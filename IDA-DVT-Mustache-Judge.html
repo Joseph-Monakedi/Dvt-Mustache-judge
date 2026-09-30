@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<!--
+  ═══════════════════════════════════════════════════════════════════════════
+  DVT INTENT-DRIVEN ARCHITECTURE — MOVEMBER MUSTACHE JUDGE
+  ═══════════════════════════════════════════════════════════════════════════
+  DVT House Style: Poppins, #007FBA accent, Dark theme with Light-mode toggle,
+  Reveal animations, and Intent-Driven Architecture Spec.
+  ═══════════════════════════════════════════════════════════════════════════
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDA-DVT-MOV-01 – The Movember Mustache Judge | DVT</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ── RESET & BASE ─────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#070c14;--bg2:#0c1220;--bg3:#111828;
+  --primary:#007FBA;--accent:#007fba;--accent-cyan:#00b4d8;--white:#f0f4f8;
+  --green:#22c55e;--amber:#eab308;--red:#ef4444;--blue:#3b82f6;--purple:#a855f7;
+  --card:#0e1525;--card-hover:#152035;
+  --radius:14px;--transition:.35s cubic-bezier(.4,0,.2,1);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Poppins','Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--white);line-height:1.65;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+h1,h2,h3,h4{font-weight:700}
+
+/* ── NAVBAR ───────────────────────────────────── */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(7,12,20,.92);backdrop-filter:blur(14px);border-bottom:1px solid rgba(0,127,186,.18);padding:0 2rem;display:flex;align-items:center;height:60px}
+.nav-logo{height:34px;width:auto;margin-right:2rem;flex-shrink:0;display:flex;align-items:center}
+.nav-logo svg{height:34px;width:auto;display:block}
+.nav-links{display:flex;gap:.2rem;overflow-x:auto;scrollbar-width:none}
+.nav-links::-webkit-scrollbar{display:none}
+.nav-links a{padding:.45rem .9rem;border-radius:8px;font-size:.82rem;font-weight:600;white-space:nowrap;transition:var(--transition);color:rgba(240,244,248,.6)}
+.nav-links a:hover,.nav-links a.active{color:var(--white);background:rgba(0,127,186,.22)}
+
+/* ── SECTION GENERIC ──────────────────────────── */
+section{min-height:auto;padding:50px 2rem 4rem;max-width:1200px;margin:0 auto}
+.section-tag{text-transform:uppercase;letter-spacing:4px;font-size:.75rem;color:var(--accent);margin-bottom:.6rem;font-weight:700}
+.section-title{font-size:2.35rem;margin-bottom:1.6rem;background:linear-gradient(135deg,var(--white),var(--accent-cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.section-intro{color:rgba(240,244,248,.68);max-width:76ch;margin-bottom:1.6rem;font-size:.98rem}
+
+/* ── ANIMATIONS ───────────────────────────────── */
+.reveal{opacity:0;transform:translateY(36px);transition:opacity .65s ease,transform .65s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.reveal-delay-1{transition-delay:.1s}.reveal-delay-2{transition-delay:.2s}.reveal-delay-3{transition-delay:.3s}.reveal-delay-4{transition-delay:.4s}
+
+/* ── HERO ─────────────────────────────────────── */
+#hero{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:92vh;position:relative;overflow:hidden;padding-top:70px}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 35%,rgba(0,127,186,.22) 0%,transparent 70%),radial-gradient(ellipse at 80% 80%,rgba(0,180,216,.12) 0%,transparent 50%);animation:pulse 8s ease-in-out infinite alternate}
+@keyframes pulse{0%{opacity:.6;transform:scale(1)}100%{opacity:1;transform:scale(1.04)}}
+.hero-content{position:relative;z-index:1;max-width:980px;padding:0 1.5rem}
+.hero-badge{display:inline-block;padding:.4rem 1rem;background:rgba(0,127,186,.15);border:1px solid rgba(0,127,186,.35);border-radius:20px;font-size:.8rem;font-weight:700;letter-spacing:1px;color:#38bdf8;margin-bottom:1.2rem}
+.hero-content h1{font-size:3.5rem;letter-spacing:-1px;margin-bottom:.6rem;line-height:1.15}
+.hero-content h1 span{background:linear-gradient(135deg,#007FBA,#38bdf8,#ffc72c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-content>p{font-size:1.12rem;color:rgba(240,244,248,.72);font-weight:400;max-width:68ch;margin:0 auto}
+.hero-line{width:80px;height:3px;background:var(--accent);margin:1.6rem auto;border-radius:3px}
+.scroll-hint{margin-top:2.5rem;animation:bob 2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+.scroll-hint span{font-size:1.4rem;color:rgba(240,244,248,.35)}
+.hero-boundaries{display:flex;gap:.8rem;flex-wrap:wrap;justify-content:center;margin-top:2rem}
+.boundary-chip{padding:.75rem 1.15rem;background:rgba(0,127,186,.1);border:1px solid rgba(0,127,186,.25);border-radius:10px;text-align:left;max-width:215px}
+.boundary-chip strong{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;color:#38bdf8;margin-bottom:.2rem}
+.boundary-chip span{font-size:.8rem;color:rgba(240,244,248,.7);line-height:1.4;display:block}
+
+/* ── SUMMARY / CALLOUT BOX ────────────────────── */
+.summary-box{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid rgba(0,180,216,.2);border-radius:var(--radius);padding:1.8rem 2.2rem;position:relative;overflow:hidden;margin-top:1.8rem}
+.summary-box::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:linear-gradient(180deg,var(--primary),#00b4d8)}
+.summary-box p{font-size:.95rem;color:rgba(240,244,248,.85);margin-bottom:.55rem}
+.summary-box p:last-child{margin-bottom:0}
+.summary-box strong{color:var(--accent-cyan)}
+.summary-highlight{display:flex;gap:.8rem;flex-wrap:wrap;margin-top:1.2rem}
+.summary-highlight span{padding:.45rem 1rem;background:rgba(0,127,186,.14);border:1px solid rgba(0,127,186,.25);border-radius:8px;font-size:.82rem;font-weight:600;color:#38bdf8}
+
+/* ── CARD GRIDS ───────────────────────────────── */
+.outcome-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:1.4rem}
+.outcome-card{background:var(--card);border:1px solid rgba(255,255,255,.07);border-radius:var(--radius);padding:1.6rem;transition:var(--transition)}
+.outcome-card:hover{background:var(--card-hover);transform:translateY(-4px);box-shadow:0 16px 48px rgba(0,0,0,.3)}
+.outcome-card h4{font-size:1.02rem;margin-bottom:.6rem;color:#38bdf8;display:flex;align-items:center;gap:.5rem}
+.outcome-card p{font-size:.88rem;color:rgba(240,244,248,.7)}
+.outcome-card ul{margin:.5rem 0 0;padding-left:1.15rem}
+.outcome-card li{font-size:.85rem;color:rgba(240,244,248,.68);margin:.3rem 0}
+.outcome-card li strong{color:var(--white)}
+
+.action-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.2rem}
+.action-card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);padding:1.5rem;transition:var(--transition);position:relative;overflow:hidden}
+.action-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--primary),#00b4d8);opacity:0;transition:var(--transition)}
+.action-card:hover{transform:translateY(-5px);box-shadow:0 16px 48px rgba(0,0,0,.32)}
+.action-card:hover::before{opacity:1}
+.action-card h4{font-size:.98rem;margin-bottom:.65rem;color:#38bdf8}
+.action-card ul{padding-left:1.1rem}
+.action-card li{font-size:.84rem;color:rgba(240,244,248,.65);margin:.3rem 0}
+
+/* ── LAYER STACK / CONSIDER CARDS ─────────────── */
+.consider-stack{display:flex;flex-direction:column;gap:.9rem}
+.consider-card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);padding:1.3rem 1.6rem;display:flex;gap:1.3rem;align-items:flex-start;transition:var(--transition)}
+.consider-card:hover{background:var(--card-hover);transform:translateX(6px);border-color:rgba(0,127,186,.3)}
+.consider-num{min-width:44px;height:44px;border-radius:10px;background:rgba(0,127,186,.14);display:flex;align-items:center;justify-content:center;font-weight:900;color:#38bdf8;font-size:.85rem;flex-shrink:0}
+.consider-card h4{font-size:.98rem;margin-bottom:.3rem;color:var(--white)}
+.consider-card p{font-size:.88rem;color:rgba(240,244,248,.65)}
+.consider-meta{display:flex;flex-wrap:wrap;gap:.4rem 1.2rem;margin-top:.5rem;font-size:.76rem;color:rgba(240,244,248,.5)}
+.consider-meta strong{color:#38bdf8;font-weight:600}
+
+/* ── CODE / SCHEMA SNIPPET ────────────────────── */
+.code-preview{background:#060a12;border:1px solid rgba(0,127,186,.25);border-radius:10px;padding:1rem 1.2rem;font-family:'Courier New',Courier,monospace;font-size:.8rem;color:#93c5fd;overflow-x:auto;margin:1rem 0}
+
+/* ── TABLES ───────────────────────────────────── */
+.table-wrap{overflow-x:auto;margin-top:1.2rem;border:1px solid rgba(255,255,255,.08);border-radius:var(--radius)}
+table{width:100%;border-collapse:collapse;background:var(--card);font-size:.86rem}
+th,td{text-align:left;padding:.85rem 1.1rem;border-bottom:1px solid rgba(255,255,255,.06);vertical-align:top}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;color:#38bdf8;background:rgba(0,127,186,.1);font-weight:700}
+td{color:rgba(240,244,248,.7)}
+td:first-child{color:var(--white);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(0,127,186,.05)}
+
+/* ── TAGS & BADGES ────────────────────────────── */
+.tag{display:inline-block;font-size:.68rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:.22rem .55rem;border-radius:5px}
+.tag-must{background:rgba(0,127,186,.18);color:#38bdf8;border:1px solid rgba(0,127,186,.35)}
+.tag-should{background:rgba(59,130,246,.16);color:#93c5fd;border:1px solid rgba(59,130,246,.3)}
+.tag-could{background:rgba(148,163,184,.14);color:#94a3b8;border:1px solid rgba(148,163,184,.25)}
+.tag-agent{background:rgba(59,130,246,.16);color:#93c5fd;border:1px solid rgba(59,130,246,.3)}
+.tag-human{background:rgba(34,197,94,.16);color:#86efac;border:1px solid rgba(34,197,94,.3)}
+.tag-gate{background:rgba(234,179,8,.16);color:#fde047;border:1px solid rgba(234,179,8,.3)}
+
+/* ── TWO-COLUMN ROLE SPLIT ────────────────────── */
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.4rem}
+.role-card{border-radius:var(--radius);padding:1.8rem;border:1px solid rgba(255,255,255,.06)}
+.role-card.agents{background:linear-gradient(135deg,rgba(59,130,246,.08),rgba(59,130,246,.02));border-color:rgba(59,130,246,.25)}
+.role-card.humans{background:linear-gradient(135deg,rgba(34,197,94,.08),rgba(34,197,94,.02));border-color:rgba(34,197,94,.25)}
+.role-card h3{font-size:1.05rem;margin-bottom:.9rem;display:flex;align-items:center;gap:.6rem}
+.role-card ul{padding-left:1.15rem}
+.role-card li{font-size:.88rem;color:rgba(240,244,248,.7);margin:.4rem 0}
+
+/* ── TIMELINE ─────────────────────────────────── */
+.timeline-bar{display:flex;justify-content:space-between;align-items:center;position:relative;margin:2.5rem 0 4.5rem;padding:0 1rem}
+.timeline-bar::before{content:'';position:absolute;top:50%;left:0;right:0;height:3px;background:rgba(255,255,255,.08);transform:translateY(-50%);border-radius:3px}
+.timeline-node{position:relative;z-index:1;width:56px;height:56px;border-radius:50%;background:var(--card);border:2px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:var(--transition);font-weight:900;font-size:.85rem}
+.timeline-node:hover,.timeline-node.active{background:var(--primary);border-color:#38bdf8;transform:scale(1.15);box-shadow:0 0 24px rgba(0,127,186,.5)}
+.timeline-label{position:absolute;top:66px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:.72rem;color:rgba(240,244,248,.5);font-weight:600;text-align:center}
+.timeline-node.active .timeline-label{color:#38bdf8}
+.phase-panel{background:var(--card);border:1px solid rgba(0,127,186,.25);border-radius:var(--radius);padding:1.8rem 2.2rem;transition:var(--transition);min-height:180px}
+.phase-panel h3{color:#38bdf8;margin-bottom:.3rem;font-size:1.2rem}
+.phase-panel .phase-date{color:rgba(240,244,248,.5);font-size:.85rem;margin-bottom:1rem;font-weight:600}
+.phase-panel ul{padding-left:1.15rem}
+.phase-panel li{font-size:.9rem;color:rgba(240,244,248,.72);margin:.35rem 0}
+.phase-panel strong{color:var(--white)}
+
+/* ── FOOTER ───────────────────────────────────── */
+footer{text-align:center;padding:3rem 2rem;color:rgba(240,244,248,.35);font-size:.82rem;border-top:1px solid rgba(255,255,255,.06)}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{position:fixed;top:12px;right:16px;z-index:2000;padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:600;background:rgba(255,255,255,0.12);color:#fff;backdrop-filter:blur(10px);transition:all .3s ease;font-family:'Poppins',sans-serif}
+.theme-toggle:hover{background:rgba(255,255,255,0.25)}
+
+/* ── LIGHT MODE ── */
+[data-theme="light"]{--bg:#f0f4f8;--bg2:#e8ecf0;--bg3:#dde3eb;--white:#1e293b;--card:#ffffff;--card-hover:#f5f7fa}
+[data-theme="light"] body{color:#1e293b}
+[data-theme="light"] nav{background:rgba(240,244,248,.92);border-color:rgba(0,127,186,.15)}
+[data-theme="light"] .nav-links a{color:#64748b}
+[data-theme="light"] .nav-links a:hover,[data-theme="light"] .nav-links a.active{color:#1e293b;background:rgba(0,127,186,.12)}
+[data-theme="light"] .section-title{background:linear-gradient(135deg,#1e293b,var(--primary));-webkit-background-clip:text;background-clip:text}
+[data-theme="light"] .section-intro{color:#475569}
+[data-theme="light"] .hero-content>p{color:#64748b}
+[data-theme="light"] .boundary-chip{background:rgba(0,127,186,.06);border-color:rgba(0,127,186,.15)}
+[data-theme="light"] .boundary-chip strong{color:var(--primary)}
+[data-theme="light"] .boundary-chip span{color:#475569}
+[data-theme="light"] .summary-box{background:linear-gradient(135deg,#f0f4f8,#e4eaf0);border-color:rgba(0,127,186,.2)}
+[data-theme="light"] .summary-box p{color:#334155}
+[data-theme="light"] .summary-box strong{color:var(--primary)}
+[data-theme="light"] .summary-highlight span{background:rgba(0,127,186,.08);border-color:rgba(0,127,186,.15);color:var(--primary)}
+[data-theme="light"] .outcome-card,[data-theme="light"] .action-card,[data-theme="light"] .consider-card,[data-theme="light"] .phase-panel{background:#fff;border-color:rgba(0,0,0,.06)}
+[data-theme="light"] .outcome-card:hover,[data-theme="light"] .consider-card:hover{background:#f8fafc;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+[data-theme="light"] .outcome-card h4,[data-theme="light"] .action-card h4,[data-theme="light"] .phase-panel h3{color:var(--primary)}
+[data-theme="light"] .outcome-card p,[data-theme="light"] .outcome-card li,[data-theme="light"] .action-card li,[data-theme="light"] .consider-card p,[data-theme="light"] .phase-panel li{color:#475569}
+[data-theme="light"] .outcome-card li strong,[data-theme="light"] .phase-panel strong,[data-theme="light"] .consider-card h4{color:#1e293b}
+[data-theme="light"] .consider-num{background:rgba(0,127,186,.08);color:var(--primary)}
+[data-theme="light"] .consider-meta{color:#94a3b8}
+[data-theme="light"] .consider-meta strong{color:var(--primary)}
+[data-theme="light"] .table-wrap{border-color:rgba(0,0,0,.08)}
+[data-theme="light"] table{background:#fff}
+[data-theme="light"] th{background:rgba(0,127,186,.06);color:var(--primary)}
+[data-theme="light"] td{color:#475569;border-color:rgba(0,0,0,.05)}
+[data-theme="light"] td:first-child{color:#1e293b}
+[data-theme="light"] tr:hover td{background:rgba(0,127,186,.04)}
+[data-theme="light"] .code-preview{background:#f1f5f9;color:#0f172a;border-color:#cbd5e1}
+[data-theme="light"] .role-card li{color:#475569}
+[data-theme="light"] .timeline-node{background:#fff;border-color:rgba(0,0,0,.1);color:#1e293b}
+[data-theme="light"] .timeline-bar::before{background:rgba(0,0,0,.08)}
+[data-theme="light"] .timeline-label{color:#64748b}
+[data-theme="light"] .timeline-node.active .timeline-label{color:var(--primary)}
+[data-theme="light"] .phase-panel .phase-date{color:#64748b}
+[data-theme="light"] footer{color:#94a3b8;border-color:rgba(0,0,0,.06)}
+[data-theme="light"] .theme-toggle{background:rgba(0,0,0,.06);color:#1e293b}
+[data-theme="light"] .theme-toggle:hover{background:rgba(0,0,0,.12)}
+[data-theme="light"] .nav-logo svg path[fill="#ffffff"]{fill:#0c1220}
+[data-theme="light"] .tag-must{color:#007FBA;background:rgba(0,127,186,.1)}
+[data-theme="light"] .tag-should{color:#2563eb;background:rgba(59,130,246,.1)}
+[data-theme="light"] .tag-could{color:#64748b;background:rgba(148,163,184,.12)}
+[data-theme="light"] .tag-agent{color:#2563eb;background:rgba(59,130,246,.1)}
+[data-theme="light"] .tag-human{color:#15803d;background:rgba(34,197,94,.1)}
+[data-theme="light"] .tag-gate{color:#a16207;background:rgba(234,179,8,.12)}
+
+/* ── RESPONSIVE ───────────────────────────────── */
+@media(max-width:768px){
+  .hero-content h1{font-size:2.2rem}
+  section{padding:70px 1.2rem 3rem}
+  .section-title{font-size:1.8rem}
+  .summary-box{padding:1.4rem}
+  .timeline-bar{flex-wrap:wrap;gap:1.2rem;justify-content:center}
+  .timeline-label{display:none}
+  nav{padding:0 1rem}
+  .nav-links a{font-size:.72rem;padding:.4rem .6rem}
+}
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="togglePageTheme()">☀ Light</button>
+
+<nav>
+  <div class="nav-logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 243.547 243.547">
+      <g transform="translate(-28.226 -28.226)">
+        <path d="M144.273,266.047A121.8,121.8,0,0,1,96.866,32.073a121.8,121.8,0,0,1,94.815,224.4,120.918,120.918,0,0,1-47.407,9.573Zm0-229.659a107.458,107.458,0,1,0,42,8.476A107.335,107.335,0,0,0,144.273,36.388Z" transform="translate(5.726 5.727)" fill="#007fba"/>
+        <path d="M779,406.5l-3.8,9.7h11.233l3.829-9.7Z" transform="translate(-554.817 -280.242)" fill="#ffc72c"/>
+        <path d="M192.934,340.626a29.363,29.363,0,0,0-22.363-9.982,34.069,34.069,0,0,0-23.921,57.823,31.42,31.42,0,0,0,23.359,10.007c9.088,0,16.288-3.421,22.951-10.212v8.118h10.748V306.8H192.96v33.8ZM186.96,348a23.671,23.671,0,0,1,6.433,16.9,22.084,22.084,0,0,1-6.918,16.7,21.969,21.969,0,0,1-31.784-.434,23.777,23.777,0,0,1-.179-32.932,22.659,22.659,0,0,1,32.473-.23" transform="translate(-79.543 -205.994)" fill="#ffffff"/>
+        <path d="M716.264,388.21a25.375,25.375,0,0,1-6.74.919c-5.336,0-8.246-1.762-8.246-11.105V306.9h-10.85v25.427h-7.2l-3.829,9.7h11.029v35.639c0,9.727,1.966,20.883,17.181,20.883s6.561-.408,9.063-1.225l.485-.153v-9.216l-.893.255Z" transform="translate(-483.473 -206.069)" fill="#ffffff"/>
+        <path d="M458.256,445.815c-.638,1.557-1.532,4.008-2.655,7.225-.536,1.532-1.047,2.987-1.43,4.085-1-2.859-2.859-8.144-4.212-11.309L434.411,406.5H423l25.069,63.695.179.46h11.437L484.933,406.5H473.675l-15.42,39.315Z" transform="translate(-292.53 -280.242)" fill="#ffffff"/>
+      </g>
+    </svg>
+  </div>
+  <div class="nav-links">
+    <a href="#overview">1. Overview</a>
+    <a href="#ida">2. IDA Approach</a>
+    <a href="#requirements">3. Requirements</a>
+    <a href="#roles">4. Roles &amp; Gates</a>
+    <a href="#build">5. Build &amp; Deploy</a>
+    <a href="#testing">6. Testing</a>
+    <a href="#demo">7. Demo &amp; Feedback</a>
+    <a href="#support">8. Support</a>
+  </div>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-content">
+    <div class="hero-badge">DVT GRADUATE BUILD 2026 · MOVEMBER INITIATIVE</div>
+    <p class="section-tag" style="font-size:.9rem;letter-spacing:6px;margin-bottom:1.2rem">Intent-Driven Architecture · IDA-DVT-MOV-01</p>
+    <h1><span>The Mustache Judge</span> 🥸</h1>
+    <div class="hero-line"></div>
+    <p>A zero-friction, crowd-delighting AI facial hair evaluation suite built on React + ASP.NET Core Web API, powered by multimodal Google Gemini 2.0 Flash, 100% free cloud storage, and an interactive real-time office leaderboard.</p>
+    <div class="hero-boundaries">
+      <div class="boundary-chip"><strong>Zero-Friction UX</strong><span>No login/signup required. Name + photo snapshot only.</span></div>
+      <div class="boundary-chip"><strong>Kindness Invariant</strong><span>Strict rubric roasting the bristles, never the person.</span></div>
+      <div class="boundary-chip"><strong>100% Free Hosting</strong><span>Gemini Free Tier + Cloudinary/Supabase free tiers.</span></div>
+      <div class="boundary-chip"><strong>Camera Silhouette</strong><span>Interactive optical HUD to guarantee perfect close-up shots.</span></div>
+      <div class="boundary-chip"><strong>Office Kiosk Mode</strong><span>Optimised for big-screen live crowd competition kickoff.</span></div>
+    </div>
+    <div class="scroll-hint"><span>&#9660;</span></div>
+  </div>
+</section>
+
+<!-- ═══ 1. ARCHITECTURE OVERVIEW ═══ -->
+<section id="overview">
+  <p class="section-tag reveal">Section 01</p>
+  <h2 class="section-title reveal">Architecture Overview</h2>
+  <p class="section-intro reveal">The solution pairs an engaging React client with a lightweight, robust ASP.NET Core backend. Image ingest is guided in the browser by an optical mustache target HUD, processed via Gemini 2.0 Flash for structured comedic yet metric-based evaluation, and broadcast instantly to a shared Movember leaderboard.</p>
+
+  <div class="consider-stack">
+    <div class="consider-card reveal">
+      <div class="consider-num">EXP</div>
+      <div>
+        <h4>Experience Layer (React + Vite)</h4>
+        <p>Responsive client featuring a live webcam viewport with animated mustache alignment reticle, instant snapshot preview, fallback drag-and-drop file upload, real-time verdict suspense reveal, and a high-impact DVT-branded Leaderboard view with office kiosk presentation mode.</p>
+      </div>
+    </div>
+
+    <div class="consider-card reveal">
+      <div class="consider-num">API</div>
+      <div>
+        <h4>Application &amp; Ingestion Plane (ASP.NET Core 8 Web API)</h4>
+        <p>Receives multipart submissions (name, cohort, photo), executes input sanitization and payload throttling, persists assets to high-speed cloud storage, invokes the Gemini evaluation pipeline, and updates the leaderboard database in a single resilient transaction.</p>
+      </div>
+    </div>
+
+    <div class="consider-card reveal">
+      <div class="consider-num">AI</div>
+      <div>
+        <h4>Evaluation Engine (Google Gemini 2.0 Flash / 1.5 Flash)</h4>
+        <p>Multimodal vision analysis prompted with strict JSON schema constraints. Evaluates facial hair across Density, Symmetry, Bristle Swagger, and Style; generates an affectionate comedic roast, mustache archetype title, and celebrity twin match.</p>
+      </div>
+    </div>
+
+    <div class="consider-card reveal">
+      <div class="consider-num">STR</div>
+      <div>
+        <h4>Data &amp; Asset Storage (Zero-Cost Free Tier)</h4>
+        <p>Images stored on Cloudinary (25GB free tier with automatic facial smart-cropping CDN URLs) or Supabase Storage (1GB free tier). Structured judge records and rankings stored in Supabase PostgreSQL (or SQLite/EF Core for local zero-config runs).</p>
+      </div>
+    </div>
+
+    <div class="consider-card reveal">
+      <div class="consider-num">OPS</div>
+      <div>
+        <h4>Office Kiosk &amp; Operations Plane</h4>
+        <p>Auto-refreshing live leaderboard, QR code generator for mobile participant check-in, and moderation override endpoints allowing graduate facilitators to flag or remove accidental photobombs live during the 1 November kickoff.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.15rem;margin:2.2rem 0 1.2rem;color:var(--accent)" class="reveal">Reusable Platform Modules</h3>
+  <div class="outcome-grid">
+    <div class="outcome-card reveal reveal-delay-1">
+      <h4>📷 Optical Guide Overlay</h4>
+      <p>Self-contained React canvas/SVG overlay with face oval + mustache target bracket, distance feedback, and mobile touch capture support. Adaptable to any badge or credential verification app.</p>
+    </div>
+    <div class="outcome-card reveal reveal-delay-2">
+      <h4>⚡ Gemini Vision Pipeline</h4>
+      <p>Configurable .NET GenAI service supporting schema-enforced multimodal output, system instructions, temperature tuning, and fallback error handling against rate limits.</p>
+    </div>
+    <div class="outcome-card reveal reveal-delay-3">
+      <h4>🏆 Live Leaderboard Engine</h4>
+      <p>Normalized scoring, percentile rank calculator, category filters ("Top Stache", "Funniest Roast", "Most Improved"), and lightweight polling/SSE stream.</p>
+    </div>
+    <div class="outcome-card reveal reveal-delay-4">
+      <h4>☁️ Cloud Asset Adaptor</h4>
+      <p>Clean C# repository interface (<code>IImageStorageService</code>) with swappable implementations for Cloudinary, Supabase S3, and Local File Disk storage for offline testing.</p>
+    </div>
+  </div>
+
+  <div class="summary-box reveal">
+    <p><strong>Hard Invariant:</strong> <strong>The Kindness &amp; Consent Guardrail.</strong> All Gemini prompts must enforce: <em>"Critique only the mustache grooming, density, and style. Never insult the human, their features, or skin. Ensure roasts are witty, affectionate, and workplace-safe."</em> Submissions require no authentication but enforce explicit client-side consent.</p>
+  </div>
+</section>
+
+<!-- ═══ 2. IDA APPROACH ═══ -->
+<section id="ida">
+  <p class="section-tag reveal">Section 02</p>
+  <h2 class="section-title reveal">Intent Driven Architecture Approach</h2>
+  <p class="section-intro reveal">Work is organized around durable <em>intents</em> — clear outcome statements that pair automated agent generation with strict human-in-the-loop validation gates. Each intent encapsulates a functional boundary and explicit acceptance criteria.</p>
+
+  <div class="outcome-grid">
+    <div class="outcome-card reveal reveal-delay-1">
+      <h4>Intent &rarr; Spec &rarr; Build</h4>
+      <p>Every feature begins with a defined intent contract, camera HUD specs, and OpenAPI endpoints. Implementation is machine-validated before any UI styling or crowd testing.</p>
+    </div>
+    <div class="outcome-card reveal reveal-delay-2">
+      <h4>Constraint as First-Class</h4>
+      <p>Zero cost ($0.00 cloud budget), sub-4-second evaluation round-trip, and no-login frictionless participation are treated as non-negotiable architectural boundaries.</p>
+    </div>
+    <div class="outcome-card reveal reveal-delay-3">
+      <h4>Clean Client / Host Split</h4>
+      <p>React handles media streams and client transitions; .NET handles AI security keys, storage credentials, rate limiting, and persistence. Secret keys never leak to the browser.</p>
+    </div>
+    <div class="outcome-card reveal reveal-delay-4">
+      <h4>Segregation of Duty</h4>
+      <p>Autonomous AI agents generate client components, backend endpoints, and prompt schemas. Human graduate leads verify tone, crowd hilarity, and live kickoff readiness.</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.15rem;margin:2.2rem 0 1.2rem;color:var(--accent)" class="reveal">Primary Architecture Intents</h3>
+  <div class="consider-stack">
+    <div class="consider-card reveal">
+      <div class="consider-num">I1</div>
+      <div>
+        <h4>Frictionless Capture Intent (Webcam + Optical Guidance)</h4>
+        <p>A competitor opens the app on phone or kiosk, aligns their mouth and nose with an on-screen mustache reticle, inputs their display name, and snaps a crisp close-up within 15 seconds without creating an account.</p>
+      </div>
+    </div>
+    <div class="consider-card reveal">
+      <div class="consider-num">I2</div>
+      <div>
+        <h4>Humorous Multimodal Deliberation Intent (Gemini 2.0 Flash)</h4>
+        <p>The backend transmits the cropped facial hair image to Gemini with structured rubric parameters, returning a valid JSON verdict comprising an Overall Score (1-100), Sub-scores, Mustache Archetype, Celebrity Twin, and Workplace-Safe Roast in &lt; 3.5 seconds.</p>
+      </div>
+    </div>
+    <div class="consider-card reveal">
+      <div class="consider-num">I3</div>
+      <div>
+        <h4>Zero-Cost Persistence Intent (Cloud Storage + Relational DB)</h4>
+        <p>Photographs are compressed and persisted to Cloudinary/Supabase free tiers with CDN optimization, while scores, names, roasts, and timestamps are recorded in PostgreSQL/SQLite without incurring subscription charges.</p>
+      </div>
+    </div>
+    <div class="consider-card reveal">
+      <div class="consider-num">I4</div>
+      <div>
+        <h4>Real-Time Crowd Leaderboard Intent</h4>
+        <p>Competitors and colleagues view live rankings with podium spotlights, archetype badges ("The Corporate Handlebar", "Peach Fuzz Prodigy"), filterable categories, and full-screen Kiosk Mode for office projection.</p>
+      </div>
+    </div>
+    <div class="consider-card reveal">
+      <div class="consider-num">I5</div>
+      <div>
+        <h4>Meme Sharecard Generation Intent</h4>
+        <p>Upon receiving their score, users can download or share a high-contrast DVT-branded digital scorecard badge featuring their cropped photo, official verdict title, and judge roast to Slack or WhatsApp.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 3. REQUIREMENTS ═══ -->
+<section id="requirements">
+  <p class="section-tag reveal">Section 03</p>
+  <h2 class="section-title reveal">High-Level Requirements · Spec-Driven Development</h2>
+  <p class="section-intro reveal">Acceptance criteria are strictly testable. Features follow MoSCoW prioritization to guarantee a rock-solid, hilarious live demo for the 1 November kickoff.</p>
+
+  <h3 style="font-size:1.15rem;margin:1rem 0 0;color:var(--accent)" class="reveal">FR — Functional Requirements (Domain)</h3>
+  <div class="table-wrap reveal">
+    <table>
+      <thead><tr><th>ID</th><th>Requirement</th><th>Acceptance (Spec)</th><th>Priority</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>FR-01</td>
+          <td>Optical Camera Overlay</td>
+          <td>Webcam stream renders an SVG face contour and dotted mustache bracket. Displays real-time guidance ("Move closer / Perfect distance"). Supports front/rear camera toggle on mobile.</td>
+          <td><span class="tag tag-must">Must</span></td>
+        </tr>
+        <tr>
+          <td>FR-02</td>
+          <td>Photo Upload Alternative</td>
+          <td>Drag-and-drop file selector accepting JPEG/PNG/WebP up to 10MB, with client-side canvas down-sampling to max 1600px prior to upload.</td>
+          <td><span class="tag tag-must">Must</span></td>
+        </tr>
+        <tr>
+          <td>FR-03</td>
+          <td>No-Login Submission</td>
+          <td>User inputs only Display Name (2-40 chars) and optional Squad/Office (e.g. "Johannesburg Grad Cohort"). Zero email/password barriers.</td>
+          <td><span class="tag tag-must">Must</span></td>
+        </tr>
+        <tr>
+          <td>FR-04</td>
+          <td>Gemini Multimodal Scoring</td>
+          <td>Backend invokes Gemini 2.0 Flash via Google AI Studio API key. Returns strictly parsed JSON with Overall Score (1-100), Density (1-10), Bristle Swagger (1-10), Archetype, Celebrity Twin, and Roast.</td>
+          <td><span class="tag tag-must">Must</span></td>
+        </tr>
+        <tr>
+          <td>FR-05</td>
+          <td>Animated Suspense Reveal</td>
+          <td>UI shows a 2.5s comedic "Judges Deliberating" loading animation with humorous rotating status lines ("Measuring follicle tensile strength...", "Consulting Tom Selleck archives...").</td>
+          <td><span class="tag tag-must">Must</span></td>
+        </tr>
+        <tr>
+          <td>FR-06</td>
+          <td>Live Leaderboard</td>
+          <td>Displays top ranked mustaches with avatar thumbnail, rank #, score, name, and archetype tag. Auto-polls every 10s or upon new submission.</td>
+          <td><span class="tag tag-must">Must</span></td>
+        </tr>
+        <tr>
+          <td>FR-07</td>
+          <td>Office Kiosk Mode</td>
+          <td>Full-screen TV/projector view showcasing top 3 podium, cycling recent verdicts, and displaying a QR code for mobile submissions.</td>
+          <td><span class="tag tag-should">Should</span></td>
+        </tr>
+        <tr>
+          <td>FR-08</td>
+          <td>Shareable Verdict Card</td>
+          <td>Client renders an HTML5 canvas scorecard (photo, DVT logo, score, roast) downloadable as PNG for Slack/Teams.</td>
+          <td><span class="tag tag-should">Should</span></td>
+        </tr>
+        <tr>
+          <td>FR-09</td>
+          <td>Admin Moderator Wipe</td>
+          <td>Passcode-protected header action allowing graduate leads to soft-delete inappropriate or test photos from the leaderboard.</td>
+          <td><span class="tag tag-should">Should</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="font-size:1.15rem;margin:2rem 0 0;color:var(--accent)" class="reveal">FR — Platform Modules &amp; Free Tier Integrations</h3>
+  <div class="table-wrap reveal">
+    <table>
+      <thead><tr><th>ID</th><th>Module</th><th>Free-Tier Architecture Specification</th><th>Priority</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>PM-01</td>
+          <td>Google Gemini API</td>
+          <td>Google AI Studio Free Tier (Gemini 2.0 Flash): 15 RPM, 1,500 RPD, 100% free with no credit card billing risk. Structured response format (JSON mode).</td>
+          <td><span class="tag tag-must">Must</span></td>
+        </tr>
+        <tr>
+          <td>PM-02</td>
+          <td>Cloudinary CDN Storage</td>
+          <td>Free Tier: 25GB storage, 25,000 transformations/month. Upload preset configured via backend; returns optimized HTTPS URL with gravity-face thumbnailing.</td>
+          <td><span class="tag tag-must">Must</span></td>
+        </tr>
+        <tr>
+          <td>PM-03</td>
+          <td>Database (PostgreSQL / SQLite)</td>
+          <td>Supabase Free Tier (500MB PostgreSQL) OR standalone SQLite with Entity Framework Core 8 for local zero-dependency kiosk deployment.</td>
+          <td><span class="tag tag-must">Must</span></td>
+        </tr>
+        <tr>
+          <td>PM-04</td>
+          <td>DVT Design System</td>
+          <td>Pure CSS3 implementation adhering to DVT guidelines: Poppins typography, #007FBA primary, dark slate backgrounds, glassmorphism cards, light/dark toggle.</td>
+          <td><span class="tag tag-must">Must</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="font-size:1.15rem;margin:2.2rem 0 1.2rem;color:var(--accent)" class="reveal">NFR — Non-Functional Requirements</h3>
+  <div class="grid-2">
+    <div class="outcome-card reveal reveal-delay-1">
+      <h4>Performance &amp; Responsiveness</h4>
+      <ul>
+        <li><strong>AI Round-Trip Latency:</strong> Total verdict response &lt; 3.5 seconds on broadband/4G.</li>
+        <li><strong>Payload Footprint:</strong> Images client-compressed to &le; 800KB before transit.</li>
+        <li><strong>Leaderboard Query Time:</strong> SQL query &lt; 40ms for top 100 entries.</li>
+        <li><strong>Cold Start Mitigation:</strong> Keep-alive ping or lightweight ASP.NET Core AOT-friendly container.</li>
+      </ul>
+    </div>
+    <div class="outcome-card reveal reveal-delay-2">
+      <h4>UX, Safety &amp; Reliability</h4>
+      <ul>
+        <li><strong>Kindness Constraint:</strong> Zero profanity, body shaming, or non-facial comments.</li>
+        <li><strong>Zero Cost:</strong> Operating cost = $0.00 across all databases and AI models.</li>
+        <li><strong>Cross-Device:</strong> Tested on iOS Safari, Chrome Android, and Desktop Windows/macOS.</li>
+        <li><strong>Resilience:</strong> Automatic fallback roast if Gemini rate limit is encountered.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="summary-box reveal">
+    <p><strong>Gemini Structured Output Contract:</strong></p>
+    <div class="code-preview">
+{
+  "overallScore": 84,
+  "mustacheTitle": "The Aristocratic Velocity",
+  "densityScore": 8,
+  "symmetryScore": 9,
+  "bristleSwagger": 8,
+  "roast": "This mustache has the aerodynamics of a sports car and the discipline of a Victorian headmaster. A magnificent bristle triumph.",
+  "celebrityTwin": "72% Tom Selleck, 23% Henry Cavill (Mission Impossible), 5% Lorax",
+  "verdictBadge": "Certified DVT Heavyweight"
+}
+    </div>
+    <div class="summary-highlight">
+      <span>Definition of Done</span>
+      <span>Camera HUD Working</span>
+      <span>Gemini JSON Validated</span>
+      <span>Storage &lt; 1s Upload</span>
+      <span>Leaderboard Sorted</span>
+      <span>Human Kickoff Approved</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 4. ROLES & GATES ═══ -->
+<section id="roles">
+  <p class="section-tag reveal">Section 04</p>
+  <h2 class="section-title reveal">Roles, Tasks &amp; Human-in-the-Loop Gates</h2>
+  <p class="section-intro reveal">Clear segregation of duties ensures rapid autonomous agent code generation while empowering the graduate team to maintain quality, safety, and kickoff hilarity.</p>
+
+  <div class="grid-2">
+    <div class="role-card agents reveal reveal-delay-1">
+      <h3><span class="tag tag-agent">AI Agents</span> Own</h3>
+      <ul>
+        <li>Scaffold React frontend with camera HUD canvas overlay.</li>
+        <li>Implement ASP.NET Core 8 Web API controllers &amp; endpoints.</li>
+        <li>Integrate Cloudinary and Supabase storage clients.</li>
+        <li>Author robust prompt templates with typed JSON schema responses.</li>
+        <li>Build the automated test harness (unit, contract, and mock image inputs).</li>
+        <li>Generate mock mustache leaderboard data for UI styling and stress-tests.</li>
+      </ul>
+    </div>
+    <div class="role-card humans reveal reveal-delay-2">
+      <h3><span class="tag tag-human">Graduates (Humans)</span> Own</h3>
+      <ul>
+        <li>Review and fine-tune AI roast prompts to guarantee humor and empathy.</li>
+        <li>Run physical device trials with diverse lighting, beard lengths, and skin tones.</li>
+        <li>Secure free API keys for Google AI Studio and Cloudinary/Supabase.</li>
+        <li>Select the office kiosk presentation screen and test HDMI/Chromecast setup.</li>
+        <li>Coordinate the live 1 November launch event and encourage initial submissions.</li>
+        <li>Hold emergency moderation authority over the live leaderboard.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.15rem;margin:2.2rem 0 1.2rem;color:var(--accent)" class="reveal">Entrance &amp; Exit Gates (HITL)</h3>
+  <div class="consider-stack">
+    <div class="consider-card reveal">
+      <div class="consider-num">G1</div>
+      <div>
+        <h4>Prompt Safety &amp; Roasting Tone Approval <span class="tag tag-gate">Entrance Gate</span></h4>
+        <p>Graduates review 20 test photo runs across various mustache styles (sparse, bushy, stubble, clean-shaven). Verifies that roasts are consistently witty, supportive of Movember, and free of body-shaming.</p>
+        <div class="consider-meta"><span><strong>In:</strong> Sample photos &amp; raw Gemini outputs</span><span><strong>Out:</strong> Locked system prompt</span><span><strong>Owner:</strong> Graduate Lead</span></div>
+      </div>
+    </div>
+    <div class="consider-card reveal">
+      <div class="consider-num">G2</div>
+      <div>
+        <h4>Zero-Cost Quota &amp; Rate-Limit Gate <span class="tag tag-gate">Technical Gate</span></h4>
+        <p>Confirm that Google AI Studio Free Tier (15 RPM) and Cloudinary free tier thresholds will not be breached during peak kickoff traffic. Verify fallback throttling and graceful user retry queues.</p>
+        <div class="consider-meta"><span><strong>In:</strong> Load test telemetry</span><span><strong>Out:</strong> Rate limit guard confirmed</span><span><strong>Owner:</strong> Backend Engineer</span></div>
+      </div>
+    </div>
+    <div class="consider-card reveal">
+      <div class="consider-num">G3</div>
+      <div>
+        <h4>Office Kiosk &amp; Crowd Readiness Gate <span class="tag tag-gate">Exit Gate</span></h4>
+        <p>Full dress rehearsal on the office big screen. Testing live camera capture from phones via QR code, real-time leaderboard update, and responsive display resolution.</p>
+        <div class="consider-meta"><span><strong>In:</strong> Staging deployment</span><span><strong>Out:</strong> Live sign-off for 1 Nov</span><span><strong>Owner:</strong> Entire Squad</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 5. BUILD & DEPLOY ═══ -->
+<section id="build">
+  <p class="section-tag reveal">Section 05</p>
+  <h2 class="section-title reveal">Planning Overview — Build &amp; Deploy</h2>
+  <p class="section-intro reveal">Sequenced delivery leading up to the 1 November Movember kickoff. Each phase delivers a testable, runnable increment with clear deliverables.</p>
+
+  <div class="timeline-bar reveal">
+    <div class="timeline-node active" onclick="showPhase(0)">P1<span class="timeline-label">Oct 1–8</span></div>
+    <div class="timeline-node" onclick="showPhase(1)">P2<span class="timeline-label">Oct 9–16</span></div>
+    <div class="timeline-node" onclick="showPhase(2)">P3<span class="timeline-label">Oct 17–25</span></div>
+    <div class="timeline-node" onclick="showPhase(3)">P4<span class="timeline-label">Oct 26–31</span></div>
+    <div class="timeline-node" onclick="showPhase(4)">P5<span class="timeline-label">Nov 1 Launch</span></div>
+  </div>
+  <div class="phase-panel reveal" id="phasePanel"></div>
+
+  <div class="summary-box reveal">
+    <p><strong>Deployment Strategy:</strong> React frontend hosted on Vercel/Netlify or GitHub Pages (100% free). ASP.NET Core Web API hosted on Render Free Tier or run locally/on an office workstation during the live kickoff event. Database hosted on Supabase (free tier) or local SQLite.</p>
+  </div>
+</section>
+
+<!-- ═══ 6. TESTING ═══ -->
+<section id="testing">
+  <p class="section-tag reveal">Section 06</p>
+  <h2 class="section-title reveal">Planning Overview — Automated &amp; Exploratory Testing</h2>
+  <p class="section-intro reveal">Testing combines standard software engineering suites with specialized GenAI rubric validation to ensure stability, deterministic output parsing, and safe hilarious judging.</p>
+
+  <div class="action-grid">
+    <div class="action-card reveal reveal-delay-1">
+      <h4>Unit &amp; Domain Logic</h4>
+      <ul>
+        <li>Score normalization algorithms (0-100 scale bounding).</li>
+        <li>Leaderboard sorting, ranking, and tie-breaker logic.</li>
+        <li>Image size validation and MIME-type integrity checks.</li>
+        <li>Display name sanitization and profanity filtering.</li>
+      </ul>
+    </div>
+    <div class="action-card reveal reveal-delay-2">
+      <h4>Gemini Schema Validation</h4>
+      <ul>
+        <li>Contract testing on Gemini JSON response parser.</li>
+        <li>Mocked responses verifying fallback handling for API 429s.</li>
+        <li>Prompt safety regression suite verifying zero abusive words.</li>
+        <li>Temperature invariance testing across diverse facial inputs.</li>
+      </ul>
+    </div>
+    <div class="action-card reveal reveal-delay-3">
+      <h4>Camera &amp; UX Testing</h4>
+      <ul>
+        <li>MediaDevices API permissions across iOS Safari and Android Chrome.</li>
+        <li>Canvas aspect-ratio scaling across portrait and landscape phones.</li>
+        <li>Guidance overlay alignment math on different aspect ratios.</li>
+        <li>Offline / low-network graceful error toasts.</li>
+      </ul>
+    </div>
+    <div class="action-card reveal reveal-delay-4">
+      <h4>End-to-End Smoke Tests</h4>
+      <ul>
+        <li>Full loop: Snap photo &rarr; Cloudinary upload &rarr; Gemini parse &rarr; DB record &rarr; Leaderboard display.</li>
+        <li>Multi-client concurrency test (10 rapid submissions).</li>
+        <li>Kiosk mode 2-hour continuous burn-in test without memory leaks.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="summary-box reveal">
+    <p><strong>CI/CD Automated Verification:</strong> Automated GitHub Actions workflow executing <code>dotnet test</code> for backend endpoints and <code>npm run test && npm run build</code> for React on every push to main.</p>
+  </div>
+</section>
+
+<!-- ═══ 7. DEMO & FEEDBACK ═══ -->
+<section id="demo">
+  <p class="section-tag reveal">Section 07</p>
+  <h2 class="section-title reveal">Planning Overview — Customer Demo &amp; Feedback</h2>
+  <p class="section-intro reveal">The primary milestone is the 1 November live DVT office launch. The demo must be entertaining, friction-free, and crowd-engaging.</p>
+
+  <div class="grid-2">
+    <div class="outcome-card reveal reveal-delay-1">
+      <h4>1 November Kickoff Demo Script (10 Mins)</h4>
+      <ul>
+        <li><strong>00:00 – Hook:</strong> Projector displays the DVT Movember Kiosk with live QR code and humorous empty podium.</li>
+        <li><strong>02:00 – Live Volunteer #1:</strong> A graduate steps up to the webcam. Optical overlay aligns their mustache; crowd sees live countdown.</li>
+        <li><strong>03:30 – Suspense Deliberation:</strong> Big screen displays AI deliberation animation; Gemini reveals a hilarious 89/100 score + roast.</li>
+        <li><strong>05:00 – Crowd Participation:</strong> Audience scans QR code on their phones, submitting photos simultaneously from their seats.</li>
+        <li><strong>08:00 – Podium Shift:</strong> Leaderboard dynamically re-ranks live as new scores flood in, crowning the Kickoff Champion.</li>
+      </ul>
+    </div>
+    <div class="outcome-card reveal reveal-delay-2">
+      <h4>Audiences &amp; Success Signals</h4>
+      <ul>
+        <li><strong>DVT Graduates &amp; Colleagues:</strong> Laughter, crowd engagement, multiple participants taking turns.</li>
+        <li><strong>Project Leads &amp; Judges:</strong> Praise for technical ambition, zero-cost architecture, and polished DVT styling.</li>
+        <li><strong>Competitors:</strong> Sharing their generated mustache scorecards directly into DVT Slack channels.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="summary-box reveal">
+    <p><strong>Feedback Triage:</strong> Immediate feedback gathered during the kickoff standup will dictate week 1 enhancements (e.g. "Most Improved Stache" progress tracking over the course of November).</p>
+  </div>
+</section>
+
+<!-- ═══ 8. SUPPORT ═══ -->
+<section id="support">
+  <p class="section-tag reveal">Section 08</p>
+  <h2 class="section-title reveal">Planning Overview — Application Support</h2>
+  <p class="section-intro reveal">Operational procedures to ensure zero downtime and smooth running across the entire 30 days of Movember.</p>
+
+  <div class="grid-2">
+    <div class="outcome-card reveal reveal-delay-1">
+      <h4>Operational Procedures</h4>
+      <ul>
+        <li><strong>Daily Quota Monitoring:</strong> Automated check on Google AI Studio 1,500 daily requests headroom.</li>
+        <li><strong>Storage Hygiene:</strong> Cloudinary storage monitor ensuring images remain well within the 25GB free tier.</li>
+        <li><strong>Moderation Console:</strong> Simple passcode-protected UI allowing graduate leads to purge erroneous test photos.</li>
+      </ul>
+    </div>
+    <div class="outcome-card reveal reveal-delay-2">
+      <h4>Support Objectives (SLOs)</h4>
+      <ul>
+        <li><strong>Availability:</strong> 99.5% uptime during office working hours (08:00 – 18:00 SAST).</li>
+        <li><strong>Scoring Latency:</strong> &lt; 4 seconds end-to-end for 95% of submissions.</li>
+        <li><strong>Bug Resolution:</strong> Showstopper kiosk bugs resolved within 2 hours by the graduate squad.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>
+  IDA-DVT-MOV-01 · The Movember Mustache Judge — DVT Graduate Build 2026<br>
+  Built with React + ASP.NET Core Web API + Google Gemini 2.0 Flash · Intent-Driven Architecture
+</footer>
+
+<script>
+/* Reveal on scroll */
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }), { threshold: .1 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+/* Nav active state */
+const navLinks = document.querySelectorAll('.nav-links a');
+const sections = [...navLinks].map(a => document.querySelector(a.getAttribute('href')));
+window.addEventListener('scroll', () => {
+  let idx = sections.findIndex(s => s && s.getBoundingClientRect().top > 120) - 1;
+  if (idx < -1) idx = sections.length - 1;
+  navLinks.forEach((a, i) => a.classList.toggle('active', i === idx));
+}, { passive: true });
+
+/* Build & deploy phases */
+const phases = [
+  {
+    title: 'Phase 1: Project Setup & Architecture Spike (Oct 1 – 8)',
+    date: 'Oct 1 – 8, 2026',
+    items: [
+      'Initialize Git repository, ASP.NET Core 8 Web API, and React (Vite) workspace.',
+      'Configure free tier accounts for Google AI Studio (Gemini 2.0 Flash) and Cloudinary/Supabase.',
+      'Build minimal proof-of-concept verifying multimodal image input & structured JSON response from Gemini.',
+      'Formalize API contracts and sign off on <strong>Gate G1 (Prompt Safety & Roasting Tone)</strong>.'
+    ]
+  },
+  {
+    title: 'Phase 2: Core Engine & Optical Camera Guidance (Oct 9 – 16)',
+    date: 'Oct 9 – 16, 2026',
+    items: [
+      'Develop React Camera Component with SVG face contour and mustache alignment reticle.',
+      'Implement client-side canvas snapshot capture with mobile responsive orientation.',
+      'Build ASP.NET Core Ingestion Controller with multipart upload and Cloudinary storage pipeline.',
+      'Implement SQLite/Supabase Entity Framework Core schema for Contestants and Verdicts.'
+    ]
+  },
+  {
+    title: 'Phase 3: Leaderboard, Roasting & Suspense Reveal (Oct 17 – 25)',
+    date: 'Oct 17 – 25, 2026',
+    items: [
+      'Design animated "Judges Deliberating" suspense reveal state with comedic cycling status lines.',
+      'Construct the DVT-themed live Leaderboard with podium spotlights and category filters.',
+      'Implement shareable HTML5 canvas scorecard generator for Slack/WhatsApp sharing.',
+      'Execute integration testing and pass <strong>Gate G2 (Zero-Cost Quota & Rate Limit Gate)</strong>.'
+    ]
+  },
+  {
+    title: 'Phase 4: Office Kiosk Polish & Dress Rehearsal (Oct 26 – 31)',
+    date: 'Oct 26 – 31, 2026',
+    items: [
+      'Implement full-screen Office Kiosk view with QR code for seamless mobile walk-up access.',
+      'Conduct multi-device testing (iOS, Android, office laptops, large TV displays).',
+      'Add simple moderation override endpoint for the graduate team.',
+      'Conduct full dress rehearsal in DVT common area and pass <strong>Gate G3 (Kiosk Readiness Gate)</strong>.'
+    ]
+  },
+  {
+    title: 'Phase 5: Movember Kickoff Live Launch (Nov 1)',
+    date: 'November 1, 2026',
+    items: [
+      'Deploy kiosk mode on office screen for morning kickoff.',
+      'Run live graduate demonstration and open competition to the entire company.',
+      'Celebrate launch and gather user feedback for weekly "Most Improved" Movember tracking.'
+    ]
+  }
+];
+
+function showPhase(i) {
+  document.querySelectorAll('.timeline-node').forEach((n, j) => n.classList.toggle('active', i === j));
+  const p = phases[i];
+  document.getElementById('phasePanel').innerHTML =
+    '<h3>' + p.title + '</h3><p class="phase-date">' + p.date + '</p><ul>' +
+    p.items.map(it => '<li>' + it + '</li>').join('') + '</ul>';
+}
+showPhase(0);
+
+/* Theme toggle */
+function togglePageTheme() {
+  const root = document.documentElement;
+  const isLight = root.getAttribute('data-theme') === 'light';
+  if (isLight) {
+    root.removeAttribute('data-theme');
+    document.querySelector('.theme-toggle').textContent = '☀ Light';
+  } else {
+    root.setAttribute('data-theme', 'light');
+    document.querySelector('.theme-toggle').textContent = '🌙 Dark';
+  }
+}
+</script>
+</body>
+</html>
