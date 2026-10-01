@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg-johan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EB5757" />
+      <stop offset="100%" stop-color="#9B2C2C" />
+    </linearGradient>
+    <linearGradient id="skin" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FBD38D" />
+      <stop offset="100%" stop-color="#F6AD55" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="40" fill="url(#bg-johan)" />
+  <circle cx="100" cy="100" r="85" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="3" />
+  <!-- Head -->
+  <ellipse cx="100" cy="105" rx="52" ry="62" fill="url(#skin)" />
+  <!-- Eyes -->
+  <circle cx="82" cy="90" r="5" fill="#2D3748" />
+  <circle cx="118" cy="90" r="5" fill="#2D3748" />
+  <circle cx="84" cy="88" r="1.5" fill="#FFF" />
+  <circle cx="120" cy="88" r="1.5" fill="#FFF" />
+  <!-- Eyebrows -->
+  <path d="M 72,82 Q 82,78 92,82" stroke="#4A5568" stroke-width="3" stroke-linecap="round" fill="none" />
+  <path d="M 108,82 Q 118,78 128,82" stroke="#4A5568" stroke-width="3" stroke-linecap="round" fill="none" />
+  <!-- Nose -->
+  <path d="M 98,92 Q 100,104 95,106 Q 100,108 105,106" stroke="#DD6B20" stroke-width="2.5" stroke-linecap="round" fill="none" />
+  <!-- Mustache -->
+  <path d="M 65,110 Q 82,105 100,108 Q 118,105 135,110 L 132,150 Q 124,152 120,150 L 122,122 Q 100,120 78,122 L 80,150 Q 76,152 68,150 Z" fill="#23272F" />
+  <!-- Mouth -->
+  <path d="M 88,135 Q 100,142 112,135" stroke="#C53030" stroke-width="2.5" stroke-linecap="round" fill="none" />
+  <!-- Badge text -->
+  <rect x="25" y="172" width="150" height="20" rx="10" fill="rgba(0,0,0,0.5)" />
+  <text x="100" y="186" fill="#FFF" font-family="system-ui, sans-serif" font-size="11" font-weight="700" text-anchor="middle">Johan B.</text>
+</svg>

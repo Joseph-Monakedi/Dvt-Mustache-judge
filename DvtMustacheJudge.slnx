@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="DvtMustacheJudge.Api/DvtMustacheJudge.Api.csproj" />
+  <Project Path="DvtMustacheJudge.Tests/DvtMustacheJudge.Tests.csproj" />
+</Solution>
