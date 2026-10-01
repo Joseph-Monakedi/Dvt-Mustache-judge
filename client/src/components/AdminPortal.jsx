@@ -8,7 +8,6 @@ import {
   FaRightFromBracket, 
   FaMagnifyingGlass, 
   FaXmark,
-  FaScaleBalanced,
   FaRotate
 } from 'react-icons/fa6';
 import { MdOutlineWarningAmber } from 'react-icons/md';
@@ -341,86 +340,149 @@ export default function AdminPortal({ onBackToApp }) {
             <p>No contestant records match your moderation filter.</p>
           </div>
         ) : (
-          <div className="standings-table-wrapper">
-            <table className="standings-table">
-              <thead>
-                <tr>
-                  <th>Contestant</th>
-                  <th>Office Location</th>
-                  <th>Title & Archetype</th>
-                  <th>Score</th>
-                  <th>Submitted</th>
-                  <th>Visibility</th>
-                  <th>Admin Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredEntries.map(entry => (
-                  <tr key={entry.id} className={`standings-row ${entry.isHidden ? 'row-hidden' : ''}`}>
-                    <td className="contestant-col">
-                      <div className="contestant-cell">
-                        <img 
-                          src={entry.thumbnailUrl || entry.imageUrl} 
-                          alt={entry.contestantName} 
-                          className="table-avatar"
-                        />
-                        <div>
-                          <div className="table-contestant-name">{entry.contestantName}</div>
-                          <div className="table-id-tag">ID: {entry.id.substring(0, 8)}...</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="cohort-col">{entry.officeLocation || 'DVT'}</td>
-                    <td className="category-col">
-                      <div>"{entry.mustacheTitle}"</div>
-                      <span className="style-tag">{entry.styleCategory}</span>
-                    </td>
-                    <td className="overall-col">
-                      <span className="score-badge score-standard">{entry.overallScore}</span>
-                    </td>
-                    <td className="cohort-col">
-                      {new Date(entry.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="cohort-col">
-                      {entry.isHidden ? (
-                        <span className="status-pill status-hidden">Hidden</span>
-                      ) : (
-                        <span className="status-pill status-visible">Visible</span>
-                      )}
-                    </td>
-                    <td className="action-col">
-                      <div className="admin-actions-cell">
-                        <button
-                          type="button"
-                          className={`admin-btn-action ${entry.isHidden ? 'btn-unhide' : 'btn-hide'}`}
-                          onClick={() => handleToggleHide(entry.id)}
-                          title={entry.isHidden ? 'Restore to leaderboard' : 'Hide from public'}
-                        >
-                          {entry.isHidden ? (
-                            <>
-                              <FaEye className="btn-icon" /> Show
-                            </>
-                          ) : (
-                            <>
-                              <FaEyeSlash className="btn-icon" /> Hide
-                            </>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          className="admin-btn-action btn-delete"
-                          onClick={() => handleDelete(entry.id, entry.contestantName)}
-                          title="Permanently Delete Entry"
-                        >
-                          <FaTrash className="btn-icon" />
-                        </button>
-                      </div>
-                    </td>
+          <>
+            {/* Desktop Moderation Table */}
+            <div className="standings-table-wrapper desktop-only">
+              <table className="standings-table">
+                <thead>
+                  <tr>
+                    <th>Contestant</th>
+                    <th>Office Location</th>
+                    <th>Title & Archetype</th>
+                    <th>Score</th>
+                    <th>Submitted</th>
+                    <th>Visibility</th>
+                    <th>Admin Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredEntries.map(entry => (
+                    <tr key={entry.id} className={`standings-row ${entry.isHidden ? 'row-hidden' : ''}`}>
+                      <td className="contestant-col">
+                        <div className="contestant-cell">
+                          <img 
+                            src={entry.thumbnailUrl || entry.imageUrl} 
+                            alt={entry.contestantName} 
+                            className="table-avatar"
+                          />
+                          <div>
+                            <div className="table-contestant-name">{entry.contestantName}</div>
+                            <div className="table-id-tag">ID: {entry.id.substring(0, 8)}...</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="cohort-col">{entry.officeLocation || 'DVT'}</td>
+                      <td className="category-col">
+                        <div>"{entry.mustacheTitle}"</div>
+                        <span className="style-tag">{entry.styleCategory}</span>
+                      </td>
+                      <td className="overall-col">
+                        <span className="score-badge score-standard">{entry.overallScore}</span>
+                      </td>
+                      <td className="cohort-col">
+                        {new Date(entry.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="cohort-col">
+                        {entry.isHidden ? (
+                          <span className="status-pill status-hidden">Hidden</span>
+                        ) : (
+                          <span className="status-pill status-visible">Visible</span>
+                        )}
+                      </td>
+                      <td className="action-col">
+                        <div className="admin-actions-cell">
+                          <button
+                            type="button"
+                            className={`admin-btn-action ${entry.isHidden ? 'btn-unhide' : 'btn-hide'}`}
+                            onClick={() => handleToggleHide(entry.id)}
+                            title={entry.isHidden ? 'Restore to leaderboard' : 'Hide from public'}
+                          >
+                            {entry.isHidden ? (
+                              <>
+                                <FaEye className="btn-icon" /> Show
+                              </>
+                            ) : (
+                              <>
+                                <FaEyeSlash className="btn-icon" /> Hide
+                              </>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            className="admin-btn-action btn-delete"
+                            onClick={() => handleDelete(entry.id, entry.contestantName)}
+                            title="Permanently Delete Entry"
+                          >
+                            <FaTrash className="btn-icon" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Moderation Cards */}
+            <div className="admin-mobile-cards mobile-only">
+              {filteredEntries.map(entry => (
+                <div key={entry.id} className={`admin-mobile-card ${entry.isHidden ? 'row-hidden' : ''}`}>
+                  <div className="admin-mobile-card-header">
+                    <img 
+                      src={entry.thumbnailUrl || entry.imageUrl} 
+                      alt={entry.contestantName} 
+                      className="admin-mobile-avatar"
+                    />
+                    <div className="admin-mobile-meta">
+                      <div className="admin-mobile-name">{entry.contestantName}</div>
+                      <div className="admin-mobile-loc">{entry.officeLocation || 'REMOTE'}</div>
+                      <div className="admin-mobile-title">"{entry.mustacheTitle}"</div>
+                    </div>
+                    <div className="admin-mobile-score-wrap">
+                      <span className="score-badge score-standard">{entry.overallScore}</span>
+                    </div>
+                  </div>
+
+                  <div className="admin-mobile-card-badges">
+                    <span className="style-tag">{entry.styleCategory}</span>
+                    {entry.isHidden ? (
+                      <span className="status-pill status-hidden">Hidden</span>
+                    ) : (
+                      <span className="status-pill status-visible">Public Visible</span>
+                    )}
+                    <span className="admin-mobile-date">
+                      {new Date(entry.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  <div className="admin-mobile-actions">
+                    <button
+                      type="button"
+                      className={`admin-btn-action mobile-act-btn ${entry.isHidden ? 'btn-unhide' : 'btn-hide'}`}
+                      onClick={() => handleToggleHide(entry.id)}
+                    >
+                      {entry.isHidden ? (
+                        <>
+                          <FaEye className="btn-icon" /> Unhide Entry
+                        </>
+                      ) : (
+                        <>
+                          <FaEyeSlash className="btn-icon" /> Hide from Public
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-btn-action btn-delete mobile-act-delete"
+                      onClick={() => handleDelete(entry.id, entry.contestantName)}
+                    >
+                      <FaTrash className="btn-icon" /> Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

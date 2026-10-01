@@ -4,12 +4,15 @@ import { GiMustache } from 'react-icons/gi';
 import { FaExpand, FaCompress, FaXmark, FaScaleBalanced, FaMobileScreenButton, FaLocationDot } from 'react-icons/fa6';
 import { HiSparkles } from 'react-icons/hi2';
 import { apiUrl } from '../utils/api';
+import { useIsMobile } from '../utils/useIsMobile';
 
 export default function KioskMode({ onExit }) {
+  const isMobile = useIsMobile();
   const [entries, setEntries] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+
 
   // Generate QR code for mobile URL
   useEffect(() => {
@@ -73,6 +76,24 @@ export default function KioskMode({ onExit }) {
   };
 
   const currentEntry = entries[currentIndex] || null;
+
+  // If viewed on mobile, render mobile notice
+  if (isMobile) {
+    return (
+      <div className="kiosk-mobile-disabled-screen">
+        <div className="kiosk-mobile-disabled-card">
+          <GiMustache className="kiosk-mobile-icon" />
+          <h2>TV Kiosk Mode Disabled on Mobile</h2>
+          <p>
+            Kiosk TV Mode is designed specifically for large widescreen displays, office TVs, and projector setups.
+          </p>
+          <button type="button" className="action-btn" onClick={onExit}>
+            Return to Leaderboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="kiosk-container">

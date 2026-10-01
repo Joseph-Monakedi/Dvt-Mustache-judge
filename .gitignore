@@ -46,3 +46,4 @@ DvtMustacheJudge.Api/appsettings.json
 DvtMustacheJudge.Api/appsettings.Development.json
 .env.render
 .env.vercel
+.agents

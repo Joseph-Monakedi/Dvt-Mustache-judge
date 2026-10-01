@@ -9,6 +9,7 @@ import EntryDetailModal from './components/EntryDetailModal';
 import AdminPortal from './components/AdminPortal';
 import { FaTv } from 'react-icons/fa6';
 import { apiUrl } from './utils/api';
+import { useIsMobile } from './utils/useIsMobile';
 import './App.css';
 
 export default function App() {
@@ -85,8 +86,18 @@ export default function App() {
     setActiveTab('booth');
   };
 
-  // If in TV Kiosk Mode, render standalone fullscreen layout
-  if (activeTab === 'kiosk') {
+  const isMobile = useIsMobile();
+
+  // If a mobile user enters kiosk tab, auto-redirect to leaderboard
+  useEffect(() => {
+    if (activeTab === 'kiosk' && isMobile) {
+      setActiveTab('leaderboard');
+      showToast('TV Kiosk mode is disabled on mobile devices (designed for widescreen TV displays).');
+    }
+  }, [activeTab, isMobile]);
+
+  // If in TV Kiosk Mode (desktop/TV only), render standalone fullscreen layout
+  if (activeTab === 'kiosk' && !isMobile) {
     return (
       <KioskMode 
         onExit={() => setActiveTab('leaderboard')} 
@@ -154,9 +165,13 @@ export default function App() {
             <span>DVT Movember 2026</span> • Zero Friction AI Facial Hair Court • Kindness Invariant Verified
           </div>
           <div className="footer-links">
-            <button className="footer-link" onClick={() => setActiveTab('kiosk')}>
-              <FaTv className="btn-icon" /> Launch Kiosk TV Mode
-            </button>
+            {!isMobile ? (
+              <button className="footer-link footer-kiosk-btn" onClick={() => setActiveTab('kiosk')}>
+                <FaTv className="btn-icon" /> Launch Kiosk TV Mode
+              </button>
+            ) : (
+              <span className="footer-mobile-tag">📱 Mobile Court Active</span>
+            )}
           </div>
         </div>
       </footer>

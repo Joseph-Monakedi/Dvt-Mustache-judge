@@ -209,6 +209,7 @@
   letter-spacing: -0.5px;
   background: linear-gradient(135deg, #ffffff 30%, var(--accent-cyan) 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 8px;
 }
@@ -667,6 +668,7 @@
   margin-bottom: 16px;
   background: linear-gradient(135deg, #ffffff, var(--accent-cyan));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -1822,6 +1824,7 @@
   font-weight: 800;
   background: linear-gradient(135deg, #fff, var(--accent-cyan));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -2219,4 +2222,698 @@
 .btn-delete:hover {
   background: rgba(239, 68, 68, 0.4);
 }
+
+/* ========================================================
+   Mobile-First Responsiveness & Viewport Optimization
+   ======================================================== */
+
+.desktop-only {
+  display: block;
+}
+
+.mobile-only {
+  display: none;
+}
+
+/* Kiosk Mode Mobile Guard Screen */
+.kiosk-mobile-disabled-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: var(--bg-dark);
+  text-align: center;
+}
+
+.kiosk-mobile-disabled-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-xl);
+  padding: 36px 24px;
+  max-width: 440px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--shadow-card);
+}
+
+.kiosk-mobile-icon {
+  font-size: 58px;
+  color: var(--accent-cyan);
+}
+
+.kiosk-mobile-disabled-card h2 {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.kiosk-mobile-disabled-card p {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.footer-mobile-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--accent-cyan);
+  background: rgba(0, 180, 216, 0.1);
+  border: 1px solid rgba(0, 180, 216, 0.3);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+/* ---------------- Responsive Rules: Tablet & Mobile (<= 768px) ---------------- */
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: flex !important;
+  }
+
+  .main-content {
+    padding: 14px 12px 48px;
+  }
+
+  .toast-banner {
+    top: 60px;
+    left: 12px;
+    right: 12px;
+    text-align: center;
+    font-size: 13px;
+    padding: 10px 14px;
+  }
+
+  /* Navbar on Mobile */
+  .navbar {
+    padding: 8px 12px;
+  }
+
+  .navbar-container {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .navbar-brand {
+    gap: 8px;
+  }
+
+  .brand-logo-icon-wrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .brand-logo-icon {
+    font-size: 22px;
+  }
+
+  .brand-title {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .brand-tagline {
+    display: none;
+  }
+
+  .navbar-nav {
+    gap: 6px;
+  }
+
+  .nav-btn {
+    padding: 7px 10px;
+    font-size: 12px;
+    min-height: 40px;
+    border-radius: 8px;
+    gap: 5px;
+  }
+
+  .nav-btn .nav-icon {
+    font-size: 14px;
+  }
+
+  .kiosk-nav-btn {
+    display: none !important;
+  }
+
+  /* WebcamBooth on Mobile */
+  .booth-container {
+    gap: 16px;
+  }
+
+  .booth-header {
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  .chamber-title {
+    font-size: clamp(20px, 5.5vw, 26px);
+    letter-spacing: -0.5px;
+  }
+
+  .chamber-subtitle {
+    font-size: 13px;
+  }
+
+  .booth-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .viewport-card, .intake-card {
+    padding: 16px;
+    border-radius: var(--radius-lg);
+  }
+
+  .camera-feed-wrapper {
+    min-height: 280px;
+    max-height: 400px;
+    aspect-ratio: 4/3;
+  }
+
+  .hud-guidance-banner {
+    font-size: 11px;
+    padding: 4px 10px;
+    bottom: 8px;
+  }
+
+  .hud-camera-controls {
+    top: 8px;
+    right: 8px;
+    gap: 6px;
+  }
+
+  .hud-control-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+    min-height: 34px;
+  }
+
+  .capture-btn {
+    min-height: 52px;
+    font-size: 15px;
+  }
+
+  .form-input, .form-select {
+    font-size: 16px !important; /* Prevents auto-zoom in iOS Safari */
+    min-height: 48px;
+    border-radius: var(--radius-md);
+  }
+
+  .judge-submit-btn {
+    min-height: 54px;
+    font-size: 16px;
+  }
+
+  /* VerdictCard on Mobile */
+  .verdict-container {
+    padding: 0;
+  }
+
+  .verdict-card {
+    padding: 18px 14px;
+    border-radius: var(--radius-lg);
+    gap: 16px;
+  }
+
+  .verdict-card-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+  }
+
+  .contestant-display-name {
+    font-size: clamp(22px, 6vw, 28px);
+    text-align: center;
+  }
+
+  .archetype-badge {
+    align-self: center;
+    font-size: 12px;
+    padding: 6px 14px;
+  }
+
+  .verdict-main-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .verdict-photo-frame {
+    max-width: 260px;
+    margin: 0 auto;
+  }
+
+  .score-gauge-wrapper {
+    width: 140px;
+    height: 140px;
+    margin: 0 auto;
+  }
+
+  .gauge-svg {
+    width: 140px;
+    height: 140px;
+  }
+
+  .gauge-num {
+    font-size: 38px;
+  }
+
+  .mustache-title-hero {
+    font-size: clamp(16px, 4.5vw, 20px);
+    text-align: center;
+  }
+
+  .celebrity-twin-box {
+    flex-direction: column;
+    text-align: center;
+    padding: 12px;
+    gap: 6px;
+  }
+
+  .roast-declaration-box {
+    padding: 14px 12px;
+  }
+
+  .roast-quote {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .verdict-actions-bar {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .verdict-actions-bar .action-btn {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  /* Leaderboard on Mobile */
+  .leaderboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .leaderboard-title {
+    font-size: clamp(20px, 5.5vw, 26px);
+  }
+
+  .leaderboard-subtitle {
+    font-size: 13px;
+  }
+
+  .live-status-pill {
+    font-size: 11px;
+    padding: 4px 10px;
+    align-self: stretch;
+    justify-content: center;
+  }
+
+  /* Mobile Podium: Gold is always on top */
+  .podium-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .podium-card {
+    padding: 16px;
+    border-radius: var(--radius-md);
+  }
+
+  .podium-card.gold-card {
+    order: -1;
+    padding: 20px 16px;
+  }
+
+  .podium-avatar-wrapper {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 10px;
+  }
+
+  .gold-card .podium-avatar-wrapper {
+    width: 76px;
+    height: 76px;
+  }
+
+  .podium-score {
+    font-size: 26px;
+  }
+
+  .podium-name {
+    font-size: 16px;
+  }
+
+  .podium-title {
+    font-size: 12px;
+  }
+
+  .podium-pedestal {
+    padding: 4px 10px;
+    font-size: 11px;
+    margin-top: 8px;
+  }
+
+  /* Category chips horizontal swipe */
+  .leaderboard-controls {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .category-chips {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .category-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .chip-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .search-bar {
+    width: 100%;
+  }
+
+  .search-input {
+    font-size: 16px !important;
+    min-height: 46px;
+  }
+
+  /* Standings Mobile Cards */
+  .standings-mobile-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 8px;
+  }
+
+  .mobile-entry-card {
+    background: rgba(13, 21, 34, 0.7);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+
+  .mobile-entry-card:active {
+    transform: scale(0.98);
+    border-color: var(--accent-cyan);
+    background: var(--bg-card-hover);
+  }
+
+  .mobile-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .mobile-card-location {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+    flex: 1;
+    margin-left: 6px;
+  }
+
+  .mobile-card-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .mobile-card-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border-subtle);
+    flex-shrink: 0;
+  }
+
+  .mobile-card-details {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mobile-card-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-card-title {
+    font-size: 12px;
+    color: var(--accent-cyan);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+
+  .mobile-card-tags {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+
+  .mobile-subscores-text {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+
+  .mobile-card-arrow {
+    color: var(--accent-cyan);
+    font-size: 14px;
+    padding-left: 4px;
+    opacity: 0.8;
+  }
+
+  /* Admin Portal on Mobile */
+  .admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .admin-title {
+    font-size: 24px;
+  }
+
+  .admin-header-actions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .admin-header-actions button {
+    flex: 1;
+    min-height: 42px;
+  }
+
+  .admin-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .admin-stat-card {
+    padding: 14px;
+  }
+
+  .stat-val {
+    font-size: 22px;
+  }
+
+  .admin-mobile-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 8px;
+  }
+
+  .admin-mobile-card {
+    background: rgba(13, 21, 34, 0.75);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .admin-mobile-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .admin-mobile-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+  }
+
+  .admin-mobile-meta {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .admin-mobile-name {
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  .admin-mobile-loc {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .admin-mobile-title {
+    font-size: 12px;
+    color: var(--accent-cyan);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .admin-mobile-card-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .admin-mobile-date {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-left: auto;
+  }
+
+  .admin-mobile-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .mobile-act-btn {
+    flex: 1;
+    min-height: 40px;
+    justify-content: center;
+  }
+
+  .mobile-act-delete {
+    min-height: 40px;
+    padding: 0 16px;
+  }
+
+  /* Modals on Mobile */
+  .entry-modal-backdrop, .judging-modal-backdrop, .sharecard-modal-backdrop {
+    padding: 10px;
+  }
+
+  .entry-modal-wrapper, .sharecard-modal {
+    max-width: 100%;
+    max-height: 94vh;
+    border-radius: var(--radius-lg);
+    padding: 16px 12px;
+    overflow-y: auto;
+  }
+
+  .judging-modal-content {
+    padding: 26px 16px;
+    max-width: 92vw;
+  }
+
+  .judging-headline {
+    font-size: 20px;
+  }
+
+  .scanner-container {
+    width: 96px;
+    height: 96px;
+  }
+
+  .scanner-stache-svg {
+    font-size: 38px;
+  }
+
+  /* Footer on Mobile */
+  .app-footer {
+    padding: 20px 14px;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+
+  .footer-text {
+    font-size: 12px;
+  }
+}
+
+/* Extra small devices (<= 480px) */
+@media (max-width: 480px) {
+  .nav-btn {
+    padding: 6px 8px;
+    font-size: 11px;
+    gap: 3px;
+  }
+
+  .nav-btn .nav-label {
+    font-size: 11px;
+  }
+
+  .brand-title {
+    font-size: 13px;
+  }
+
+  .stat-val {
+    font-size: 19px;
+  }
+}
+
 

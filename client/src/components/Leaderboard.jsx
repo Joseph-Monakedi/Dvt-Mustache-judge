@@ -22,7 +22,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [lastUpdated, setLastUpdated] = useState(() => new Date());
 
   const fetchLeaderboard = async () => {
     try {
@@ -91,6 +91,12 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
           </span>
         </div>
       </div>
+
+      {error && (
+        <div className="leaderboard-error-banner">
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Top 3 Podium */}
       {selectedCategory === 'All' && !searchQuery.trim() && topThree.length >= 3 && (
@@ -206,81 +212,128 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
             </button>
           </div>
         ) : (
-          <div className="standings-table-wrapper">
-            <table className="standings-table">
-              <thead>
-                <tr>
-                  <th>Rank</th>
-                  <th>Contestant</th>
-                  <th>Office Location</th>
-                  <th>Style Archetype</th>
-                  <th>Scores (D/S/Sw)</th>
-                  <th>Overall</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredEntries.map(entry => (
-                  <tr 
-                    key={entry.id} 
-                    className="standings-row"
-                    onClick={() => onSelectEntry(entry)}
-                  >
-                    <td className="rank-col">
-                      <span className={`rank-pill rank-${entry.rank <= 3 ? entry.rank : 'other'}`}>
-                        #{entry.rank}
-                      </span>
-                    </td>
-                    <td className="contestant-col">
-                      <div className="contestant-cell">
-                        <img 
-                          src={entry.thumbnailUrl || entry.imageUrl} 
-                          alt={entry.contestantName} 
-                          className="table-avatar"
-                        />
-                        <div>
-                          <div className="table-contestant-name">{entry.contestantName}</div>
-                          <div className="table-stache-title">"{entry.mustacheTitle}"</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="cohort-col">
-                      <span className="cohort-text">{entry.officeLocation || 'DVT'}</span>
-                    </td>
-                    <td className="category-col">
-                      <span className="style-tag">{entry.styleCategory}</span>
-                    </td>
-                    <td className="breakdown-col">
-                      <div className="subscores-compact">
-                        <span title="Density">D: {entry.densityScore}</span>
-                        <span>•</span>
-                        <span title="Symmetry">S: {entry.symmetryScore}</span>
-                        <span>•</span>
-                        <span title="Swagger">Sw: {entry.swaggerScore}</span>
-                      </div>
-                    </td>
-                    <td className="overall-col">
-                      <div className={`score-badge ${entry.overallScore === 0 ? 'score-zero' : entry.overallScore >= 90 ? 'score-gold' : entry.overallScore >= 80 ? 'score-cyan' : 'score-standard'}`}>
-                        {entry.overallScore}
-                      </div>
-                    </td>
-                    <td className="action-col">
-                      <button 
-                        type="button" 
-                        className="table-view-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectEntry(entry);
-                        }}
-                      >
-                        Inspect <FaArrowRight className="btn-icon" />
-                      </button>
-                    </td>
+          <>
+            {/* Desktop Table View */}
+            <div className="standings-table-wrapper desktop-only">
+              <table className="standings-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Contestant</th>
+                    <th>Office Location</th>
+                    <th>Style Archetype</th>
+                    <th>Scores (D/S/Sw)</th>
+                    <th>Overall</th>
+                    <th>Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredEntries.map(entry => (
+                    <tr 
+                      key={entry.id} 
+                      className="standings-row"
+                      onClick={() => onSelectEntry(entry)}
+                    >
+                      <td className="rank-col">
+                        <span className={`rank-pill rank-${entry.rank <= 3 ? entry.rank : 'other'}`}>
+                          #{entry.rank}
+                        </span>
+                      </td>
+                      <td className="contestant-col">
+                        <div className="contestant-cell">
+                          <img 
+                            src={entry.thumbnailUrl || entry.imageUrl} 
+                            alt={entry.contestantName} 
+                            className="table-avatar"
+                          />
+                          <div>
+                            <div className="table-contestant-name">{entry.contestantName}</div>
+                            <div className="table-stache-title">"{entry.mustacheTitle}"</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="cohort-col">
+                        <span className="cohort-text">{entry.officeLocation || 'DVT'}</span>
+                      </td>
+                      <td className="category-col">
+                        <span className="style-tag">{entry.styleCategory}</span>
+                      </td>
+                      <td className="breakdown-col">
+                        <div className="subscores-compact">
+                          <span title="Density">D: {entry.densityScore}</span>
+                          <span>•</span>
+                          <span title="Symmetry">S: {entry.symmetryScore}</span>
+                          <span>•</span>
+                          <span title="Swagger">Sw: {entry.swaggerScore}</span>
+                        </div>
+                      </td>
+                      <td className="overall-col">
+                        <div className={`score-badge ${entry.overallScore === 0 ? 'score-zero' : entry.overallScore >= 90 ? 'score-gold' : entry.overallScore >= 80 ? 'score-cyan' : 'score-standard'}`}>
+                          {entry.overallScore}
+                        </div>
+                      </td>
+                      <td className="action-col">
+                        <button 
+                          type="button" 
+                          className="table-view-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectEntry(entry);
+                          }}
+                        >
+                          Inspect <FaArrowRight className="btn-icon" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card List View */}
+            <div className="standings-mobile-cards mobile-only">
+              {filteredEntries.map(entry => (
+                <div 
+                  key={entry.id} 
+                  className="mobile-entry-card"
+                  onClick={() => onSelectEntry(entry)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="mobile-card-top">
+                    <span className={`rank-pill rank-${entry.rank <= 3 ? entry.rank : 'other'}`}>
+                      #{entry.rank}
+                    </span>
+                    <span className="mobile-card-location">{entry.officeLocation || 'REMOTE'}</span>
+                    <div className={`score-badge ${entry.overallScore === 0 ? 'score-zero' : entry.overallScore >= 90 ? 'score-gold' : entry.overallScore >= 80 ? 'score-cyan' : 'score-standard'}`}>
+                      {entry.overallScore}
+                    </div>
+                  </div>
+
+                  <div className="mobile-card-main">
+                    <img 
+                      src={entry.thumbnailUrl || entry.imageUrl} 
+                      alt={entry.contestantName} 
+                      className="mobile-card-avatar"
+                    />
+                    <div className="mobile-card-details">
+                      <div className="mobile-card-name">{entry.contestantName}</div>
+                      <div className="mobile-card-title">"{entry.mustacheTitle}"</div>
+                      <div className="mobile-card-tags">
+                        <span className="style-tag">{entry.styleCategory}</span>
+                        <span className="mobile-subscores-text">
+                          D:{entry.densityScore} S:{entry.symmetryScore} Sw:{entry.swaggerScore}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mobile-card-arrow">
+                      <FaArrowRight />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
