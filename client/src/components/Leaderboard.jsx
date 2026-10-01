@@ -116,7 +116,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
             setSelectedCategory('All');
           }}
         >
-          <FaTrophy className="tab-icon" /> 🏆 Genuine Humans ({championshipCount})
+          <FaTrophy className="tab-icon" /> Genuine Humans
         </button>
         <button
           type="button"
@@ -126,7 +126,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
             setSelectedCategory('All');
           }}
         >
-          <FaUtensils className="tab-icon" /> 🥄 The Wooden Spoon ({woodenSpoonCount})
+          <FaUtensils className="tab-icon" /> The Wooden Spoon
         </button>
       </div>
 
