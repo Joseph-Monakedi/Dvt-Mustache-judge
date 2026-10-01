@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaTrophy, FaCrown, FaMagnifyingGlass, FaXmark, FaArrowRight } from 'react-icons/fa6';
 import { GiMustache } from 'react-icons/gi';
+import { apiUrl } from '../utils/api';
 
 const CATEGORIES = [
   'All',
@@ -29,7 +30,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
         ? '/api/mustache/leaderboard?limit=100'
         : `/api/mustache/leaderboard?limit=100&category=${encodeURIComponent(selectedCategory)}`;
 
-      const res = await fetch(url);
+      const res = await fetch(apiUrl(url));
       if (!res.ok) {
         throw new Error(`Server returned ${res.status}`);
       }

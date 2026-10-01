@@ -8,6 +8,7 @@ import KioskMode from './components/KioskMode';
 import EntryDetailModal from './components/EntryDetailModal';
 import AdminPortal from './components/AdminPortal';
 import { FaTv } from 'react-icons/fa6';
+import { apiUrl } from './utils/api';
 import './App.css';
 
 export default function App() {
@@ -21,7 +22,7 @@ export default function App() {
 
   // Fetch initial entry count
   useEffect(() => {
-    fetch('/api/mustache/leaderboard?limit=1')
+    fetch(apiUrl('/api/mustache/leaderboard?limit=1'))
       .then(res => res.json())
       .then(data => {
         if (data.totalEntries !== undefined) {
@@ -54,7 +55,7 @@ export default function App() {
     const delayPromise = new Promise(resolve => setTimeout(resolve, 2600));
 
     try {
-      const fetchPromise = fetch('/api/mustache/judge', {
+      const fetchPromise = fetch(apiUrl('/api/mustache/judge'), {
         method: 'POST',
         body: formData
       });

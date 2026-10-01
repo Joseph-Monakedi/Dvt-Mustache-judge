@@ -12,6 +12,7 @@ import {
   FaRotate
 } from 'react-icons/fa6';
 import { MdOutlineWarningAmber } from 'react-icons/md';
+import { apiUrl } from '../utils/api';
 
 export default function AdminPortal({ onBackToApp }) {
   const [adminPassword, setAdminPassword] = useState(() => sessionStorage.getItem('dvt_admin_token') || '');
@@ -31,7 +32,7 @@ export default function AdminPortal({ onBackToApp }) {
     if (!pwd) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/mustache/admin/entries', {
+      const res = await fetch(apiUrl('/api/mustache/admin/entries'), {
         headers: {
           'X-Admin-Password': pwd
         }
@@ -72,7 +73,7 @@ export default function AdminPortal({ onBackToApp }) {
     setLoginError('');
 
     try {
-      const res = await fetch('/api/mustache/admin/login', {
+      const res = await fetch(apiUrl('/api/mustache/admin/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: passwordInput.trim() })
@@ -106,7 +107,7 @@ export default function AdminPortal({ onBackToApp }) {
   // Toggle Hide/Unhide
   const handleToggleHide = async (id) => {
     try {
-      const res = await fetch(`/api/mustache/admin/entry/${id}/toggle-hide`, {
+      const res = await fetch(apiUrl(`/api/mustache/admin/entry/${id}/toggle-hide`), {
         method: 'POST',
         headers: { 'X-Admin-Password': adminPassword }
       });
@@ -143,7 +144,7 @@ export default function AdminPortal({ onBackToApp }) {
     }
 
     try {
-      const res = await fetch(`/api/mustache/admin/entry/${id}`, {
+      const res = await fetch(apiUrl(`/api/mustache/admin/entry/${id}`), {
         method: 'DELETE',
         headers: { 'X-Admin-Password': adminPassword }
       });

@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { GiMustache } from 'react-icons/gi';
 import { FaExpand, FaCompress, FaXmark, FaScaleBalanced, FaMobileScreenButton, FaLocationDot } from 'react-icons/fa6';
 import { HiSparkles } from 'react-icons/hi2';
+import { apiUrl } from '../utils/api';
 
 export default function KioskMode({ onExit }) {
   const [entries, setEntries] = useState([]);
@@ -28,7 +29,7 @@ export default function KioskMode({ onExit }) {
   // Fetch entries
   const fetchEntries = async () => {
     try {
-      const res = await fetch('/api/mustache/leaderboard?limit=30');
+      const res = await fetch(apiUrl('/api/mustache/leaderboard?limit=30'));
       if (res.ok) {
         const data = await res.json();
         if (data.entries && data.entries.length > 0) {
