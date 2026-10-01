@@ -147,10 +147,29 @@ public class AdminOverviewDto
     public int WoodenSpoonCount { get; set; }
     public double AverageScore { get; set; }
     public int TopScore { get; set; }
+    public int RemainingAiQuota { get; set; } = 3;
+    public int MaxAiQuotaPerMinute { get; set; } = 3;
+    public int SecondsUntilQuotaReset { get; set; } = 0;
     public List<AdminEntryDto> Entries { get; set; } = new();
 }
 
 public class BulkDeleteRequestDto
 {
     public List<Guid> Ids { get; set; } = new();
+}
+
+public class ReanalyseRequestDto
+{
+    public List<Guid> Ids { get; set; } = new();
+}
+
+public class ReanalyseResponseDto
+{
+    public bool Success { get; set; }
+    public int ReanalysedCount { get; set; }
+    public int SkippedDueToRateLimit { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public int RemainingRequests { get; set; }
+    public int SecondsUntilReset { get; set; }
+    public List<AdminEntryDto> UpdatedEntries { get; set; } = new();
 }

@@ -263,7 +263,7 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
           await navigator.share({
             files: [file],
             title: `DVT Mustache Verdict: ${verdict.contestantName}`,
-            text: `Check out my official DVT Movember mustache verdict: ${verdict.overallScore}/100! 👨🏻✨`
+            text: `Check out my official DVT Movember mustache verdict: ${verdict.overallScore}/100 ("${verdict.mustacheTitle}")!`
           });
         } else if (navigator.share) {
           await navigator.share({

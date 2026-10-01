@@ -5,6 +5,7 @@ public interface IApiRateLimiter
     bool TryAcquire();
     int GetRemainingRequests();
     TimeSpan GetTimeUntilNextWindow();
+    int MaxRequestsPerMinute { get; }
 }
 
 public class GeminiRateLimiter : IApiRateLimiter
@@ -15,11 +16,28 @@ public class GeminiRateLimiter : IApiRateLimiter
     private readonly object _lock = new();
     private readonly ILogger<GeminiRateLimiter> _logger;
 
+    public int MaxRequestsPerMinute => _maxRequestsPerMinute;
+
     public GeminiRateLimiter(IConfiguration configuration, ILogger<GeminiRateLimiter> logger)
     {
         _logger = logger;
-        // Default: strictly 3 requests per minute for free Gemini tier
-        _maxRequestsPerMinute = configuration.GetValue<int>("Gemini:MaxRequestsPerMinute", 3);
+        
+        // Priority:
+        // 1. Environment variables: GEMINI_MAX_REQUESTS_PER_MINUTE or Gemini__MaxRequestsPerMinute
+        // 2. IConfiguration ["Gemini:MaxRequestsPerMinute"]
+        // 3. Fallback default: 3
+        var envVar = Environment.GetEnvironmentVariable("GEMINI_MAX_REQUESTS_PER_MINUTE") 
+                     ?? Environment.GetEnvironmentVariable("Gemini__MaxRequestsPerMinute");
+
+        if (!string.IsNullOrWhiteSpace(envVar) && int.TryParse(envVar, out var envLimit) && envLimit > 0)
+        {
+            _maxRequestsPerMinute = envLimit;
+        }
+        else
+        {
+            _maxRequestsPerMinute = configuration.GetValue<int>("Gemini:MaxRequestsPerMinute", 3);
+        }
+
         _logger.LogInformation("GeminiRateLimiter initialized with limit of {Limit} requests per minute", _maxRequestsPerMinute);
     }
 

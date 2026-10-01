@@ -12,7 +12,8 @@ import {
   FaCheck,
   FaTriangleExclamation,
   FaUtensils,
-  FaTrophy
+  FaTrophy,
+  FaBolt
 } from 'react-icons/fa6';
 import { MdOutlineWarningAmber } from 'react-icons/md';
 import { apiUrl } from '../utils/api';
@@ -33,6 +34,10 @@ export default function AdminPortal({ onBackToApp }) {
   // Multi-select & Batch Delete state
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+
+  // Re-analyse state
+  const [isReanalysing, setIsReanalysing] = useState(false);
+  const [reanalysingId, setReanalysingId] = useState(null);
 
   // Delete All Modal state
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
@@ -187,6 +192,112 @@ export default function AdminPortal({ onBackToApp }) {
     }
   };
 
+  // Re-analyse Selected Entries (Rate Limiter strictly enforced)
+  const handleReanalyseSelected = async () => {
+    if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
+
+    setIsReanalysing(true);
+    setActionMessage(`Re-analysing ${count} selected contestant submission${count > 1 ? 's' : ''} with AI...`);
+
+    try {
+      const res = await fetch(apiUrl('/api/mustache/admin/entries/reanalyse'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Password': adminPassword
+        },
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok && res.status !== 429) {
+        throw new Error(data.error || data.message || `Re-analysis failed (${res.status})`);
+      }
+
+      if (data.updatedEntries && data.updatedEntries.length > 0) {
+        setOverview(prev => {
+          if (!prev) return prev;
+          const updatedMap = new Map(data.updatedEntries.map(e => [e.id, e]));
+          const nextEntries = prev.entries.map(e => updatedMap.get(e.id) ? { ...e, ...updatedMap.get(e.id) } : e);
+          return {
+            ...prev,
+            remainingAiQuota: data.remainingRequests,
+            secondsUntilQuotaReset: data.secondsUntilReset,
+            championshipCount: nextEntries.filter(e => !e.isWoodenSpoon).length,
+            woodenSpoonCount: nextEntries.filter(e => e.isWoodenSpoon).length,
+            entries: nextEntries
+          };
+        });
+      } else if (data.remainingRequests !== undefined) {
+        setOverview(prev => prev ? { 
+          ...prev, 
+          remainingAiQuota: data.remainingRequests, 
+          secondsUntilQuotaReset: data.secondsUntilReset 
+        } : prev);
+      }
+
+      setActionMessage(data.message || `Re-analysed ${data.reanalysedCount || 0} entries.`);
+      setTimeout(() => setActionMessage(''), 5000);
+    } catch (err) {
+      alert(`Re-analysis error: ${err.message}`);
+    } finally {
+      setIsReanalysing(false);
+    }
+  };
+
+  // Re-analyse Single Entry (Rate Limiter strictly enforced)
+  const handleReanalyseSingle = async (id, contestantName) => {
+    setReanalysingId(id);
+    setActionMessage(`Re-analysing "${contestantName}" with AI...`);
+
+    try {
+      const res = await fetch(apiUrl(`/api/mustache/admin/entry/${id}/reanalyse`), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Password': adminPassword
+        }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok && res.status !== 429) {
+        throw new Error(data.error || data.message || `Re-analysis failed (${res.status})`);
+      }
+
+      if (data.updatedEntries && data.updatedEntries.length > 0) {
+        const updated = data.updatedEntries[0];
+        setOverview(prev => {
+          if (!prev) return prev;
+          const nextEntries = prev.entries.map(e => e.id === id ? { ...e, ...updated } : e);
+          return {
+            ...prev,
+            remainingAiQuota: data.remainingRequests,
+            secondsUntilQuotaReset: data.secondsUntilReset,
+            championshipCount: nextEntries.filter(e => !e.isWoodenSpoon).length,
+            woodenSpoonCount: nextEntries.filter(e => e.isWoodenSpoon).length,
+            entries: nextEntries
+          };
+        });
+      } else if (data.remainingRequests !== undefined) {
+        setOverview(prev => prev ? { 
+          ...prev, 
+          remainingAiQuota: data.remainingRequests, 
+          secondsUntilQuotaReset: data.secondsUntilReset 
+        } : prev);
+      }
+
+      setActionMessage(data.message || `Re-analysis complete for ${contestantName}.`);
+      setTimeout(() => setActionMessage(''), 5000);
+    } catch (err) {
+      alert(`Re-analysis error: ${err.message}`);
+    } finally {
+      setReanalysingId(null);
+    }
+  };
+
   // Delete Single Entry
   const handleDelete = async (id, contestantName) => {
     if (!window.confirm(`Permanently delete submission for "${contestantName}"? This cannot be undone.`)) {
@@ -333,6 +444,9 @@ export default function AdminPortal({ onBackToApp }) {
         woodenSpoonCount: 0,
         averageScore: 0,
         topScore: 0,
+        remainingAiQuota: prev?.maxAiQuotaPerMinute ?? 3,
+        maxAiQuotaPerMinute: prev?.maxAiQuotaPerMinute ?? 3,
+        secondsUntilQuotaReset: 0,
         entries: []
       }));
 
@@ -359,7 +473,8 @@ export default function AdminPortal({ onBackToApp }) {
       return (
         e.contestantName.toLowerCase().includes(q) ||
         (e.officeLocation && e.officeLocation.toLowerCase().includes(q)) ||
-        e.mustacheTitle.toLowerCase().includes(q)
+        e.mustacheTitle.toLowerCase().includes(q) ||
+        (e.woodenSpoonReason && e.woodenSpoonReason.toLowerCase().includes(q))
       );
     }
     return true;
@@ -377,7 +492,7 @@ export default function AdminPortal({ onBackToApp }) {
           </div>
           <h2 className="admin-login-title">DVT Judicial Admin Portal</h2>
           <p className="admin-login-desc">
-            Protected area. Supply the admin password to manage entries, perform batch deletions, and moderate submissions.
+            Protected area. Supply the admin password to manage entries, re-analyse submissions, and moderate entries.
           </p>
 
           <form onSubmit={handleLogin} className="admin-login-form">
@@ -422,7 +537,7 @@ export default function AdminPortal({ onBackToApp }) {
           </div>
           <h1 className="admin-title">DVT Movember Moderation Portal</h1>
           <p className="admin-subtitle">
-            Manage submissions, bulk delete entries, reclassify divisions, or wipe test data.
+            Manage submissions, bulk delete, reclassify divisions, or re-analyse entries with the Gemini AI Judge.
           </p>
         </div>
 
@@ -458,11 +573,11 @@ export default function AdminPortal({ onBackToApp }) {
             <div className="stat-val">{overview.totalSubmissions}</div>
           </div>
           <div className="admin-stat-card">
-            <div className="stat-label"> Genuine Championship</div>
+            <div className="stat-label"><FaTrophy className="inline-icon text-gold" /> Genuine Entries</div>
             <div className="stat-val text-gold">{overview.championshipCount ?? overview.entries.filter(e => !e.isWoodenSpoon).length}</div>
           </div>
           <div className="admin-stat-card">
-            <div className="stat-label"> Wooden Spoon</div>
+            <div className="stat-label"><FaUtensils className="inline-icon text-cyan" /> The Wooden Spoon</div>
             <div className="stat-val text-cyan">{overview.woodenSpoonCount ?? overview.entries.filter(e => e.isWoodenSpoon).length}</div>
           </div>
           <div className="admin-stat-card">
@@ -470,8 +585,17 @@ export default function AdminPortal({ onBackToApp }) {
             <div className="stat-val text-green">{overview.visibleCount}</div>
           </div>
           <div className="admin-stat-card">
-            <div className="stat-label">Hidden / Moderated</div>
-            <div className="stat-val text-orange">{overview.hiddenCount}</div>
+            <div className="stat-label">
+              <FaBolt className="stat-icon-mini" /> AI Rate Limit Quota
+            </div>
+            <div className={`stat-val ${(overview.remainingAiQuota ?? 3) > 0 ? 'text-green' : 'text-orange'}`}>
+              {overview.remainingAiQuota ?? 3} / {overview.maxAiQuotaPerMinute ?? 3}
+            </div>
+            {(overview.remainingAiQuota ?? 3) === 0 && overview.secondsUntilQuotaReset > 0 && (
+              <span className="stat-subtext text-orange">
+                Resets in {overview.secondsUntilQuotaReset}s
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -484,21 +608,21 @@ export default function AdminPortal({ onBackToApp }) {
             className={`chip-btn ${filterMode === 'all' ? 'active' : ''}`}
             onClick={() => setFilterMode('all')}
           >
-            All Submissions ({overview?.totalSubmissions || 0})
+            All ({overview?.totalSubmissions || 0})
           </button>
           <button 
             type="button" 
             className={`chip-btn ${filterMode === 'genuine' ? 'active' : ''}`}
             onClick={() => setFilterMode('genuine')}
           >
-             Genuine ({overview?.championshipCount ?? overview?.entries.filter(e => !e.isWoodenSpoon).length ?? 0})
+            <FaTrophy className="inline-icon" /> Genuine ({overview?.championshipCount ?? overview?.entries.filter(e => !e.isWoodenSpoon).length ?? 0})
           </button>
           <button 
             type="button" 
             className={`chip-btn ${filterMode === 'woodenspoon' ? 'active' : ''}`}
             onClick={() => setFilterMode('woodenspoon')}
           >
-             Wooden Spoon ({overview?.woodenSpoonCount ?? overview?.entries.filter(e => e.isWoodenSpoon).length ?? 0})
+            <FaUtensils className="inline-icon" /> Wooden Spoon ({overview?.woodenSpoonCount ?? overview?.entries.filter(e => e.isWoodenSpoon).length ?? 0})
           </button>
           <button 
             type="button" 
@@ -557,19 +681,33 @@ export default function AdminPortal({ onBackToApp }) {
         <div className="batch-toolbar-right">
           {selectedIds.size > 0 && (
             <>
+              {/* Re-analyse Selected button with Rate Limit protection */}
+              <button
+                type="button"
+                className="batch-btn batch-reanalyse-btn"
+                onClick={handleReanalyseSelected}
+                disabled={isReanalysing || isBatchDeleting}
+                title="Re-analyse selected submissions using Gemini AI (strictly honors rate limits)"
+              >
+                <FaRotate className={`btn-icon ${isReanalysing ? 'spin-icon' : ''}`} />
+                {isReanalysing ? 'Re-analysing...' : `Re-analyse Selected (${selectedIds.size})`}
+              </button>
+
               <button
                 type="button"
                 className="batch-btn batch-delete-btn"
                 onClick={handleDeleteSelected}
-                disabled={isBatchDeleting}
+                disabled={isBatchDeleting || isReanalysing}
               >
                 <FaTrash className="btn-icon" />
                 {isBatchDeleting ? 'Deleting...' : `Delete Selected (${selectedIds.size})`}
               </button>
+
               <button
                 type="button"
                 className="batch-btn batch-clear-btn"
                 onClick={handleClearSelection}
+                disabled={isReanalysing || isBatchDeleting}
               >
                 Clear Selection
               </button>
@@ -580,6 +718,7 @@ export default function AdminPortal({ onBackToApp }) {
             type="button"
             className="batch-btn batch-delete-all-btn"
             onClick={() => setShowDeleteAllModal(true)}
+            disabled={isReanalysing || isBatchDeleting}
             title="Permanently Delete All Entries"
           >
             <FaTrash className="btn-icon" /> Delete All Entries
@@ -627,6 +766,7 @@ export default function AdminPortal({ onBackToApp }) {
                 <tbody>
                   {filteredEntries.map(entry => {
                     const isSelected = selectedIds.has(entry.id);
+                    const isRowReanalysing = reanalysingId === entry.id;
                     return (
                       <tr 
                         key={entry.id} 
@@ -657,11 +797,11 @@ export default function AdminPortal({ onBackToApp }) {
                         <td className="cohort-col">
                           {entry.isWoodenSpoon ? (
                             <span className="division-badge badge-woodenspoon" title={entry.woodenSpoonReason || 'Wooden Spoon entry'}>
-                               Wooden Spoon
+                              <FaUtensils className="inline-icon" /> Wooden Spoon
                             </span>
                           ) : (
                             <span className="division-badge badge-genuine" title="Genuine Human Contestant">
-                               Genuine
+                              <FaTrophy className="inline-icon" /> Genuine
                             </span>
                           )}
                         </td>
@@ -687,6 +827,18 @@ export default function AdminPortal({ onBackToApp }) {
                         </td>
                         <td className="action-col">
                           <div className="admin-actions-cell">
+                            {/* Re-analyse button (Rate Limiter strictly enforced) */}
+                            <button
+                              type="button"
+                              className="admin-btn-action btn-reanalyse"
+                              onClick={() => handleReanalyseSingle(entry.id, entry.contestantName)}
+                              disabled={isRowReanalysing || isReanalysing}
+                              title="Re-analyse this entry with Gemini AI (strictly honors rate limit)"
+                            >
+                              <FaRotate className={`btn-icon ${isRowReanalysing ? 'spin-icon' : ''}`} />
+                              {isRowReanalysing ? 'Re-analysing...' : 'Re-analyse'}
+                            </button>
+
                             <button
                               type="button"
                               className={`admin-btn-action ${entry.isHidden ? 'btn-unhide' : 'btn-hide'}`}
@@ -740,6 +892,7 @@ export default function AdminPortal({ onBackToApp }) {
             <div className="admin-mobile-cards mobile-only">
               {filteredEntries.map(entry => {
                 const isSelected = selectedIds.has(entry.id);
+                const isRowReanalysing = reanalysingId === entry.id;
                 return (
                   <div 
                     key={entry.id} 
@@ -773,9 +926,13 @@ export default function AdminPortal({ onBackToApp }) {
 
                     <div className="admin-mobile-card-badges">
                       {entry.isWoodenSpoon ? (
-                        <span className="division-badge badge-woodenspoon"> Spoon</span>
+                        <span className="division-badge badge-woodenspoon">
+                          <FaUtensils className="inline-icon" /> Spoon
+                        </span>
                       ) : (
-                        <span className="division-badge badge-genuine"> Genuine</span>
+                        <span className="division-badge badge-genuine">
+                          <FaTrophy className="inline-icon" /> Genuine
+                        </span>
                       )}
                       <span className="style-tag">{entry.styleCategory}</span>
                       {entry.isHidden ? (
@@ -789,6 +946,16 @@ export default function AdminPortal({ onBackToApp }) {
                     </div>
 
                     <div className="admin-mobile-actions">
+                      <button
+                        type="button"
+                        className="admin-btn-action mobile-act-btn btn-reanalyse"
+                        onClick={() => handleReanalyseSingle(entry.id, entry.contestantName)}
+                        disabled={isRowReanalysing || isReanalysing}
+                      >
+                        <FaRotate className={`btn-icon ${isRowReanalysing ? 'spin-icon' : ''}`} />
+                        {isRowReanalysing ? 'Re-analysing...' : 'Re-analyse'}
+                      </button>
+
                       <button
                         type="button"
                         className={`admin-btn-action mobile-act-btn ${entry.isHidden ? 'btn-unhide' : 'btn-hide'}`}

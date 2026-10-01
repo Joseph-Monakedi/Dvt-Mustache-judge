@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { GiMustache } from 'react-icons/gi';
-import { FaCamera, FaRotate, FaUpload, FaScaleBalanced, FaArrowRight } from 'react-icons/fa6';
+import { FaCamera, FaRotate, FaUpload, FaScaleBalanced, FaArrowRight, FaArrowDown } from 'react-icons/fa6';
 import { MdOutlineWarningAmber } from 'react-icons/md';
 
 const OFFICE_LOCATIONS = [
@@ -236,7 +236,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                     className="proceed-details-btn mobile-only" 
                     onClick={scrollToDetails}
                   >
-                    Enter Details ↓
+                    Enter Details <FaArrowDown className="btn-icon" />
                   </button>
                 </div>
               </div>

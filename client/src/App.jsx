@@ -7,7 +7,7 @@ import Leaderboard from './components/Leaderboard';
 import KioskMode from './components/KioskMode';
 import EntryDetailModal from './components/EntryDetailModal';
 import AdminPortal from './components/AdminPortal';
-import { FaTv } from 'react-icons/fa6';
+import { FaTv, FaMobileScreen } from 'react-icons/fa6';
 import { apiUrl } from './utils/api';
 import { useIsMobile } from './utils/useIsMobile';
 import './App.css';
@@ -171,7 +171,9 @@ export default function App() {
                 <FaTv className="btn-icon" /> Launch Kiosk TV Mode
               </button>
             ) : (
-              <span className="footer-mobile-tag">📱 Mobile Court Active</span>
+              <span className="footer-mobile-tag">
+                <FaMobileScreen className="btn-icon" /> Mobile Court Active
+              </span>
             )}
           </div>
         </div>

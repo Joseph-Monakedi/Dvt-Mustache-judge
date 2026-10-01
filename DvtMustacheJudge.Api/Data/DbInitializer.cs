@@ -1,4 +1,5 @@
 using DvtMustacheJudge.Api.Models;
+using DvtMustacheJudge.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -38,7 +39,7 @@ public static class DbInitializer
         }
 
         // 3. One-time classification for existing entries:
-        // Identify any existing cartoons, drawings, or pen doodles and move them to the Wooden Spoon division
+        // Identify any prompt/SQL injection attempts, cartoons, drawings, or pen doodles and classify into Wooden Spoon
         try
         {
             var existingEntries = await context.MustacheEntries.ToListAsync();
@@ -49,6 +50,23 @@ public static class DbInitializer
                 var roastLower = (entry.RoastCommentary ?? "").ToLowerInvariant();
                 var titleLower = (entry.MustacheTitle ?? "").ToLowerInvariant();
 
+                // 3a. Check for Prompt or SQL injection attempts
+                bool isInjection = InjectionDetector.IsInjectionAttempt(entry.ContestantName, out _) ||
+                                   InjectionDetector.IsInjectionAttempt(entry.OfficeLocation, out _) ||
+                                   roastLower.Contains("injection") ||
+                                   titleLower.Contains("bobby tables");
+
+                if (isInjection)
+                {
+                    if (!entry.IsWoodenSpoon || entry.WoodenSpoonReason != "Prompt / SQL Injection")
+                    {
+                        InjectionDetector.ApplyWoodenSpoonInjectionVerdict(entry);
+                        modified = true;
+                    }
+                    continue;
+                }
+
+                // 3b. Check for cartoons, drawings, or doodles
                 bool isCartoonOrFake = nameLower.Contains("mickey") || 
                                        nameLower.Contains("cartoon") || 
                                        roastLower.Contains("cartoon") || 
