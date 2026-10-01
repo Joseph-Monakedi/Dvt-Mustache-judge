@@ -458,11 +458,11 @@ export default function AdminPortal({ onBackToApp }) {
             <div className="stat-val">{overview.totalSubmissions}</div>
           </div>
           <div className="admin-stat-card">
-            <div className="stat-label">🏆 Genuine Championship</div>
+            <div className="stat-label"> Genuine Championship</div>
             <div className="stat-val text-gold">{overview.championshipCount ?? overview.entries.filter(e => !e.isWoodenSpoon).length}</div>
           </div>
           <div className="admin-stat-card">
-            <div className="stat-label">🥄 Wooden Spoon</div>
+            <div className="stat-label"> Wooden Spoon</div>
             <div className="stat-val text-cyan">{overview.woodenSpoonCount ?? overview.entries.filter(e => e.isWoodenSpoon).length}</div>
           </div>
           <div className="admin-stat-card">
@@ -491,14 +491,14 @@ export default function AdminPortal({ onBackToApp }) {
             className={`chip-btn ${filterMode === 'genuine' ? 'active' : ''}`}
             onClick={() => setFilterMode('genuine')}
           >
-            🏆 Genuine ({overview?.championshipCount ?? overview?.entries.filter(e => !e.isWoodenSpoon).length ?? 0})
+             Genuine ({overview?.championshipCount ?? overview?.entries.filter(e => !e.isWoodenSpoon).length ?? 0})
           </button>
           <button 
             type="button" 
             className={`chip-btn ${filterMode === 'woodenspoon' ? 'active' : ''}`}
             onClick={() => setFilterMode('woodenspoon')}
           >
-            🥄 Wooden Spoon ({overview?.woodenSpoonCount ?? overview?.entries.filter(e => e.isWoodenSpoon).length ?? 0})
+             Wooden Spoon ({overview?.woodenSpoonCount ?? overview?.entries.filter(e => e.isWoodenSpoon).length ?? 0})
           </button>
           <button 
             type="button" 
@@ -657,11 +657,11 @@ export default function AdminPortal({ onBackToApp }) {
                         <td className="cohort-col">
                           {entry.isWoodenSpoon ? (
                             <span className="division-badge badge-woodenspoon" title={entry.woodenSpoonReason || 'Wooden Spoon entry'}>
-                              🥄 Wooden Spoon
+                               Wooden Spoon
                             </span>
                           ) : (
                             <span className="division-badge badge-genuine" title="Genuine Human Contestant">
-                              🏆 Genuine
+                               Genuine
                             </span>
                           )}
                         </td>
@@ -773,9 +773,9 @@ export default function AdminPortal({ onBackToApp }) {
 
                     <div className="admin-mobile-card-badges">
                       {entry.isWoodenSpoon ? (
-                        <span className="division-badge badge-woodenspoon">🥄 Spoon</span>
+                        <span className="division-badge badge-woodenspoon"> Spoon</span>
                       ) : (
-                        <span className="division-badge badge-genuine">🏆 Genuine</span>
+                        <span className="division-badge badge-genuine"> Genuine</span>
                       )}
                       <span className="style-tag">{entry.styleCategory}</span>
                       {entry.isHidden ? (

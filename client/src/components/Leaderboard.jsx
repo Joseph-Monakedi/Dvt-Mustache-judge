@@ -157,7 +157,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
             <div className="podium-title">"{topThree[1].mustacheTitle}"</div>
             {isSpoonDivision && topThree[1].woodenSpoonReason && (
               <div className="podium-spoon-reason-badge">
-                🥄 {topThree[1].woodenSpoonReason}
+                 {topThree[1].woodenSpoonReason}
               </div>
             )}
             <div className="podium-badge-tag">{topThree[1].verdictBadge}</div>
@@ -191,7 +191,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
             <div className="podium-title">"{topThree[0].mustacheTitle}"</div>
             {isSpoonDivision && topThree[0].woodenSpoonReason && (
               <div className="podium-spoon-reason-badge">
-                🥄 {topThree[0].woodenSpoonReason}
+                 {topThree[0].woodenSpoonReason}
               </div>
             )}
             <div className={`podium-badge-tag ${isSpoonDivision ? 'spoon-tag' : 'gold-tag'}`}>
@@ -220,7 +220,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
             <div className="podium-title">"{topThree[2].mustacheTitle}"</div>
             {isSpoonDivision && topThree[2].woodenSpoonReason && (
               <div className="podium-spoon-reason-badge">
-                🥄 {topThree[2].woodenSpoonReason}
+                 {topThree[2].woodenSpoonReason}
               </div>
             )}
             <div className="podium-badge-tag">{topThree[2].verdictBadge}</div>
@@ -333,7 +333,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                       {isSpoonDivision && (
                         <td className="spoon-reason-col">
                           <span className="division-badge badge-woodenspoon">
-                            🥄 {entry.woodenSpoonReason || 'Creative Submission'}
+                             {entry.woodenSpoonReason || 'Creative Submission'}
                           </span>
                         </td>
                       )}
@@ -412,7 +412,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                         <span className="style-tag">{entry.styleCategory}</span>
                         {isSpoonDivision && entry.woodenSpoonReason && (
                           <span className="division-badge badge-woodenspoon mobile-reason-tag">
-                            🥄 {entry.woodenSpoonReason}
+                             {entry.woodenSpoonReason}
                           </span>
                         )}
                       </div>
