@@ -63,7 +63,31 @@ public class GeminiJudgeService : IGeminiJudgeService
         var systemPrompt = @"You are the Chief Justice of the DVT Movember Mustache Court.
 Your mission is to evaluate contestant facial hair with sharp wit, swagger, and warm humor.
 
-CRITICAL VISUAL GROUNDING & MUSTACHE DETECTION RULE:
+CRITICAL CONTENT SAFETY, NSFW & VULGARITY DETECTION RULE:
+- You MUST evaluate whether the photo or contestant behavior contains ANY vulgar, obscene, sexually explicit, pornographic, lewd, or NSFW content.
+- This includes:
+  * Obscene hand gestures (e.g., middle finger / flipping the bird, vulgar gestures).
+  * Nudity, exposed intimate body parts (breasts, genitals, buttocks), or underwear/lingerie.
+  * Sexually suggestive or lewd poses.
+  * Vulgar, offensive, or hateful graphics, text, or symbols.
+  * Violence, gore, or extreme disrespect.
+- If the image contains ANY vulgar or NSFW behaviour:
+  * isAppropriate: MUST BE false.
+  * inappropriateReason: A concise explanation (e.g., 'Obscene hand gesture detected', 'NSFW or nudity detected', 'Vulgar behavior detected').
+  * overallScore: 0
+  * densityScore: 0
+  * symmetryScore: 0
+  * swaggerScore: 0
+  * mustacheTitle: 'Rejected'
+  * roast: 'Submission rejected due to content policy violation.'
+  * celebrityTwin: 'None'
+  * verdictBadge: 'Policy Violation'
+  * styleCategory: 'Other'
+- If and only if the image is clean, appropriate, and suitable for a workplace competition:
+  * isAppropriate: MUST BE true.
+  * inappropriateReason: null.
+
+CRITICAL VISUAL GROUNDING & MUSTACHE DETECTION RULE (When image is appropriate):
 - You must carefully analyze the EXACT area above the upper lip (the philtrum and upper lip margin) in the submitted photo.
 - If you FAIL TO CLEARLY IDENTIFY A MUSTACHE — including if the contestant is clean-shaven, has bare skin, has only invisible/microscopic hairs, has a completely hairless upper lip, or no mustache can be distinctly recognized:
   * overallScore: MUST BE 0 (strictly ZERO out of 100). DO NOT award any pity points or non-zero score to a bare lip!
@@ -95,7 +119,7 @@ CRITICAL KINDNESS & SAFETY INVARIANT:
 - ABSOLUTELY ZERO remarks, insults, or references regarding skin tone, ethnicity, body weight, age, gender, teeth, or non-mustache facial features.
 - Keep all commentary playful, celebratory, and supportive of the Movember charity spirit.";
 
-        var userPrompt = $"Contestant Name: {contestantName}. Office Location: {officeLocation ?? "REMOTE"}. Inspect the upper lip area of the photo. If you fail to clearly identify a mustache or if the contestant is clean-shaven, you MUST award an overallScore of 0, densityScore of 0, symmetryScore of 0, and swaggerScore of 0. If a mustache is clearly present, score and evaluate it accurately.";
+        var userPrompt = $"Contestant Name: {contestantName}. Office Location: {officeLocation ?? "REMOTE"}. Inspect the photo carefully. Check for any vulgar, obscene, or NSFW content first. If vulgarity, obscene gestures, or NSFW behavior is present, set isAppropriate to false. Otherwise, inspect the upper lip area. If you fail to clearly identify a mustache or if clean-shaven, award an overallScore of 0. If a mustache is clearly present, score and evaluate it accurately.";
 
         var requestBody = new
         {
@@ -148,12 +172,15 @@ CRITICAL KINDNESS & SAFETY INVARIANT:
                         },
                         roast = new { type = "STRING" },
                         celebrityTwin = new { type = "STRING" },
-                        verdictBadge = new { type = "STRING" }
+                        verdictBadge = new { type = "STRING" },
+                        isAppropriate = new { type = "BOOLEAN" },
+                        inappropriateReason = new { type = "STRING" }
                     },
                     required = new[]
                     {
                         "overallScore", "mustacheTitle", "densityScore", "symmetryScore",
-                        "swaggerScore", "styleCategory", "roast", "celebrityTwin", "verdictBadge"
+                        "swaggerScore", "styleCategory", "roast", "celebrityTwin", "verdictBadge",
+                        "isAppropriate"
                     }
                 }
             }
@@ -189,7 +216,7 @@ CRITICAL KINDNESS & SAFETY INVARIANT:
             throw new InvalidOperationException("The AI Judge failed to produce a valid verdict for this photo. Please try uploading a clearer photo.");
         }
 
-        _logger.LogInformation("Successfully received and parsed Gemini verdict for {Name} (Overall Score: {Score})", contestantName, parsedResult.OverallScore);
+        _logger.LogInformation("Successfully received and parsed Gemini verdict for {Name} (Overall Score: {Score}, Appropriate: {Appropriate})", contestantName, parsedResult.OverallScore, parsedResult.IsAppropriate);
         return parsedResult;
     }
 
@@ -200,9 +227,59 @@ CRITICAL KINDNESS & SAFETY INVARIANT:
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
+            // 1. Check prompt feedback block for safety
+            if (root.TryGetProperty("promptFeedback", out var promptFeedback))
+            {
+                if (promptFeedback.TryGetProperty("blockReason", out var blockReason))
+                {
+                    _logger.LogWarning("Gemini prompt blocked due to safety: {BlockReason}", blockReason.GetString());
+                    return new GeminiJudgeResult
+                    {
+                        IsAppropriate = false,
+                        InappropriateReason = $"Image blocked by safety moderation filters ({blockReason.GetString()}).",
+                        OverallScore = 0,
+                        DensityScore = 0,
+                        SymmetryScore = 0,
+                        SwaggerScore = 0,
+                        MustacheTitle = "Rejected",
+                        Roast = "Submission rejected due to safety or content policy violation.",
+                        CelebrityTwin = "None",
+                        VerdictBadge = "Policy Violation",
+                        StyleCategory = "Other"
+                    };
+                }
+            }
+
             if (root.TryGetProperty("candidates", out var candidates) && candidates.GetArrayLength() > 0)
             {
                 var firstCandidate = candidates[0];
+
+                // 2. Check candidate finishReason for SAFETY / BLOCKLIST
+                if (firstCandidate.TryGetProperty("finishReason", out var finishReason))
+                {
+                    var reasonStr = finishReason.GetString();
+                    if (string.Equals(reasonStr, "SAFETY", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(reasonStr, "BLOCKLIST", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(reasonStr, "PROHIBITED_CONTENT", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogWarning("Gemini candidate blocked due to finishReason: {FinishReason}", reasonStr);
+                        return new GeminiJudgeResult
+                        {
+                            IsAppropriate = false,
+                            InappropriateReason = $"Image blocked by safety moderation filters ({reasonStr}).",
+                            OverallScore = 0,
+                            DensityScore = 0,
+                            SymmetryScore = 0,
+                            SwaggerScore = 0,
+                            MustacheTitle = "Rejected",
+                            Roast = "Submission rejected due to safety or content policy violation.",
+                            CelebrityTwin = "None",
+                            VerdictBadge = "Policy Violation",
+                            StyleCategory = "Other"
+                        };
+                    }
+                }
+
                 if (firstCandidate.TryGetProperty("content", out var content) &&
                     content.TryGetProperty("parts", out var parts) &&
                     parts.GetArrayLength() > 0)
@@ -249,4 +326,5 @@ CRITICAL KINDNESS & SAFETY INVARIANT:
             return null;
         }
     }
+
 }

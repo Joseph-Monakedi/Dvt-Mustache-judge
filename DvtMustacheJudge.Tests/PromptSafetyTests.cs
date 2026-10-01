@@ -26,10 +26,10 @@ public class PromptSafetyTests
         {
             var verdict = GeminiJudgeService.GenerateFallbackVerdict("Test Contestant", "Johannesburg");
 
-            Assert.InRange(verdict.OverallScore, 1, 100);
-            Assert.InRange(verdict.DensityScore, 1, 10);
-            Assert.InRange(verdict.SymmetryScore, 1, 10);
-            Assert.InRange(verdict.SwaggerScore, 1, 10);
+            Assert.True(verdict.OverallScore is >= 1 and <= 100);
+            Assert.True(verdict.DensityScore is >= 1 and <= 10);
+            Assert.True(verdict.SymmetryScore is >= 1 and <= 10);
+            Assert.True(verdict.SwaggerScore is >= 1 and <= 10);
 
             var roast = verdict.Roast.ToLowerInvariant();
             var twin = verdict.CelebrityTwin.ToLowerInvariant();

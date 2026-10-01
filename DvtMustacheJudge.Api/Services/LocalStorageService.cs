@@ -65,4 +65,52 @@ public class LocalStorageService : IImageStorageService
 
         return (fullUrl, fullUrl);
     }
+
+    public Task<bool> DeleteImageAsync(string imageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl))
+        {
+            return Task.FromResult(false);
+        }
+
+        try
+        {
+            var webRoot = _environment.WebRootPath;
+            if (string.IsNullOrWhiteSpace(webRoot))
+            {
+                webRoot = Path.Combine(_environment.ContentRootPath, "wwwroot");
+            }
+
+            string fileName;
+            if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri))
+            {
+                fileName = Path.GetFileName(uri.LocalPath);
+            }
+            else
+            {
+                fileName = Path.GetFileName(imageUrl);
+            }
+
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                return Task.FromResult(false);
+            }
+
+            var filePath = Path.Combine(webRoot, "uploads", fileName);
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+                _logger.LogInformation("Deleted local image file at {Path}", filePath);
+                return Task.FromResult(true);
+            }
+
+            _logger.LogWarning("Local image file not found for deletion: {Path}", filePath);
+            return Task.FromResult(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting local image: {ImageUrl}", imageUrl);
+            return Task.FromResult(false);
+        }
+    }
 }

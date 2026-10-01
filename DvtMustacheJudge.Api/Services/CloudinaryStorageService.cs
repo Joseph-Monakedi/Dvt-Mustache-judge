@@ -98,4 +98,59 @@ public class CloudinaryStorageService : IImageStorageService
             return await _fallbackStorage.UploadImageAsync(fallbackMs, fileName, contentType);
         }
     }
+
+    public async Task<bool> DeleteImageAsync(string imageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl))
+        {
+            return false;
+        }
+
+        if (!_isConfigured || _cloudinary == null || !imageUrl.Contains("cloudinary.com"))
+        {
+            return await _fallbackStorage.DeleteImageAsync(imageUrl);
+        }
+
+        try
+        {
+            string publicId = ExtractCloudinaryPublicId(imageUrl);
+            if (!string.IsNullOrWhiteSpace(publicId))
+            {
+                var delParams = new DeletionParams(publicId);
+                var delResult = await _cloudinary.DestroyAsync(delParams);
+                _logger.LogInformation("Deleted Cloudinary image {PublicId}, result: {Result}", publicId, delResult.Result);
+                return delResult.Result == "ok";
+            }
+
+            return await _fallbackStorage.DeleteImageAsync(imageUrl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting Cloudinary image: {ImageUrl}", imageUrl);
+            return await _fallbackStorage.DeleteImageAsync(imageUrl);
+        }
+    }
+
+    private static string ExtractCloudinaryPublicId(string url)
+    {
+        try
+        {
+            var uri = new Uri(url);
+            var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var folderIndex = Array.FindIndex(segments, s => s.Equals("dvt-mustache-judge", StringComparison.OrdinalIgnoreCase));
+            if (folderIndex >= 0 && folderIndex < segments.Length - 1)
+            {
+                var filename = segments[folderIndex + 1];
+                var nameWithoutExt = Path.GetFileNameWithoutExtension(filename);
+                return $"dvt-mustache-judge/{nameWithoutExt}";
+            }
+
+            var lastSegment = segments.LastOrDefault();
+            return !string.IsNullOrEmpty(lastSegment) ? Path.GetFileNameWithoutExtension(lastSegment) : string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
 }

@@ -12,6 +12,25 @@ using Xunit;
 
 namespace DvtMustacheJudge.Tests;
 
+public class TestGeminiJudgeService : DvtMustacheJudge.Api.Services.IGeminiJudgeService
+{
+    public Task<GeminiJudgeResult> JudgeMustacheAsync(Stream imageStream, string mimeType, string contestantName, string? officeLocation)
+    {
+        if (contestantName.Contains("FlaggedVisionTest", StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(new GeminiJudgeResult
+            {
+                IsAppropriate = false,
+                InappropriateReason = "NSFW behaviour detected in image.",
+                OverallScore = 0
+            });
+        }
+
+        var verdict = DvtMustacheJudge.Api.Services.GeminiJudgeService.GenerateFallbackVerdict(contestantName, officeLocation);
+        return Task.FromResult(verdict);
+    }
+}
+
 public class TestWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly string _dbName = "TestMustacheDb_" + Guid.NewGuid();
@@ -35,6 +54,13 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                 options.UseInMemoryDatabase(_dbName)
                        .UseInternalServiceProvider(inMemorySp);
             });
+
+            var geminiDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DvtMustacheJudge.Api.Services.IGeminiJudgeService));
+            if (geminiDescriptor != null)
+            {
+                services.Remove(geminiDescriptor);
+            }
+            services.AddScoped<DvtMustacheJudge.Api.Services.IGeminiJudgeService, TestGeminiJudgeService>();
 
             var sp = services.BuildServiceProvider();
             using var scope = sp.CreateScope();
@@ -165,10 +191,10 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         Assert.NotNull(verdict);
         Assert.Equal("Integration Test Contestant", verdict.ContestantName);
         Assert.Equal("Cape Town", verdict.OfficeLocation);
-        Assert.InRange(verdict.OverallScore, 1, 100);
-        Assert.InRange(verdict.DensityScore, 1, 10);
-        Assert.InRange(verdict.SymmetryScore, 1, 10);
-        Assert.InRange(verdict.SwaggerScore, 1, 10);
+        Assert.True(verdict.OverallScore is >= 1 and <= 100);
+        Assert.True(verdict.DensityScore is >= 1 and <= 10);
+        Assert.True(verdict.SymmetryScore is >= 1 and <= 10);
+        Assert.True(verdict.SwaggerScore is >= 1 and <= 10);
         Assert.False(string.IsNullOrWhiteSpace(verdict.MustacheTitle));
         Assert.False(string.IsNullOrWhiteSpace(verdict.Roast));
         Assert.False(string.IsNullOrWhiteSpace(verdict.CelebrityTwin));
@@ -264,5 +290,80 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         revertReq.Headers.Add("X-Admin-Password", _adminPassword);
         var revertRes = await _client.SendAsync(revertReq);
         Assert.Equal(HttpStatusCode.OK, revertRes.StatusCode);
+    }
+
+    [Fact]
+    public async Task JudgeEndpoint_VulgarName_ReturnsBadRequestAndDoesNotPersist()
+    {
+        // Arrange: Count before submission
+        var initialLb = await _client.GetAsync("/api/mustache/leaderboard?limit=100");
+        var initialJson = await initialLb.Content.ReadAsStringAsync();
+        var initialResult = JsonSerializer.Deserialize<LeaderboardResponseDto>(initialJson, _jsonOptions);
+        var initialCount = initialResult?.TotalEntries ?? 0;
+
+        using var formData = new MultipartFormDataContent();
+        formData.Add(new StringContent("John Motherfucker Doe"), "Name");
+        formData.Add(new StringContent("Johannesburg"), "Location");
+
+        var dummyImageBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
+        var imageContent = new ByteArrayContent(dummyImageBytes);
+        imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        formData.Add(imageContent, "Image", "test_stache.jpg");
+
+        // Act
+        var response = await _client.PostAsync("/api/mustache/judge", formData);
+
+        // Assert: 400 Bad Request
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Submission rejected", json);
+        Assert.Contains("inappropriate or vulgar", json);
+
+        // Verify entry was NOT persisted in leaderboard / database
+        var afterLb = await _client.GetAsync("/api/mustache/leaderboard?limit=100");
+        var afterJson = await afterLb.Content.ReadAsStringAsync();
+        var afterResult = JsonSerializer.Deserialize<LeaderboardResponseDto>(afterJson, _jsonOptions);
+
+        Assert.Equal(initialCount, afterResult?.TotalEntries ?? 0);
+        Assert.DoesNotContain(afterResult?.Entries ?? new List<LeaderboardEntryDto>(), e => e.ContestantName.Contains("Motherfucker"));
+    }
+
+    [Fact]
+    public async Task JudgeEndpoint_NSFWImage_ReturnsBadRequestAndDoesNotPersist()
+    {
+        // Arrange: Count before submission
+        var initialLb = await _client.GetAsync("/api/mustache/leaderboard?limit=100");
+        var initialJson = await initialLb.Content.ReadAsStringAsync();
+        var initialResult = JsonSerializer.Deserialize<LeaderboardResponseDto>(initialJson, _jsonOptions);
+        var initialCount = initialResult?.TotalEntries ?? 0;
+
+        using var formData = new MultipartFormDataContent();
+        // Triggers the TestGeminiJudgeService NSFW simulation
+        formData.Add(new StringContent("Alex Clean Guy FlaggedVisionTest"), "Name");
+        formData.Add(new StringContent("Cape Town"), "Location");
+
+        var dummyImageBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
+        var imageContent = new ByteArrayContent(dummyImageBytes);
+        imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        formData.Add(imageContent, "Image", "test_nsfw.jpg");
+
+        // Act
+        var response = await _client.PostAsync("/api/mustache/judge", formData);
+
+        // Assert: 400 Bad Request
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Submission rejected", json);
+        Assert.Contains("Inappropriate or NSFW", json);
+
+        // Verify entry was NOT persisted in leaderboard / database
+        var afterLb = await _client.GetAsync("/api/mustache/leaderboard?limit=100");
+        var afterJson = await afterLb.Content.ReadAsStringAsync();
+        var afterResult = JsonSerializer.Deserialize<LeaderboardResponseDto>(afterJson, _jsonOptions);
+
+        Assert.Equal(initialCount, afterResult?.TotalEntries ?? 0);
+        Assert.DoesNotContain(afterResult?.Entries ?? new List<LeaderboardEntryDto>(), e => e.ContestantName.Contains("FlaggedVisionTest"));
     }
 }

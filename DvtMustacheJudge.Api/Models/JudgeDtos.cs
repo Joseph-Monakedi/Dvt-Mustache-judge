@@ -30,6 +30,12 @@ public class GeminiJudgeResult
 
     [JsonPropertyName("verdictBadge")]
     public string VerdictBadge { get; set; } = string.Empty;
+
+    [JsonPropertyName("isAppropriate")]
+    public bool IsAppropriate { get; set; } = true;
+
+    [JsonPropertyName("inappropriateReason")]
+    public string? InappropriateReason { get; set; }
 }
 
 public class JudgeRequestDto

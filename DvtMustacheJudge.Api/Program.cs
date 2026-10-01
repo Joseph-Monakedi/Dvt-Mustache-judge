@@ -28,7 +28,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<LocalStorageService>();
 builder.Services.AddScoped<IImageStorageService, CloudinaryStorageService>();
 
-// 4. Rate Limiter (strictly max 3 requests per minute for free Gemini tier)
+// 4. Content Moderation Service for contestant name and text
+builder.Services.AddSingleton<IContentModerationService, ContentModerationService>();
+
+// 5. Rate Limiter (strictly max 3 requests per minute for free Gemini tier)
 builder.Services.AddSingleton<IApiRateLimiter, GeminiRateLimiter>();
 
 // 5. Gemini AI Judge HTTP Client

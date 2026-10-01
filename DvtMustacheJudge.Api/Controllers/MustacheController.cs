@@ -13,6 +13,7 @@ public class MustacheController : ControllerBase
     private readonly AppDbContext _dbContext;
     private readonly IImageStorageService _storageService;
     private readonly IGeminiJudgeService _geminiService;
+    private readonly IContentModerationService _moderationService;
     private readonly IConfiguration _configuration;
     private readonly ILogger<MustacheController> _logger;
 
@@ -20,12 +21,14 @@ public class MustacheController : ControllerBase
         AppDbContext dbContext,
         IImageStorageService storageService,
         IGeminiJudgeService geminiService,
+        IContentModerationService moderationService,
         IConfiguration configuration,
         ILogger<MustacheController> logger)
     {
         _dbContext = dbContext;
         _storageService = storageService;
         _geminiService = geminiService;
+        _moderationService = moderationService;
         _configuration = configuration;
         _logger = logger;
     }
@@ -48,6 +51,14 @@ public class MustacheController : ControllerBase
         if (request.Name.Length > 50)
         {
             return BadRequest(new { error = "Contestant name must not exceed 50 characters." });
+        }
+
+        // 1. Moderate Contestant Name for vulgarity, NSFW, or profanity
+        var nameModeration = _moderationService.CheckName(request.Name);
+        if (!nameModeration.IsAppropriate)
+        {
+            _logger.LogWarning("Submission denied due to inappropriate or vulgar name: '{Name}'", request.Name);
+            return BadRequest(new { error = $"Submission rejected: Contestant name contains inappropriate or vulgar language. ({nameModeration.Reason})" });
         }
 
         if (request.Image == null || request.Image.Length == 0)
@@ -75,7 +86,7 @@ public class MustacheController : ControllerBase
             var contestantName = request.Name.Trim();
             var location = request.GetResolvedLocation();
 
-            // Read image into a reusable byte array to avoid stream disposal conflicts
+            // Read image into a reusable byte array for in-memory moderation and judging
             byte[] imageBytes;
             using (var memoryStream = new MemoryStream())
             {
@@ -83,7 +94,27 @@ public class MustacheController : ControllerBase
                 imageBytes = memoryStream.ToArray();
             }
 
-            // 1. Upload image to storage
+            // 2. Call Gemini AI judge for vision analysis & NSFW/vulgarity detection FIRST
+            GeminiJudgeResult judgeResult;
+            using (var aiStream = new MemoryStream(imageBytes))
+            {
+                judgeResult = await _geminiService.JudgeMustacheAsync(
+                    aiStream,
+                    request.Image.ContentType,
+                    contestantName,
+                    location);
+            }
+
+            // 3. Moderate Image: Deny if NSFW, nudity, vulgar gestures, or inappropriate content detected
+            if (!judgeResult.IsAppropriate)
+            {
+                _logger.LogWarning("Submission denied due to inappropriate/NSFW image content for contestant '{Name}': {Reason}",
+                    contestantName, judgeResult.InappropriateReason);
+                // The image stream was in-memory only and is NEVER uploaded to storage or persisted in the DB.
+                return BadRequest(new { error = $"Submission rejected: Inappropriate or NSFW behaviour detected in image. ({judgeResult.InappropriateReason ?? "Content policy violation"})" });
+            }
+
+            // 4. Upload image to storage ONLY AFTER both name and photo are verified appropriate
             string imageUrl;
             string thumbnailUrl;
             using (var uploadStream = new MemoryStream(imageBytes))
@@ -97,67 +128,65 @@ public class MustacheController : ControllerBase
                 thumbnailUrl = uploadResult.ThumbnailUrl;
             }
 
-            // 2. Call Gemini AI judge
-            GeminiJudgeResult judgeResult;
-            using (var aiStream = new MemoryStream(imageBytes))
+            try
             {
-                judgeResult = await _geminiService.JudgeMustacheAsync(
-                    aiStream,
-                    request.Image.ContentType,
-                    contestantName,
-                    location);
+                // 5. Save entry to database
+                var entry = new MustacheEntry
+                {
+                    Id = Guid.NewGuid(),
+                    ContestantName = contestantName,
+                    OfficeLocation = location,
+                    ImageUrl = imageUrl,
+                    ThumbnailUrl = thumbnailUrl,
+                    OverallScore = Math.Clamp(judgeResult.OverallScore, 0, 100),
+                    DensityScore = Math.Clamp(judgeResult.DensityScore, 0, 10),
+                    SymmetryScore = Math.Clamp(judgeResult.SymmetryScore, 0, 10),
+                    SwaggerScore = Math.Clamp(judgeResult.SwaggerScore, 0, 10),
+                    MustacheTitle = string.IsNullOrWhiteSpace(judgeResult.MustacheTitle)
+                        ? (judgeResult.OverallScore == 0 ? "Follicle 404" : "The Bristle Contender")
+                        : judgeResult.MustacheTitle,
+                    StyleCategory = string.IsNullOrWhiteSpace(judgeResult.StyleCategory)
+                        ? "Other"
+                        : judgeResult.StyleCategory,
+                    RoastCommentary = judgeResult.Roast,
+                    CelebrityTwin = judgeResult.CelebrityTwin,
+                    VerdictBadge = string.IsNullOrWhiteSpace(judgeResult.VerdictBadge)
+                        ? (judgeResult.OverallScore == 0 ? "Zero-Bristle Deficit" : "Certified Movember Hero")
+                        : judgeResult.VerdictBadge,
+                    CreatedAt = DateTime.UtcNow,
+                    IsHidden = false
+                };
+
+                _dbContext.MustacheEntries.Add(entry);
+                await _dbContext.SaveChangesAsync();
+
+                var responseDto = new JudgeResponseDto
+                {
+                    Id = entry.Id,
+                    ContestantName = entry.ContestantName,
+                    OfficeLocation = entry.OfficeLocation,
+                    ImageUrl = entry.ImageUrl,
+                    ThumbnailUrl = entry.ThumbnailUrl,
+                    OverallScore = entry.OverallScore,
+                    DensityScore = entry.DensityScore,
+                    SymmetryScore = entry.SymmetryScore,
+                    SwaggerScore = entry.SwaggerScore,
+                    MustacheTitle = entry.MustacheTitle,
+                    StyleCategory = entry.StyleCategory,
+                    Roast = entry.RoastCommentary,
+                    CelebrityTwin = entry.CelebrityTwin,
+                    VerdictBadge = entry.VerdictBadge,
+                    CreatedAt = entry.CreatedAt
+                };
+
+                return Ok(responseDto);
             }
-
-            // 3. Save entry to database
-            var entry = new MustacheEntry
+            catch (Exception)
             {
-                Id = Guid.NewGuid(),
-                ContestantName = contestantName,
-                OfficeLocation = location,
-                ImageUrl = imageUrl,
-                ThumbnailUrl = thumbnailUrl,
-                OverallScore = Math.Clamp(judgeResult.OverallScore, 0, 100),
-                DensityScore = Math.Clamp(judgeResult.DensityScore, 0, 10),
-                SymmetryScore = Math.Clamp(judgeResult.SymmetryScore, 0, 10),
-                SwaggerScore = Math.Clamp(judgeResult.SwaggerScore, 0, 10),
-                MustacheTitle = string.IsNullOrWhiteSpace(judgeResult.MustacheTitle)
-                    ? (judgeResult.OverallScore == 0 ? "Follicle 404" : "The Bristle Contender")
-                    : judgeResult.MustacheTitle,
-                StyleCategory = string.IsNullOrWhiteSpace(judgeResult.StyleCategory)
-                    ? "Other"
-                    : judgeResult.StyleCategory,
-                RoastCommentary = judgeResult.Roast,
-                CelebrityTwin = judgeResult.CelebrityTwin,
-                VerdictBadge = string.IsNullOrWhiteSpace(judgeResult.VerdictBadge)
-                    ? (judgeResult.OverallScore == 0 ? "Zero-Bristle Deficit" : "Certified Movember Hero")
-                    : judgeResult.VerdictBadge,
-                CreatedAt = DateTime.UtcNow,
-                IsHidden = false
-            };
-
-            _dbContext.MustacheEntries.Add(entry);
-            await _dbContext.SaveChangesAsync();
-
-            var responseDto = new JudgeResponseDto
-            {
-                Id = entry.Id,
-                ContestantName = entry.ContestantName,
-                OfficeLocation = entry.OfficeLocation,
-                ImageUrl = entry.ImageUrl,
-                ThumbnailUrl = entry.ThumbnailUrl,
-                OverallScore = entry.OverallScore,
-                DensityScore = entry.DensityScore,
-                SymmetryScore = entry.SymmetryScore,
-                SwaggerScore = entry.SwaggerScore,
-                MustacheTitle = entry.MustacheTitle,
-                StyleCategory = entry.StyleCategory,
-                Roast = entry.RoastCommentary,
-                CelebrityTwin = entry.CelebrityTwin,
-                VerdictBadge = entry.VerdictBadge,
-                CreatedAt = entry.CreatedAt
-            };
-
-            return Ok(responseDto);
+                // If DB save fails, ensure the uploaded image is cleaned up immediately
+                await _storageService.DeleteImageAsync(imageUrl);
+                throw;
+            }
         }
         catch (Exception ex)
         {
@@ -395,6 +424,11 @@ public class MustacheController : ControllerBase
         if (entry == null)
         {
             return NotFound(new { error = "Entry not found." });
+        }
+
+        if (!string.IsNullOrWhiteSpace(entry.ImageUrl))
+        {
+            await _storageService.DeleteImageAsync(entry.ImageUrl);
         }
 
         _dbContext.MustacheEntries.Remove(entry);

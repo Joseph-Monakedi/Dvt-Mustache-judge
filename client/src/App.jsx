@@ -74,7 +74,8 @@ export default function App() {
       showToast(`Verdict in for ${verdictData.contestantName}!`);
     } catch (err) {
       console.error('Submission failed:', err);
-      showToast(`Judging error: ${err.message}`);
+      const msg = err.message || 'An unexpected error occurred during judging.';
+      showToast(msg.startsWith('Submission rejected') ? msg : `Judging error: ${msg}`);
     } finally {
       setIsSubmitting(false);
       setJudgingModalOpen(false);
