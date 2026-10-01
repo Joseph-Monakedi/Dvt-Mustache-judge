@@ -142,6 +142,11 @@ public class MustacheController : ControllerBase
                     DensityScore = Math.Clamp(judgeResult.DensityScore, 0, 10),
                     SymmetryScore = Math.Clamp(judgeResult.SymmetryScore, 0, 10),
                     SwaggerScore = Math.Clamp(judgeResult.SwaggerScore, 0, 10),
+                    IsWoodenSpoon = judgeResult.IsWoodenSpoon,
+                    WoodenSpoonReason = judgeResult.WoodenSpoonReason,
+                    InnovationScore = Math.Clamp(judgeResult.InnovationScore, 0, 10),
+                    DedicationScore = Math.Clamp(judgeResult.DedicationScore, 0, 10),
+                    FunninessScore = Math.Clamp(judgeResult.FunninessScore, 0, 10),
                     MustacheTitle = string.IsNullOrWhiteSpace(judgeResult.MustacheTitle)
                         ? (judgeResult.OverallScore == 0 ? "Follicle 404" : "The Bristle Contender")
                         : judgeResult.MustacheTitle,
@@ -171,6 +176,11 @@ public class MustacheController : ControllerBase
                     DensityScore = entry.DensityScore,
                     SymmetryScore = entry.SymmetryScore,
                     SwaggerScore = entry.SwaggerScore,
+                    IsWoodenSpoon = entry.IsWoodenSpoon,
+                    WoodenSpoonReason = entry.WoodenSpoonReason,
+                    InnovationScore = entry.InnovationScore,
+                    DedicationScore = entry.DedicationScore,
+                    FunninessScore = entry.FunninessScore,
                     MustacheTitle = entry.MustacheTitle,
                     StyleCategory = entry.StyleCategory,
                     Roast = entry.RoastCommentary,
@@ -200,14 +210,24 @@ public class MustacheController : ControllerBase
     /// </summary>
     [HttpGet("leaderboard")]
     [ProducesResponseType(typeof(LeaderboardResponseDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetLeaderboard([FromQuery] int limit = 50, [FromQuery] string? category = null)
+    public async Task<IActionResult> GetLeaderboard(
+        [FromQuery] int limit = 50,
+        [FromQuery] string? category = null,
+        [FromQuery] string division = "championship")
     {
         if (limit <= 0) limit = 50;
         if (limit > 200) limit = 200;
 
-        var query = _dbContext.MustacheEntries
+        var isWoodenSpoon = string.Equals(division, "woodenspoon", StringComparison.OrdinalIgnoreCase);
+
+        var baseQuery = _dbContext.MustacheEntries
             .AsNoTracking()
             .Where(e => !e.IsHidden);
+
+        var championshipCount = await baseQuery.CountAsync(e => !e.IsWoodenSpoon);
+        var woodenSpoonCount = await baseQuery.CountAsync(e => e.IsWoodenSpoon);
+
+        var query = baseQuery.Where(e => e.IsWoodenSpoon == isWoodenSpoon);
 
         if (!string.IsNullOrWhiteSpace(category) && !category.Equals("All", StringComparison.OrdinalIgnoreCase))
         {
@@ -231,6 +251,11 @@ public class MustacheController : ControllerBase
                 DensityScore = e.DensityScore,
                 SymmetryScore = e.SymmetryScore,
                 SwaggerScore = e.SwaggerScore,
+                IsWoodenSpoon = e.IsWoodenSpoon,
+                WoodenSpoonReason = e.WoodenSpoonReason,
+                InnovationScore = e.InnovationScore,
+                DedicationScore = e.DedicationScore,
+                FunninessScore = e.FunninessScore,
                 MustacheTitle = e.MustacheTitle,
                 StyleCategory = e.StyleCategory,
                 Roast = e.RoastCommentary,
@@ -248,6 +273,9 @@ public class MustacheController : ControllerBase
         return Ok(new LeaderboardResponseDto
         {
             TotalEntries = totalEntries,
+            ChampionshipEntriesCount = championshipCount,
+            WoodenSpoonEntriesCount = woodenSpoonCount,
+            Division = isWoodenSpoon ? "woodenspoon" : "championship",
             Entries = entries
         });
     }
@@ -280,6 +308,11 @@ public class MustacheController : ControllerBase
             DensityScore = entry.DensityScore,
             SymmetryScore = entry.SymmetryScore,
             SwaggerScore = entry.SwaggerScore,
+            IsWoodenSpoon = entry.IsWoodenSpoon,
+            WoodenSpoonReason = entry.WoodenSpoonReason,
+            InnovationScore = entry.InnovationScore,
+            DedicationScore = entry.DedicationScore,
+            FunninessScore = entry.FunninessScore,
             MustacheTitle = entry.MustacheTitle,
             StyleCategory = entry.StyleCategory,
             Roast = entry.RoastCommentary,
@@ -351,6 +384,8 @@ public class MustacheController : ControllerBase
         var total = allEntries.Count;
         var visible = allEntries.Count(e => !e.IsHidden);
         var hidden = allEntries.Count(e => e.IsHidden);
+        var championship = allEntries.Count(e => !e.IsWoodenSpoon);
+        var woodenSpoon = allEntries.Count(e => e.IsWoodenSpoon);
         var avg = total > 0 ? Math.Round(allEntries.Average(e => e.OverallScore), 1) : 0;
         var top = total > 0 ? allEntries.Max(e => e.OverallScore) : 0;
 
@@ -366,6 +401,11 @@ public class MustacheController : ControllerBase
             DensityScore = e.DensityScore,
             SymmetryScore = e.SymmetryScore,
             SwaggerScore = e.SwaggerScore,
+            IsWoodenSpoon = e.IsWoodenSpoon,
+            WoodenSpoonReason = e.WoodenSpoonReason,
+            InnovationScore = e.InnovationScore,
+            DedicationScore = e.DedicationScore,
+            FunninessScore = e.FunninessScore,
             MustacheTitle = e.MustacheTitle,
             StyleCategory = e.StyleCategory,
             Roast = e.RoastCommentary,
@@ -380,6 +420,8 @@ public class MustacheController : ControllerBase
             TotalSubmissions = total,
             VisibleCount = visible,
             HiddenCount = hidden,
+            ChampionshipCount = championship,
+            WoodenSpoonCount = woodenSpoon,
             AverageScore = avg,
             TopScore = top,
             Entries = entryDtos
@@ -410,6 +452,33 @@ public class MustacheController : ControllerBase
     }
 
     /// <summary>
+    /// Toggle whether an entry belongs to the Wooden Spoon division or Championship division.
+    /// </summary>
+    [HttpPost("admin/entry/{id:guid}/toggle-woodenspoon")]
+    public async Task<IActionResult> ToggleWoodenSpoon(Guid id)
+    {
+        if (!IsAdminAuthorized())
+        {
+            return Unauthorized(new { error = "Admin authorization required." });
+        }
+
+        var entry = await _dbContext.MustacheEntries.FindAsync(id);
+        if (entry == null)
+        {
+            return NotFound(new { error = "Entry not found." });
+        }
+
+        entry.IsWoodenSpoon = !entry.IsWoodenSpoon;
+        if (entry.IsWoodenSpoon && string.IsNullOrWhiteSpace(entry.WoodenSpoonReason))
+        {
+            entry.WoodenSpoonReason = "Reclassified by admin";
+        }
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(new { id = entry.Id, isWoodenSpoon = entry.IsWoodenSpoon, woodenSpoonReason = entry.WoodenSpoonReason });
+    }
+
+    /// <summary>
     /// Permanently delete an entry.
     /// </summary>
     [HttpDelete("admin/entry/{id:guid}")]
@@ -428,12 +497,105 @@ public class MustacheController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(entry.ImageUrl))
         {
-            await _storageService.DeleteImageAsync(entry.ImageUrl);
+            try
+            {
+                await _storageService.DeleteImageAsync(entry.ImageUrl);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete storage image for {Id}", entry.Id);
+            }
         }
 
         _dbContext.MustacheEntries.Remove(entry);
         await _dbContext.SaveChangesAsync();
 
         return Ok(new { success = true, message = "Entry deleted permanently." });
+    }
+
+    /// <summary>
+    /// Permanently delete multiple selected entries.
+    /// </summary>
+    [HttpPost("admin/entries/bulk-delete")]
+    public async Task<IActionResult> BulkDeleteEntries([FromBody] BulkDeleteRequestDto request)
+    {
+        if (!IsAdminAuthorized())
+        {
+            return Unauthorized(new { error = "Admin authorization required." });
+        }
+
+        if (request?.Ids == null || request.Ids.Count == 0)
+        {
+            return BadRequest(new { error = "No entry IDs provided for deletion." });
+        }
+
+        var entries = await _dbContext.MustacheEntries
+            .Where(e => request.Ids.Contains(e.Id))
+            .ToListAsync();
+
+        if (entries.Count == 0)
+        {
+            return Ok(new { success = true, deletedCount = 0, message = "No matching entries found." });
+        }
+
+        foreach (var entry in entries)
+        {
+            if (!string.IsNullOrWhiteSpace(entry.ImageUrl))
+            {
+                try
+                {
+                    await _storageService.DeleteImageAsync(entry.ImageUrl);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete storage image {Url} for entry {Id}", entry.ImageUrl, entry.Id);
+                }
+            }
+        }
+
+        _dbContext.MustacheEntries.RemoveRange(entries);
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(new { success = true, deletedCount = entries.Count, message = $"Successfully deleted {entries.Count} selected entries." });
+    }
+
+    /// <summary>
+    /// Permanently delete all entries and clean up storage images.
+    /// </summary>
+    [HttpPost("admin/entries/delete-all")]
+    public async Task<IActionResult> DeleteAllEntries()
+    {
+        if (!IsAdminAuthorized())
+        {
+            return Unauthorized(new { error = "Admin authorization required." });
+        }
+
+        var allEntries = await _dbContext.MustacheEntries.ToListAsync();
+        var count = allEntries.Count;
+
+        if (count == 0)
+        {
+            return Ok(new { success = true, deletedCount = 0, message = "Database is already empty." });
+        }
+
+        foreach (var entry in allEntries)
+        {
+            if (!string.IsNullOrWhiteSpace(entry.ImageUrl))
+            {
+                try
+                {
+                    await _storageService.DeleteImageAsync(entry.ImageUrl);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete storage image {Url} for entry {Id}", entry.ImageUrl, entry.Id);
+                }
+            }
+        }
+
+        _dbContext.MustacheEntries.RemoveRange(allEntries);
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(new { success = true, deletedCount = count, message = $"All {count} entries have been permanently deleted." });
     }
 }

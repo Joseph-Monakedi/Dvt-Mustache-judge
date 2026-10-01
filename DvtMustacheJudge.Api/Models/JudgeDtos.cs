@@ -19,6 +19,21 @@ public class GeminiJudgeResult
     [JsonPropertyName("swaggerScore")]
     public int SwaggerScore { get; set; }
 
+    [JsonPropertyName("isWoodenSpoon")]
+    public bool IsWoodenSpoon { get; set; } = false;
+
+    [JsonPropertyName("woodenSpoonReason")]
+    public string? WoodenSpoonReason { get; set; }
+
+    [JsonPropertyName("innovationScore")]
+    public int InnovationScore { get; set; } = 0;
+
+    [JsonPropertyName("dedicationScore")]
+    public int DedicationScore { get; set; } = 0;
+
+    [JsonPropertyName("funninessScore")]
+    public int FunninessScore { get; set; } = 0;
+
     [JsonPropertyName("styleCategory")]
     public string StyleCategory { get; set; } = "Other";
 
@@ -66,6 +81,11 @@ public class JudgeResponseDto
     public int DensityScore { get; set; }
     public int SymmetryScore { get; set; }
     public int SwaggerScore { get; set; }
+    public bool IsWoodenSpoon { get; set; }
+    public string? WoodenSpoonReason { get; set; }
+    public int InnovationScore { get; set; }
+    public int DedicationScore { get; set; }
+    public int FunninessScore { get; set; }
     public string MustacheTitle { get; set; } = string.Empty;
     public string StyleCategory { get; set; } = string.Empty;
     public string Roast { get; set; } = string.Empty;
@@ -86,6 +106,11 @@ public class LeaderboardEntryDto
     public int DensityScore { get; set; }
     public int SymmetryScore { get; set; }
     public int SwaggerScore { get; set; }
+    public bool IsWoodenSpoon { get; set; }
+    public string? WoodenSpoonReason { get; set; }
+    public int InnovationScore { get; set; }
+    public int DedicationScore { get; set; }
+    public int FunninessScore { get; set; }
     public string MustacheTitle { get; set; } = string.Empty;
     public string StyleCategory { get; set; } = string.Empty;
     public string Roast { get; set; } = string.Empty;
@@ -97,6 +122,9 @@ public class LeaderboardEntryDto
 public class LeaderboardResponseDto
 {
     public int TotalEntries { get; set; }
+    public int ChampionshipEntriesCount { get; set; }
+    public int WoodenSpoonEntriesCount { get; set; }
+    public string Division { get; set; } = "championship";
     public List<LeaderboardEntryDto> Entries { get; set; } = new();
 }
 
@@ -115,7 +143,14 @@ public class AdminOverviewDto
     public int TotalSubmissions { get; set; }
     public int VisibleCount { get; set; }
     public int HiddenCount { get; set; }
+    public int ChampionshipCount { get; set; }
+    public int WoodenSpoonCount { get; set; }
     public double AverageScore { get; set; }
     public int TopScore { get; set; }
     public List<AdminEntryDto> Entries { get; set; } = new();
+}
+
+public class BulkDeleteRequestDto
+{
+    public List<Guid> Ids { get; set; } = new();
 }

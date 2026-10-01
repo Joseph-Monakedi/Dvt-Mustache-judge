@@ -1,9 +1,10 @@
 import React, { useRef, useState } from 'react';
-import { FaCamera, FaXmark, FaDownload, FaCopy, FaCheck } from 'react-icons/fa6';
+import { FaCamera, FaXmark, FaDownload, FaCopy, FaCheck, FaShareNodes } from 'react-icons/fa6';
 
 export default function ShareableCanvasCard({ verdict, onClose }) {
   const canvasRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
   // Generate canvas rendering
@@ -117,7 +118,10 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
         const scoreY = 375;
         ctx.fillStyle = '#94a3b8';
         ctx.font = '500 18px Poppins';
-        ctx.fillText(`Density: ${verdict.densityScore}/10   •   Symmetry: ${verdict.symmetryScore}/10   •   Swagger: ${verdict.swaggerScore}/10`, contentX, scoreY);
+        const subscoresText = verdict.isWoodenSpoon
+          ? `Innovation: ${verdict.innovationScore || 0}/10   •   Dedication: ${verdict.dedicationScore || 0}/10   •   Funniness: ${verdict.funninessScore || 0}/10`
+          : `Density: ${verdict.densityScore}/10   •   Symmetry: ${verdict.symmetryScore}/10   •   Swagger: ${verdict.swaggerScore}/10`;
+        ctx.fillText(subscoresText, contentX, scoreY);
 
         // Official Roast Box
         ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
@@ -236,6 +240,50 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
     }
   };
 
+  const handleNativeShare = async () => {
+    try {
+      setSharing(true);
+      await renderCardToCanvas();
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        setSharing(false);
+        return;
+      }
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          setSharing(false);
+          return;
+        }
+
+        const fileName = `DVT-Mustache-Verdict-${verdict.contestantName.replace(/\s+/g, '_')}.png`;
+        const file = new File([blob], fileName, { type: 'image/png' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: `DVT Mustache Verdict: ${verdict.contestantName}`,
+            text: `Check out my official DVT Movember mustache verdict: ${verdict.overallScore}/100! 👨🏻✨`
+          });
+        } else if (navigator.share) {
+          await navigator.share({
+            title: `DVT Mustache Verdict: ${verdict.contestantName}`,
+            text: `DVT Mustache Verdict: ${verdict.contestantName} scored ${verdict.overallScore}/100 ("${verdict.mustacheTitle}")!`,
+            url: window.location.href
+          });
+        }
+        setSharing(false);
+      });
+    } catch (err) {
+      setSharing(false);
+      if (err.name !== 'AbortError') {
+        console.warn('Native share failed:', err);
+      }
+    }
+  };
+
+  const hasNativeShare = typeof navigator !== 'undefined' && Boolean(navigator.share);
+
   return (
     <div className="sharecard-modal-backdrop">
       <div className="sharecard-modal">
@@ -244,7 +292,7 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
             <FaCamera className="title-icon" />
             <h3>Export Official DVT Verdict Card</h3>
           </div>
-          <button className="close-btn" onClick={onClose}>
+          <button className="close-btn" onClick={onClose} aria-label="Close">
             <FaXmark />
           </button>
         </div>
@@ -254,12 +302,22 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
         </div>
 
         <div className="sharecard-actions">
+          {hasNativeShare && (
+            <button 
+              className="action-btn native-share-btn"
+              onClick={handleNativeShare}
+              disabled={sharing}
+            >
+              <FaShareNodes className="btn-icon" /> {sharing ? 'Opening Share...' : 'Share to WhatsApp / Apps'}
+            </button>
+          )}
+
           <button 
             className="action-btn download-btn" 
             onClick={handleDownload}
             disabled={downloading}
           >
-            <FaDownload className="btn-icon" /> {downloading ? 'Rendering...' : 'Download High-Res PNG'}
+            <FaDownload className="btn-icon" /> {downloading ? 'Rendering...' : 'Download Image'}
           </button>
 
           {navigator.clipboard && window.ClipboardItem && (
@@ -273,14 +331,14 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
                 </>
               ) : (
                 <>
-                  <FaCopy className="btn-icon" /> Copy Image for Slack
+                  <FaCopy className="btn-icon" /> Copy for Slack
                 </>
               )}
             </button>
           )}
 
           <button className="action-btn secondary-btn" onClick={onClose}>
-            Back to Verdict
+            Back
           </button>
         </div>
       </div>

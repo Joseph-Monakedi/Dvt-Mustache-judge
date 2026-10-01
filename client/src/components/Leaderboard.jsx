@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaTrophy, FaCrown, FaMagnifyingGlass, FaXmark, FaArrowRight } from 'react-icons/fa6';
+import { FaTrophy, FaCrown, FaMagnifyingGlass, FaXmark, FaArrowRight, FaUtensils } from 'react-icons/fa6';
 import { GiMustache } from 'react-icons/gi';
 import { apiUrl } from '../utils/api';
 
@@ -18,6 +18,9 @@ const CATEGORIES = [
 export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
   const [entries, setEntries] = useState([]);
   const [totalEntries, setTotalEntries] = useState(0);
+  const [championshipCount, setChampionshipCount] = useState(0);
+  const [woodenSpoonCount, setWoodenSpoonCount] = useState(0);
+  const [division, setDivision] = useState('championship'); // 'championship' | 'woodenspoon'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -27,8 +30,8 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
   const fetchLeaderboard = async () => {
     try {
       const url = selectedCategory === 'All' 
-        ? '/api/mustache/leaderboard?limit=100'
-        : `/api/mustache/leaderboard?limit=100&category=${encodeURIComponent(selectedCategory)}`;
+        ? `/api/mustache/leaderboard?limit=100&division=${division}`
+        : `/api/mustache/leaderboard?limit=100&division=${division}&category=${encodeURIComponent(selectedCategory)}`;
 
       const res = await fetch(apiUrl(url));
       if (!res.ok) {
@@ -37,6 +40,8 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       const data = await res.json();
       setEntries(data.entries || []);
       setTotalEntries(data.totalEntries || 0);
+      setChampionshipCount(data.championshipEntriesCount || 0);
+      setWoodenSpoonCount(data.woodenSpoonEntriesCount || 0);
       setLastUpdated(new Date());
       setError(null);
     } catch (err) {
@@ -48,8 +53,9 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
   };
 
   useEffect(() => {
+    setLoading(true);
     fetchLeaderboard();
-  }, [selectedCategory]);
+  }, [selectedCategory, division]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -57,7 +63,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [selectedCategory]);
+  }, [selectedCategory, division]);
 
   const filteredEntries = entries.filter(e => {
     if (!searchQuery.trim()) return true;
@@ -65,11 +71,13 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
     return (
       e.contestantName.toLowerCase().includes(q) ||
       (e.officeLocation && e.officeLocation.toLowerCase().includes(q)) ||
-      e.mustacheTitle.toLowerCase().includes(q)
+      e.mustacheTitle.toLowerCase().includes(q) ||
+      (e.woodenSpoonReason && e.woodenSpoonReason.toLowerCase().includes(q))
     );
   });
 
   const topThree = entries.slice(0, 3);
+  const isSpoonDivision = division === 'woodenspoon';
 
   return (
     <div className="leaderboard-container fade-in">
@@ -77,19 +85,49 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       <div className="leaderboard-header">
         <div>
           <h1 className="leaderboard-title">
-            DVT Movember Leaderboard <FaTrophy className="title-trophy-icon" />
+            {isSpoonDivision ? (
+              <>The Wooden Spoon Gallery <FaUtensils className="title-trophy-icon text-orange" /></>
+            ) : (
+              <>DVT Movember Championship <FaTrophy className="title-trophy-icon" /></>
+            )}
           </h1>
           <p className="leaderboard-subtitle">
-            Live bristle standings across all DVT squads. Auto-refreshes every 10 seconds.
+            {isSpoonDivision 
+              ? 'Honouring cartoons, doodles, AI marvels, pets, and drawn-on masterpieces.'
+              : 'Live bristle standings for genuine, real-life human mustaches across all DVT squads.'}
           </p>
         </div>
 
         <div className="live-status-pill">
           <span className="live-dot"></span>
           <span className="live-text">
-            LIVE • {totalEntries} Entries • Refreshed {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            LIVE • {totalEntries} in Division • Refreshed {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </span>
         </div>
+      </div>
+
+      {/* Division Switch Tabs */}
+      <div className="division-switch-tabs">
+        <button
+          type="button"
+          className={`division-tab ${!isSpoonDivision ? 'active' : ''}`}
+          onClick={() => {
+            setDivision('championship');
+            setSelectedCategory('All');
+          }}
+        >
+          <FaTrophy className="tab-icon" /> 🏆 Genuine Humans ({championshipCount})
+        </button>
+        <button
+          type="button"
+          className={`division-tab spoon-tab ${isSpoonDivision ? 'active' : ''}`}
+          onClick={() => {
+            setDivision('woodenspoon');
+            setSelectedCategory('All');
+          }}
+        >
+          <FaUtensils className="tab-icon" /> 🥄 The Wooden Spoon ({woodenSpoonCount})
+        </button>
       </div>
 
       {error && (
@@ -103,61 +141,88 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
         <div className="podium-section">
           {/* 2nd Place (Silver) */}
           <div 
-            className="podium-card silver-card"
+            className={`podium-card silver-card ${isSpoonDivision ? 'spoon-podium-card' : ''}`}
             onClick={() => onSelectEntry(topThree[1])}
           >
             <div className="podium-rank-badge silver-badge">2</div>
             <div className="podium-avatar-wrapper">
               <img 
                 src={topThree[1].thumbnailUrl || topThree[1].imageUrl} 
-                alt={topThree[1].contestantName}
+                alt={topThree[1].contestantName} 
                 className="podium-avatar" 
               />
             </div>
             <div className="podium-score silver-score">{topThree[1].overallScore}</div>
             <h3 className="podium-name">{topThree[1].contestantName}</h3>
             <div className="podium-title">"{topThree[1].mustacheTitle}"</div>
+            {isSpoonDivision && topThree[1].woodenSpoonReason && (
+              <div className="podium-spoon-reason-badge">
+                🥄 {topThree[1].woodenSpoonReason}
+              </div>
+            )}
             <div className="podium-badge-tag">{topThree[1].verdictBadge}</div>
-            <div className="podium-pedestal silver-pedestal">2ND PLACE</div>
+            <div className="podium-pedestal silver-pedestal">
+              {isSpoonDivision ? '2ND RUNNER UP' : '2ND PLACE'}
+            </div>
           </div>
 
-          {/* 1st Place (Gold Champion) */}
+          {/* 1st Place (Gold Champion or Spoon Master) */}
           <div 
-            className="podium-card gold-card"
+            className={`podium-card gold-card ${isSpoonDivision ? 'spoon-grand-card' : ''}`}
             onClick={() => onSelectEntry(topThree[0])}
           >
-            <FaCrown className="crown-icon" />
-            <div className="podium-rank-badge gold-badge">1</div>
-            <div className="podium-avatar-wrapper gold-avatar-border">
+            {isSpoonDivision ? (
+              <FaUtensils className="crown-icon text-orange" />
+            ) : (
+              <FaCrown className="crown-icon" />
+            )}
+            <div className={`podium-rank-badge ${isSpoonDivision ? 'spoon-badge' : 'gold-badge'}`}>1</div>
+            <div className={`podium-avatar-wrapper ${isSpoonDivision ? 'spoon-avatar-border' : 'gold-avatar-border'}`}>
               <img 
                 src={topThree[0].thumbnailUrl || topThree[0].imageUrl} 
-                alt={topThree[0].contestantName}
+                alt={topThree[0].contestantName} 
                 className="podium-avatar" 
               />
             </div>
-            <div className="podium-score gold-score">{topThree[0].overallScore}</div>
+            <div className={`podium-score ${isSpoonDivision ? 'spoon-score' : 'gold-score'}`}>
+              {topThree[0].overallScore}
+            </div>
             <h3 className="podium-name gold-text">{topThree[0].contestantName}</h3>
             <div className="podium-title">"{topThree[0].mustacheTitle}"</div>
-            <div className="podium-badge-tag gold-tag">{topThree[0].verdictBadge}</div>
-            <div className="podium-pedestal gold-pedestal">GRAND CHAMPION</div>
+            {isSpoonDivision && topThree[0].woodenSpoonReason && (
+              <div className="podium-spoon-reason-badge">
+                🥄 {topThree[0].woodenSpoonReason}
+              </div>
+            )}
+            <div className={`podium-badge-tag ${isSpoonDivision ? 'spoon-tag' : 'gold-tag'}`}>
+              {topThree[0].verdictBadge}
+            </div>
+            <div className={`podium-pedestal ${isSpoonDivision ? 'spoon-pedestal' : 'gold-pedestal'}`}>
+              {isSpoonDivision ? 'WOODEN SPOON CHAMPION' : 'GRAND CHAMPION'}
+            </div>
           </div>
 
           {/* 3rd Place (Bronze) */}
           <div 
-            className="podium-card bronze-card"
+            className={`podium-card bronze-card ${isSpoonDivision ? 'spoon-podium-card' : ''}`}
             onClick={() => onSelectEntry(topThree[2])}
           >
             <div className="podium-rank-badge bronze-badge">3</div>
             <div className="podium-avatar-wrapper">
               <img 
                 src={topThree[2].thumbnailUrl || topThree[2].imageUrl} 
-                alt={topThree[2].contestantName}
+                alt={topThree[2].contestantName} 
                 className="podium-avatar" 
               />
             </div>
             <div className="podium-score bronze-score">{topThree[2].overallScore}</div>
             <h3 className="podium-name">{topThree[2].contestantName}</h3>
             <div className="podium-title">"{topThree[2].mustacheTitle}"</div>
+            {isSpoonDivision && topThree[2].woodenSpoonReason && (
+              <div className="podium-spoon-reason-badge">
+                🥄 {topThree[2].woodenSpoonReason}
+              </div>
+            )}
             <div className="podium-badge-tag">{topThree[2].verdictBadge}</div>
             <div className="podium-pedestal bronze-pedestal">3RD PLACE</div>
           </div>
@@ -184,7 +249,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
           <input
             type="text"
             className="search-input"
-            placeholder="Search contestant or office location..."
+            placeholder="Search contestant, office, or reason..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
@@ -200,13 +265,17 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       <div className="standings-card">
         {loading && entries.length === 0 ? (
           <div className="loading-state">
-            <span className="spinner"></span> Loading supreme standings...
+            <span className="spinner"></span> Loading standings...
           </div>
         ) : filteredEntries.length === 0 ? (
           <div className="empty-state">
             <GiMustache className="empty-icon" />
-            <h3>No Mustaches Found</h3>
-            <p>No contestants match the current filter. Be the first to enter!</p>
+            <h3>No entries in this division</h3>
+            <p>
+              {isSpoonDivision 
+                ? 'No cartoon, AI or drawn-on submissions yet. Try uploading a doodle in the booth!'
+                : 'No real contestant records match this filter.'}
+            </p>
             <button className="action-btn" onClick={onGoToBooth}>
               Judge Your Mustache Now
             </button>
@@ -222,7 +291,10 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                     <th>Contestant</th>
                     <th>Office Location</th>
                     <th>Style Archetype</th>
-                    <th>Scores (D/S/Sw)</th>
+                    {isSpoonDivision && <th>Wooden Spoon Reason</th>}
+                    <th>
+                      {isSpoonDivision ? 'Scores (Inn / Ded / Fun)' : 'Scores (D / S / Sw)'}
+                    </th>
                     <th>Overall</th>
                     <th>Action</th>
                   </tr>
@@ -235,7 +307,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                       onClick={() => onSelectEntry(entry)}
                     >
                       <td className="rank-col">
-                        <span className={`rank-pill rank-${entry.rank <= 3 ? entry.rank : 'other'}`}>
+                        <span className={`rank-pill ${isSpoonDivision ? 'rank-spoon' : entry.rank <= 3 ? `rank-${entry.rank}` : 'rank-other'}`}>
                           #{entry.rank}
                         </span>
                       </td>
@@ -258,17 +330,34 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                       <td className="category-col">
                         <span className="style-tag">{entry.styleCategory}</span>
                       </td>
+                      {isSpoonDivision && (
+                        <td className="spoon-reason-col">
+                          <span className="division-badge badge-woodenspoon">
+                            🥄 {entry.woodenSpoonReason || 'Creative Submission'}
+                          </span>
+                        </td>
+                      )}
                       <td className="breakdown-col">
-                        <div className="subscores-compact">
-                          <span title="Density">D: {entry.densityScore}</span>
-                          <span>•</span>
-                          <span title="Symmetry">S: {entry.symmetryScore}</span>
-                          <span>•</span>
-                          <span title="Swagger">Sw: {entry.swaggerScore}</span>
-                        </div>
+                        {isSpoonDivision ? (
+                          <div className="subscores-compact spoon-subscores">
+                            <span title="Innovation">Inn: {entry.innovationScore}</span>
+                            <span>•</span>
+                            <span title="Dedication">Ded: {entry.dedicationScore}</span>
+                            <span>•</span>
+                            <span title="Funniness">Fun: {entry.funninessScore}</span>
+                          </div>
+                        ) : (
+                          <div className="subscores-compact">
+                            <span title="Density">D: {entry.densityScore}</span>
+                            <span>•</span>
+                            <span title="Symmetry">S: {entry.symmetryScore}</span>
+                            <span>•</span>
+                            <span title="Swagger">Sw: {entry.swaggerScore}</span>
+                          </div>
+                        )}
                       </td>
                       <td className="overall-col">
-                        <div className={`score-badge ${entry.overallScore === 0 ? 'score-zero' : entry.overallScore >= 90 ? 'score-gold' : entry.overallScore >= 80 ? 'score-cyan' : 'score-standard'}`}>
+                        <div className={`score-badge ${isSpoonDivision ? 'score-woodenspoon' : entry.overallScore === 0 ? 'score-zero' : entry.overallScore >= 90 ? 'score-gold' : entry.overallScore >= 80 ? 'score-cyan' : 'score-standard'}`}>
                           {entry.overallScore}
                         </div>
                       </td>
@@ -301,11 +390,11 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                   tabIndex={0}
                 >
                   <div className="mobile-card-top">
-                    <span className={`rank-pill rank-${entry.rank <= 3 ? entry.rank : 'other'}`}>
+                    <span className={`rank-pill ${isSpoonDivision ? 'rank-spoon' : entry.rank <= 3 ? `rank-${entry.rank}` : 'rank-other'}`}>
                       #{entry.rank}
                     </span>
                     <span className="mobile-card-location">{entry.officeLocation || 'REMOTE'}</span>
-                    <div className={`score-badge ${entry.overallScore === 0 ? 'score-zero' : entry.overallScore >= 90 ? 'score-gold' : entry.overallScore >= 80 ? 'score-cyan' : 'score-standard'}`}>
+                    <div className={`score-badge ${isSpoonDivision ? 'score-woodenspoon' : entry.overallScore === 0 ? 'score-zero' : entry.overallScore >= 90 ? 'score-gold' : entry.overallScore >= 80 ? 'score-cyan' : 'score-standard'}`}>
                       {entry.overallScore}
                     </div>
                   </div>
@@ -321,9 +410,22 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                       <div className="mobile-card-title">"{entry.mustacheTitle}"</div>
                       <div className="mobile-card-tags">
                         <span className="style-tag">{entry.styleCategory}</span>
-                        <span className="mobile-subscores-text">
-                          D:{entry.densityScore} S:{entry.symmetryScore} Sw:{entry.swaggerScore}
-                        </span>
+                        {isSpoonDivision && entry.woodenSpoonReason && (
+                          <span className="division-badge badge-woodenspoon mobile-reason-tag">
+                            🥄 {entry.woodenSpoonReason}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mobile-subscores-wrap">
+                        {isSpoonDivision ? (
+                          <span className="mobile-subscores-text text-orange">
+                            Inn: {entry.innovationScore} • Ded: {entry.dedicationScore} • Fun: {entry.funninessScore}
+                          </span>
+                        ) : (
+                          <span className="mobile-subscores-text">
+                            D: {entry.densityScore} • S: {entry.symmetryScore} • Sw: {entry.swaggerScore}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="mobile-card-arrow">

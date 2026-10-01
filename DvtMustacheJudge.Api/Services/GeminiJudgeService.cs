@@ -74,10 +74,8 @@ CRITICAL CONTENT SAFETY, NSFW & VULGARITY DETECTION RULE:
 - If the image contains ANY vulgar or NSFW behaviour:
   * isAppropriate: MUST BE false.
   * inappropriateReason: A concise explanation (e.g., 'Obscene hand gesture detected', 'NSFW or nudity detected', 'Vulgar behavior detected').
-  * overallScore: 0
-  * densityScore: 0
-  * symmetryScore: 0
-  * swaggerScore: 0
+  * overallScore: 0, densityScore: 0, symmetryScore: 0, swaggerScore: 0
+  * isWoodenSpoon: false, woodenSpoonReason: null, innovationScore: 0, dedicationScore: 0, funninessScore: 0
   * mustacheTitle: 'Rejected'
   * roast: 'Submission rejected due to content policy violation.'
   * celebrityTwin: 'None'
@@ -87,39 +85,64 @@ CRITICAL CONTENT SAFETY, NSFW & VULGARITY DETECTION RULE:
   * isAppropriate: MUST BE true.
   * inappropriateReason: null.
 
-CRITICAL VISUAL GROUNDING & MUSTACHE DETECTION RULE (When image is appropriate):
-- You must carefully analyze the EXACT area above the upper lip (the philtrum and upper lip margin) in the submitted photo.
-- If you FAIL TO CLEARLY IDENTIFY A MUSTACHE — including if the contestant is clean-shaven, has bare skin, has only invisible/microscopic hairs, has a completely hairless upper lip, or no mustache can be distinctly recognized:
-  * overallScore: MUST BE 0 (strictly ZERO out of 100). DO NOT award any pity points or non-zero score to a bare lip!
-  * densityScore: 0 (out of 10).
-  * symmetryScore: 0 (out of 10).
-  * swaggerScore: 0 (out of 10).
-  * styleCategory: MUST be 'Other'.
-  * mustacheTitle: A witty title acknowledging the zero-mustache verdict (e.g., 'Follicle 404: Not Found', 'The Pristine Philtrum', 'The Stealth Whisker', 'The Clean-Shaven Phantom', 'The Razor's Accomplice').
-  * roast: A sharp, hilarious roast highlighting that zero bristles were detected on the upper lip, the optical calipers found only bare skin/air, and awarding an unequivocal score of ZERO points.
-  * celebrityTwin: A humorous clean-shaven or smooth comparison (e.g., '95% Mr. Clean, 5% Fresh Razor Blade', '90% Lex Luthor, 10% Polished Glass').
-  * verdictBadge: examples of verdicts: 'Zero-Bristle Deficit', 'Follicle 404', 'Clean-Shaven Zero', or 'Bare Philtrum'.
+CRITICAL DIVISION RULE: GENUINE LIVE HUMANS VS. THE WOODEN SPOON DIVISION:
+You must strictly determine whether the submission is a GENUINE LIVE HUMAN or a WOODEN SPOON CONTESTANT.
 
-SCORING RULES WHEN A MUSTACHE IS CLEARLY IDENTIFIED:
-- If and only if the contestant HAS a clearly identifiable mustache on the upper lip:
-  * overallScore: 1 to 100 based on grooming, density, symmetry, and style:
-    - Magnificent, dense, well-shaped mustaches (Chevron, Handlebar, Walrus): 80 to 98.
-    - Solid, developing, deliberate mustaches (Painter's Brush, Horseshoe, Stubbled Maverick): 60 to 79.
-    - Thin, faint, patchy, or early-stage growth (Pencil, Peach Fuzz): 20 to 59.
-  * densityScore: 1 to 10 based on hair thickness and coverage.
-  * symmetryScore: 1 to 10 based on left-right balance across the philtrum.
-  * swaggerScore: 1 to 10 based on style panache, flair, and attitude.
-  * styleCategory: examples of mustaches: 'Chevron', 'Handlebar', 'Pencil', 'Horseshoe', 'Walrus', 'Peach Fuzz', 'Stubbled Maverick', 'Painter's Brush', 'Other'.
-  * roast: MUST describe the EXACT visible characteristics observed in this photo (thickness, curvature, trim lines, width, curl tips, color contrast).
-  * celebrityTwin: A creative percentage breakdown (e.g., '78% Tom Selleck, 18% Ron Swanson, 4% Pure Grit').
-  * verdictBadge: A celebratory title (e.g., 'Grand Champion', 'Aerodynamic Vanguard', 'Certified DVT Heavyweight').
+1. WOODEN SPOON DIVISION (isWoodenSpoon = true):
+Classify as Wooden Spoon IF the subject is ANY of the following:
+- CARTOON / DRAWING / ANIME / SKETCH (e.g., Mickey Mouse, animated characters, hand-drawn paper doodle, comic strips).
+- CLEARLY AI GENERATED (synthetic AI art, Midjourney/DALL-E rendered faces, deepfakes, hyper-smoothed digital renders).
+- NON-HUMAN (dogs, cats, pets, animals, action figures, toys, dolls, statues, coffee cups, inanimate objects).
+- FAKE / DRAWN-ON MUSTACHE (mustache drawn with marker pen, ballpoint pen, ink, eyeliner, cardboard cutout taped on, glued-on fake prop mustache, finger mustache tattoo).
+- DIGITAL / AR FILTER (Snapchat, Instagram, TikTok fake augmented mustache filters).
+
+FOR ALL WOODEN SPOON ENTRIES:
+* isWoodenSpoon: true
+* woodenSpoonReason: Choose the exact reason: 'Cartoon / Drawing', 'AI Generated', 'Non-Human / Pet / Object', 'Marker Pen / Drawn-on', 'Costume Prop / Fake', or 'Digital AR Filter'.
+* WOODEN SPOON SCORING (Judged purely on creativity, commitment to the bit, and humor):
+  - innovationScore: 1 to 10 (Ingenuity and creativity of this fake/cartoon/prop mustache).
+  - dedicationScore: 1 to 10 (The sheer commitment and effort to the gag).
+  - funninessScore: 1 to 10 (Comedy value, wit, and laughter quotient).
+  - overallScore: Calculate accurately as (innovationScore * 3) + (dedicationScore * 3) + (funninessScore * 4), scaled 1 to 100.
+  - densityScore, symmetryScore, swaggerScore: 1 to 10 (playful assessment of the faux bristles).
+  - mustacheTitle: A clever comic title (e.g., 'The 2D Marker Masterpiece', 'The Ballpoint Vanguard', 'The Cartoon Sovereign', 'The Pixel Imposter', 'Canine Whisker Baron').
+  - roast: A hilarious, witty roast celebrating their cheeky, unhinged ingenuity, playfully calling out the fake/cartoon/pet nature, and proudly inducting them into the Wooden Spoon Hall of Fame!
+  - verdictBadge: A celebratory Wooden Spoon title (e.g., 'Wooden Spoon Grand Master', 'Marker Pen Virtuoso', 'Cartoon Bristle Legend', 'Rogue Follicle Innovator', 'Pet Whisker Overlord', 'Comic Genius').
+  - styleCategory: 'Other' or the closest archetype.
+
+2. GENUINE LIVE HUMANS (isWoodenSpoon = false):
+If the contestant is a real, living, biological human:
+* isWoodenSpoon: false
+* woodenSpoonReason: null
+* innovationScore: 0, dedicationScore: 0, funninessScore: 0
+* INSPECT UPPER LIP AREA:
+  - If CLEAN-SHAVEN / NO CLEAR MUSTACHE (bare skin, microscopic hair, hairless philtrum):
+    * overallScore: 0 (Strictly ZERO out of 100).
+    * densityScore: 0, symmetryScore: 0, swaggerScore: 0
+    * styleCategory: 'Other'
+    * mustacheTitle: e.g., 'Follicle 404: Not Found', 'The Pristine Philtrum', 'The Clean-Shaven Phantom'.
+    * roast: A sharp roast pointing out that optical calipers found zero bristles on the upper lip, awarding an unequivocal zero.
+    * celebrityTwin: e.g. '95% Mr. Clean, 5% Fresh Razor'.
+    * verdictBadge: 'Zero-Bristle Deficit' or 'Follicle 404'.
+  - If CLEARLY IDENTIFIED REAL MUSTACHE:
+    * overallScore: 1 to 100 based on biological growth, shape, grooming, symmetry, density:
+      - Magnificent, dense, well-shaped mustaches (Chevron, Handlebar, Walrus): 80 to 98.
+      - Solid, developing, deliberate mustaches (Painter's Brush, Horseshoe, Stubbled Maverick): 60 to 79.
+      - Thin, faint, patchy, or early-stage growth (Pencil, Peach Fuzz): 20 to 59.
+    * densityScore: 1 to 10.
+    * symmetryScore: 1 to 10.
+    * swaggerScore: 1 to 10.
+    * styleCategory: 'Chevron', 'Handlebar', 'Pencil', 'Horseshoe', 'Walrus', 'Peach Fuzz', 'Stubbled Maverick', 'Painter's Brush', or 'Other'.
+    * roast: Describe the exact real facial hair characteristics observed.
+    * celebrityTwin: Percentage match breakdown (e.g. '80% Tom Selleck, 20% Ron Swanson').
+    * verdictBadge: e.g. 'Grand Champion', 'Certified DVT Heavyweight'.
 
 CRITICAL KINDNESS & SAFETY INVARIANT:
-- Evaluate and roast ONLY the facial hair (or the total absence thereof on the upper lip).
-- ABSOLUTELY ZERO remarks, insults, or references regarding skin tone, ethnicity, body weight, age, gender, teeth, or non-mustache facial features.
-- Keep all commentary playful, celebratory, and supportive of the Movember charity spirit.";
+- Evaluate facial hair or comedic mustache attempts only.
+- ZERO insults regarding body weight, ethnicity, skin tone, gender, age, teeth, or non-mustache facial features.
+- Keep commentary witty, celebratory, and supportive of the Movember charity spirit.";
 
-        var userPrompt = $"Contestant Name: {contestantName}. Office Location: {officeLocation ?? "REMOTE"}. Inspect the photo carefully. Check for any vulgar, obscene, or NSFW content first. If vulgarity, obscene gestures, or NSFW behavior is present, set isAppropriate to false. Otherwise, inspect the upper lip area. If you fail to clearly identify a mustache or if clean-shaven, award an overallScore of 0. If a mustache is clearly present, score and evaluate it accurately.";
+        var userPrompt = $"Contestant Name: {contestantName}. Office Location: {officeLocation ?? "REMOTE"}. Inspect the photo carefully. Check for any vulgar, obscene, or NSFW content first. Next, check if the subject is a cartoon, drawing, AI-generated, pet/non-human, fake/drawn mustache, or filter (set isWoodenSpoon to true and score innovation, dedication, and funniness). If a genuine live human, set isWoodenSpoon to false; if clean-shaven award 0, otherwise score density, symmetry, and swagger.";
 
         var requestBody = new
         {
@@ -161,6 +184,11 @@ CRITICAL KINDNESS & SAFETY INVARIANT:
                         densityScore = new { type = "INTEGER" },
                         symmetryScore = new { type = "INTEGER" },
                         swaggerScore = new { type = "INTEGER" },
+                        isWoodenSpoon = new { type = "BOOLEAN" },
+                        woodenSpoonReason = new { type = "STRING" },
+                        innovationScore = new { type = "INTEGER" },
+                        dedicationScore = new { type = "INTEGER" },
+                        funninessScore = new { type = "INTEGER" },
                         styleCategory = new
                         {
                             type = "STRING",
@@ -179,8 +207,9 @@ CRITICAL KINDNESS & SAFETY INVARIANT:
                     required = new[]
                     {
                         "overallScore", "mustacheTitle", "densityScore", "symmetryScore",
-                        "swaggerScore", "styleCategory", "roast", "celebrityTwin", "verdictBadge",
-                        "isAppropriate"
+                        "swaggerScore", "isWoodenSpoon", "innovationScore", "dedicationScore",
+                        "funninessScore", "styleCategory", "roast", "celebrityTwin",
+                        "verdictBadge", "isAppropriate"
                     }
                 }
             }

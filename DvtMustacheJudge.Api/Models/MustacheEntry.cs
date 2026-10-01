@@ -25,6 +25,16 @@ public class MustacheEntry
     public int SymmetryScore { get; set; }
     public int SwaggerScore { get; set; }
 
+    // Wooden Spoon Division properties (for cartoons, drawings, AI, non-humans, fake mustaches, filters)
+    public bool IsWoodenSpoon { get; set; } = false;
+
+    [MaxLength(100)]
+    public string? WoodenSpoonReason { get; set; }
+
+    public int InnovationScore { get; set; } = 0;
+    public int DedicationScore { get; set; } = 0;
+    public int FunninessScore { get; set; } = 0;
+
     [MaxLength(150)]
     public string MustacheTitle { get; set; } = string.Empty;
 

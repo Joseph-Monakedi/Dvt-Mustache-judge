@@ -8,7 +8,11 @@ import {
   FaRightFromBracket, 
   FaMagnifyingGlass, 
   FaXmark,
-  FaRotate
+  FaRotate,
+  FaCheck,
+  FaTriangleExclamation,
+  FaUtensils,
+  FaTrophy
 } from 'react-icons/fa6';
 import { MdOutlineWarningAmber } from 'react-icons/md';
 import { apiUrl } from '../utils/api';
@@ -22,9 +26,18 @@ export default function AdminPortal({ onBackToApp }) {
 
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [filterMode, setFilterMode] = useState('all'); // 'all' | 'visible' | 'hidden'
+  const [filterMode, setFilterMode] = useState('all'); // 'all' | 'genuine' | 'woodenspoon' | 'visible' | 'hidden'
   const [searchQuery, setSearchQuery] = useState('');
   const [actionMessage, setActionMessage] = useState('');
+
+  // Multi-select & Batch Delete state
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+
+  // Delete All Modal state
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [deleteAllConfirmText, setDeleteAllConfirmText] = useState('');
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
 
   // Fetch admin entries
   const fetchAdminData = async (pwd = adminPassword) => {
@@ -101,6 +114,7 @@ export default function AdminPortal({ onBackToApp }) {
     setIsAuthenticated(false);
     setAdminPassword('');
     setOverview(null);
+    setSelectedIds(new Set());
   };
 
   // Toggle Hide/Unhide
@@ -136,7 +150,44 @@ export default function AdminPortal({ onBackToApp }) {
     }
   };
 
-  // Delete Entry
+  // Toggle Wooden Spoon classification
+  const handleToggleWoodenSpoon = async (id) => {
+    try {
+      const res = await fetch(apiUrl(`/api/mustache/admin/entry/${id}/toggle-woodenspoon`), {
+        method: 'POST',
+        headers: { 'X-Admin-Password': adminPassword }
+      });
+
+      if (!res.ok) throw new Error('Failed to toggle division');
+      const result = await res.json();
+
+      setOverview(prev => {
+        if (!prev) return prev;
+        const updatedEntries = prev.entries.map(e => 
+          e.id === id ? { 
+            ...e, 
+            isWoodenSpoon: result.isWoodenSpoon, 
+            woodenSpoonReason: result.woodenSpoonReason 
+          } : e
+        );
+        return {
+          ...prev,
+          championshipCount: updatedEntries.filter(e => !e.isWoodenSpoon).length,
+          woodenSpoonCount: updatedEntries.filter(e => e.isWoodenSpoon).length,
+          entries: updatedEntries
+        };
+      });
+
+      setActionMessage(result.isWoodenSpoon 
+        ? 'Moved to Wooden Spoon Gallery.' 
+        : 'Moved to Championship Division.');
+      setTimeout(() => setActionMessage(''), 3000);
+    } catch (err) {
+      alert(`Division toggle error: ${err.message}`);
+    }
+  };
+
+  // Delete Single Entry
   const handleDelete = async (id, contestantName) => {
     if (!window.confirm(`Permanently delete submission for "${contestantName}"? This cannot be undone.`)) {
       return;
@@ -158,8 +209,16 @@ export default function AdminPortal({ onBackToApp }) {
           totalSubmissions: updatedEntries.length,
           visibleCount: updatedEntries.filter(e => !e.isHidden).length,
           hiddenCount: updatedEntries.filter(e => e.isHidden).length,
+          championshipCount: updatedEntries.filter(e => !e.isWoodenSpoon).length,
+          woodenSpoonCount: updatedEntries.filter(e => e.isWoodenSpoon).length,
           entries: updatedEntries
         };
+      });
+
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
       });
 
       setActionMessage(`Entry for ${contestantName} deleted permanently.`);
@@ -169,8 +228,130 @@ export default function AdminPortal({ onBackToApp }) {
     }
   };
 
+  // Multi-Selection Controls
+  const handleToggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = (visibleEntries) => {
+    const visibleIds = visibleEntries.map(e => e.id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
+
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allSelected) {
+        visibleIds.forEach(id => next.delete(id));
+      } else {
+        visibleIds.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  // Delete Selected Entries (Bulk Delete)
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
+
+    if (!window.confirm(`Permanently delete ${count} selected contestant submission${count > 1 ? 's' : ''}? Their images will also be removed from storage. This cannot be undone.`)) {
+      return;
+    }
+
+    setIsBatchDeleting(true);
+    try {
+      const res = await fetch(apiUrl('/api/mustache/admin/entries/bulk-delete'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Password': adminPassword
+        },
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      });
+
+      if (!res.ok) throw new Error(`Batch delete failed (${res.status})`);
+      const data = await res.json();
+
+      setOverview(prev => {
+        if (!prev) return prev;
+        const remaining = prev.entries.filter(e => !selectedIds.has(e.id));
+        return {
+          ...prev,
+          totalSubmissions: remaining.length,
+          visibleCount: remaining.filter(e => !e.isHidden).length,
+          hiddenCount: remaining.filter(e => e.isHidden).length,
+          championshipCount: remaining.filter(e => !e.isWoodenSpoon).length,
+          woodenSpoonCount: remaining.filter(e => e.isWoodenSpoon).length,
+          entries: remaining
+        };
+      });
+
+      setSelectedIds(new Set());
+      setActionMessage(`Successfully deleted ${data.deletedCount || count} entries.`);
+      setTimeout(() => setActionMessage(''), 4000);
+    } catch (err) {
+      alert(`Batch delete error: ${err.message}`);
+    } finally {
+      setIsBatchDeleting(false);
+    }
+  };
+
+  // Delete All Entries
+  const handleDeleteAll = async (e) => {
+    e.preventDefault();
+    const normalizedInput = deleteAllConfirmText.trim().toUpperCase();
+    if (normalizedInput !== 'DELETE ALL' && normalizedInput !== 'DELETE') {
+      return;
+    }
+
+    setIsDeletingAll(true);
+    try {
+      const res = await fetch(apiUrl('/api/mustache/admin/entries/delete-all'), {
+        method: 'POST',
+        headers: { 'X-Admin-Password': adminPassword }
+      });
+
+      if (!res.ok) throw new Error(`Delete all failed (${res.status})`);
+      const data = await res.json();
+
+      setOverview(prev => ({
+        totalSubmissions: 0,
+        visibleCount: 0,
+        hiddenCount: 0,
+        championshipCount: 0,
+        woodenSpoonCount: 0,
+        averageScore: 0,
+        topScore: 0,
+        entries: []
+      }));
+
+      setSelectedIds(new Set());
+      setShowDeleteAllModal(false);
+      setDeleteAllConfirmText('');
+      setActionMessage(`All tournament entries (${data.deletedCount || 0}) have been permanently deleted.`);
+      setTimeout(() => setActionMessage(''), 4000);
+    } catch (err) {
+      alert(`Delete all error: ${err.message}`);
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
   // Filter entries
   const filteredEntries = (overview?.entries || []).filter(e => {
+    if (filterMode === 'genuine' && e.isWoodenSpoon) return false;
+    if (filterMode === 'woodenspoon' && !e.isWoodenSpoon) return false;
     if (filterMode === 'visible' && e.isHidden) return false;
     if (filterMode === 'hidden' && !e.isHidden) return false;
     if (searchQuery.trim()) {
@@ -184,6 +365,8 @@ export default function AdminPortal({ onBackToApp }) {
     return true;
   });
 
+  const isAllFilteredSelected = filteredEntries.length > 0 && filteredEntries.every(e => selectedIds.has(e.id));
+
   // Password Prompt screen if unauthenticated
   if (!isAuthenticated) {
     return (
@@ -194,7 +377,7 @@ export default function AdminPortal({ onBackToApp }) {
           </div>
           <h2 className="admin-login-title">DVT Judicial Admin Portal</h2>
           <p className="admin-login-desc">
-            Protected area. Supply the admin password (configured in environment or app settings) to manage entries and moderate submissions.
+            Protected area. Supply the admin password to manage entries, perform batch deletions, and moderate submissions.
           </p>
 
           <form onSubmit={handleLogin} className="admin-login-form">
@@ -239,13 +422,21 @@ export default function AdminPortal({ onBackToApp }) {
           </div>
           <h1 className="admin-title">DVT Movember Moderation Portal</h1>
           <p className="admin-subtitle">
-            Hide offensive entries, delete rogue submissions, or monitor tournament statistics.
+            Manage submissions, bulk delete entries, reclassify divisions, or wipe test data.
           </p>
         </div>
 
         <div className="admin-header-actions">
           <button className="kiosk-btn" onClick={() => fetchAdminData()}>
             <FaRotate className="btn-icon" /> Refresh
+          </button>
+          <button 
+            type="button" 
+            className="kiosk-btn btn-danger-header" 
+            onClick={() => setShowDeleteAllModal(true)}
+            title="Permanently Delete All Entries"
+          >
+            <FaTrash className="btn-icon" /> Delete All Entries
           </button>
           <button className="kiosk-btn exit-btn" onClick={handleLogout}>
             <FaRightFromBracket className="btn-icon" /> Logout
@@ -267,20 +458,20 @@ export default function AdminPortal({ onBackToApp }) {
             <div className="stat-val">{overview.totalSubmissions}</div>
           </div>
           <div className="admin-stat-card">
+            <div className="stat-label">🏆 Genuine Championship</div>
+            <div className="stat-val text-gold">{overview.championshipCount ?? overview.entries.filter(e => !e.isWoodenSpoon).length}</div>
+          </div>
+          <div className="admin-stat-card">
+            <div className="stat-label">🥄 Wooden Spoon</div>
+            <div className="stat-val text-cyan">{overview.woodenSpoonCount ?? overview.entries.filter(e => e.isWoodenSpoon).length}</div>
+          </div>
+          <div className="admin-stat-card">
             <div className="stat-label">Public / Visible</div>
             <div className="stat-val text-green">{overview.visibleCount}</div>
           </div>
           <div className="admin-stat-card">
             <div className="stat-label">Hidden / Moderated</div>
             <div className="stat-val text-orange">{overview.hiddenCount}</div>
-          </div>
-          <div className="admin-stat-card">
-            <div className="stat-label">Average Score</div>
-            <div className="stat-val text-cyan">{overview.averageScore} / 100</div>
-          </div>
-          <div className="admin-stat-card">
-            <div className="stat-label">Top Score</div>
-            <div className="stat-val text-gold">{overview.topScore} pts</div>
           </div>
         </div>
       )}
@@ -297,17 +488,31 @@ export default function AdminPortal({ onBackToApp }) {
           </button>
           <button 
             type="button" 
+            className={`chip-btn ${filterMode === 'genuine' ? 'active' : ''}`}
+            onClick={() => setFilterMode('genuine')}
+          >
+            🏆 Genuine ({overview?.championshipCount ?? overview?.entries.filter(e => !e.isWoodenSpoon).length ?? 0})
+          </button>
+          <button 
+            type="button" 
+            className={`chip-btn ${filterMode === 'woodenspoon' ? 'active' : ''}`}
+            onClick={() => setFilterMode('woodenspoon')}
+          >
+            🥄 Wooden Spoon ({overview?.woodenSpoonCount ?? overview?.entries.filter(e => e.isWoodenSpoon).length ?? 0})
+          </button>
+          <button 
+            type="button" 
             className={`chip-btn ${filterMode === 'visible' ? 'active' : ''}`}
             onClick={() => setFilterMode('visible')}
           >
-            Visible Only ({overview?.visibleCount || 0})
+            Visible ({overview?.visibleCount || 0})
           </button>
           <button 
             type="button" 
             className={`chip-btn ${filterMode === 'hidden' ? 'active' : ''}`}
             onClick={() => setFilterMode('hidden')}
           >
-            Hidden Only ({overview?.hiddenCount || 0})
+            Hidden ({overview?.hiddenCount || 0})
           </button>
         </div>
 
@@ -325,6 +530,60 @@ export default function AdminPortal({ onBackToApp }) {
               <FaXmark />
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Batch Action Bar (Triggered when entries are selected or visible) */}
+      <div className={`admin-batch-toolbar ${selectedIds.size > 0 ? 'active' : ''}`}>
+        <div className="batch-toolbar-left">
+          <label className="batch-select-all-label">
+            <input
+              type="checkbox"
+              className="admin-checkbox"
+              checked={isAllFilteredSelected}
+              onChange={() => handleToggleSelectAll(filteredEntries)}
+            />
+            <span className="batch-select-text">
+              {isAllFilteredSelected ? 'Deselect Filtered' : 'Select All Filtered'}
+            </span>
+          </label>
+          {selectedIds.size > 0 && (
+            <span className="batch-count-pill">
+              <FaCheck className="pill-check-icon" /> {selectedIds.size} Selected
+            </span>
+          )}
+        </div>
+
+        <div className="batch-toolbar-right">
+          {selectedIds.size > 0 && (
+            <>
+              <button
+                type="button"
+                className="batch-btn batch-delete-btn"
+                onClick={handleDeleteSelected}
+                disabled={isBatchDeleting}
+              >
+                <FaTrash className="btn-icon" />
+                {isBatchDeleting ? 'Deleting...' : `Delete Selected (${selectedIds.size})`}
+              </button>
+              <button
+                type="button"
+                className="batch-btn batch-clear-btn"
+                onClick={handleClearSelection}
+              >
+                Clear Selection
+              </button>
+            </>
+          )}
+
+          <button
+            type="button"
+            className="batch-btn batch-delete-all-btn"
+            onClick={() => setShowDeleteAllModal(true)}
+            title="Permanently Delete All Entries"
+          >
+            <FaTrash className="btn-icon" /> Delete All Entries
+          </button>
         </div>
       </div>
 
@@ -346,7 +605,17 @@ export default function AdminPortal({ onBackToApp }) {
               <table className="standings-table">
                 <thead>
                   <tr>
+                    <th style={{ width: '40px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        className="admin-checkbox"
+                        checked={isAllFilteredSelected}
+                        onChange={() => handleToggleSelectAll(filteredEntries)}
+                        aria-label="Select all entries"
+                      />
+                    </th>
                     <th>Contestant</th>
+                    <th>Division</th>
                     <th>Office Location</th>
                     <th>Title & Archetype</th>
                     <th>Score</th>
@@ -356,135 +625,280 @@ export default function AdminPortal({ onBackToApp }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredEntries.map(entry => (
-                    <tr key={entry.id} className={`standings-row ${entry.isHidden ? 'row-hidden' : ''}`}>
-                      <td className="contestant-col">
-                        <div className="contestant-cell">
-                          <img 
-                            src={entry.thumbnailUrl || entry.imageUrl} 
-                            alt={entry.contestantName} 
-                            className="table-avatar"
+                  {filteredEntries.map(entry => {
+                    const isSelected = selectedIds.has(entry.id);
+                    return (
+                      <tr 
+                        key={entry.id} 
+                        className={`standings-row ${entry.isHidden ? 'row-hidden' : ''} ${isSelected ? 'row-selected' : ''}`}
+                      >
+                        <td style={{ textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            className="admin-checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleSelect(entry.id)}
+                            aria-label={`Select ${entry.contestantName}`}
                           />
-                          <div>
-                            <div className="table-contestant-name">{entry.contestantName}</div>
-                            <div className="table-id-tag">ID: {entry.id.substring(0, 8)}...</div>
+                        </td>
+                        <td className="contestant-col">
+                          <div className="contestant-cell">
+                            <img 
+                              src={entry.thumbnailUrl || entry.imageUrl} 
+                              alt={entry.contestantName} 
+                              className="table-avatar"
+                            />
+                            <div>
+                              <div className="table-contestant-name">{entry.contestantName}</div>
+                              <div className="table-id-tag">ID: {entry.id.substring(0, 8)}...</div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="cohort-col">{entry.officeLocation || 'DVT'}</td>
-                      <td className="category-col">
-                        <div>"{entry.mustacheTitle}"</div>
-                        <span className="style-tag">{entry.styleCategory}</span>
-                      </td>
-                      <td className="overall-col">
-                        <span className="score-badge score-standard">{entry.overallScore}</span>
-                      </td>
-                      <td className="cohort-col">
-                        {new Date(entry.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="cohort-col">
-                        {entry.isHidden ? (
-                          <span className="status-pill status-hidden">Hidden</span>
-                        ) : (
-                          <span className="status-pill status-visible">Visible</span>
-                        )}
-                      </td>
-                      <td className="action-col">
-                        <div className="admin-actions-cell">
-                          <button
-                            type="button"
-                            className={`admin-btn-action ${entry.isHidden ? 'btn-unhide' : 'btn-hide'}`}
-                            onClick={() => handleToggleHide(entry.id)}
-                            title={entry.isHidden ? 'Restore to leaderboard' : 'Hide from public'}
-                          >
-                            {entry.isHidden ? (
-                              <>
-                                <FaEye className="btn-icon" /> Show
-                              </>
-                            ) : (
-                              <>
-                                <FaEyeSlash className="btn-icon" /> Hide
-                              </>
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            className="admin-btn-action btn-delete"
-                            onClick={() => handleDelete(entry.id, entry.contestantName)}
-                            title="Permanently Delete Entry"
-                          >
-                            <FaTrash className="btn-icon" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="cohort-col">
+                          {entry.isWoodenSpoon ? (
+                            <span className="division-badge badge-woodenspoon" title={entry.woodenSpoonReason || 'Wooden Spoon entry'}>
+                              🥄 Wooden Spoon
+                            </span>
+                          ) : (
+                            <span className="division-badge badge-genuine" title="Genuine Human Contestant">
+                              🏆 Genuine
+                            </span>
+                          )}
+                        </td>
+                        <td className="cohort-col">{entry.officeLocation || 'DVT'}</td>
+                        <td className="category-col">
+                          <div>"{entry.mustacheTitle}"</div>
+                          <span className="style-tag">{entry.styleCategory}</span>
+                        </td>
+                        <td className="overall-col">
+                          <span className={`score-badge ${entry.isWoodenSpoon ? 'score-woodenspoon' : 'score-standard'}`}>
+                            {entry.overallScore}
+                          </span>
+                        </td>
+                        <td className="cohort-col">
+                          {new Date(entry.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="cohort-col">
+                          {entry.isHidden ? (
+                            <span className="status-pill status-hidden">Hidden</span>
+                          ) : (
+                            <span className="status-pill status-visible">Visible</span>
+                          )}
+                        </td>
+                        <td className="action-col">
+                          <div className="admin-actions-cell">
+                            <button
+                              type="button"
+                              className={`admin-btn-action ${entry.isHidden ? 'btn-unhide' : 'btn-hide'}`}
+                              onClick={() => handleToggleHide(entry.id)}
+                              title={entry.isHidden ? 'Restore to leaderboard' : 'Hide from public'}
+                            >
+                              {entry.isHidden ? (
+                                <>
+                                  <FaEye className="btn-icon" /> Show
+                                </>
+                              ) : (
+                                <>
+                                  <FaEyeSlash className="btn-icon" /> Hide
+                                </>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              className={`admin-btn-action ${entry.isWoodenSpoon ? 'btn-make-genuine' : 'btn-make-spoon'}`}
+                              onClick={() => handleToggleWoodenSpoon(entry.id)}
+                              title={entry.isWoodenSpoon ? 'Move to Genuine Championship' : 'Move to Wooden Spoon Gallery'}
+                            >
+                              {entry.isWoodenSpoon ? (
+                                <>
+                                  <FaTrophy className="btn-icon" /> Genuine
+                                </>
+                              ) : (
+                                <>
+                                  <FaUtensils className="btn-icon" /> Spoon
+                                </>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              className="admin-btn-action btn-delete"
+                              onClick={() => handleDelete(entry.id, entry.contestantName)}
+                              title="Permanently Delete Entry"
+                            >
+                              <FaTrash className="btn-icon" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* Mobile Moderation Cards */}
             <div className="admin-mobile-cards mobile-only">
-              {filteredEntries.map(entry => (
-                <div key={entry.id} className={`admin-mobile-card ${entry.isHidden ? 'row-hidden' : ''}`}>
-                  <div className="admin-mobile-card-header">
-                    <img 
-                      src={entry.thumbnailUrl || entry.imageUrl} 
-                      alt={entry.contestantName} 
-                      className="admin-mobile-avatar"
-                    />
-                    <div className="admin-mobile-meta">
-                      <div className="admin-mobile-name">{entry.contestantName}</div>
-                      <div className="admin-mobile-loc">{entry.officeLocation || 'REMOTE'}</div>
-                      <div className="admin-mobile-title">"{entry.mustacheTitle}"</div>
+              {filteredEntries.map(entry => {
+                const isSelected = selectedIds.has(entry.id);
+                return (
+                  <div 
+                    key={entry.id} 
+                    className={`admin-mobile-card ${entry.isHidden ? 'row-hidden' : ''} ${isSelected ? 'row-selected' : ''}`}
+                  >
+                    <div className="admin-mobile-card-header">
+                      <div className="admin-mobile-checkbox-wrap">
+                        <input
+                          type="checkbox"
+                          className="admin-checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(entry.id)}
+                        />
+                      </div>
+                      <img 
+                        src={entry.thumbnailUrl || entry.imageUrl} 
+                        alt={entry.contestantName} 
+                        className="admin-mobile-avatar"
+                      />
+                      <div className="admin-mobile-meta">
+                        <div className="admin-mobile-name">{entry.contestantName}</div>
+                        <div className="admin-mobile-loc">{entry.officeLocation || 'REMOTE'}</div>
+                        <div className="admin-mobile-title">"{entry.mustacheTitle}"</div>
+                      </div>
+                      <div className="admin-mobile-score-wrap">
+                        <span className={`score-badge ${entry.isWoodenSpoon ? 'score-woodenspoon' : 'score-standard'}`}>
+                          {entry.overallScore}
+                        </span>
+                      </div>
                     </div>
-                    <div className="admin-mobile-score-wrap">
-                      <span className="score-badge score-standard">{entry.overallScore}</span>
-                    </div>
-                  </div>
 
-                  <div className="admin-mobile-card-badges">
-                    <span className="style-tag">{entry.styleCategory}</span>
-                    {entry.isHidden ? (
-                      <span className="status-pill status-hidden">Hidden</span>
-                    ) : (
-                      <span className="status-pill status-visible">Public Visible</span>
-                    )}
-                    <span className="admin-mobile-date">
-                      {new Date(entry.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  <div className="admin-mobile-actions">
-                    <button
-                      type="button"
-                      className={`admin-btn-action mobile-act-btn ${entry.isHidden ? 'btn-unhide' : 'btn-hide'}`}
-                      onClick={() => handleToggleHide(entry.id)}
-                    >
-                      {entry.isHidden ? (
-                        <>
-                          <FaEye className="btn-icon" /> Unhide Entry
-                        </>
+                    <div className="admin-mobile-card-badges">
+                      {entry.isWoodenSpoon ? (
+                        <span className="division-badge badge-woodenspoon">🥄 Spoon</span>
                       ) : (
-                        <>
-                          <FaEyeSlash className="btn-icon" /> Hide from Public
-                        </>
+                        <span className="division-badge badge-genuine">🏆 Genuine</span>
                       )}
-                    </button>
-                    <button
-                      type="button"
-                      className="admin-btn-action btn-delete mobile-act-delete"
-                      onClick={() => handleDelete(entry.id, entry.contestantName)}
-                    >
-                      <FaTrash className="btn-icon" /> Delete
-                    </button>
+                      <span className="style-tag">{entry.styleCategory}</span>
+                      {entry.isHidden ? (
+                        <span className="status-pill status-hidden">Hidden</span>
+                      ) : (
+                        <span className="status-pill status-visible">Visible</span>
+                      )}
+                      <span className="admin-mobile-date">
+                        {new Date(entry.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <div className="admin-mobile-actions">
+                      <button
+                        type="button"
+                        className={`admin-btn-action mobile-act-btn ${entry.isHidden ? 'btn-unhide' : 'btn-hide'}`}
+                        onClick={() => handleToggleHide(entry.id)}
+                      >
+                        {entry.isHidden ? (
+                          <>
+                            <FaEye className="btn-icon" /> Unhide
+                          </>
+                        ) : (
+                          <>
+                            <FaEyeSlash className="btn-icon" /> Hide
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className={`admin-btn-action mobile-act-btn ${entry.isWoodenSpoon ? 'btn-make-genuine' : 'btn-make-spoon'}`}
+                        onClick={() => handleToggleWoodenSpoon(entry.id)}
+                      >
+                        {entry.isWoodenSpoon ? (
+                          <>
+                            <FaTrophy className="btn-icon" /> Genuine
+                          </>
+                        ) : (
+                          <>
+                            <FaUtensils className="btn-icon" /> Spoon
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-btn-action btn-delete mobile-act-delete"
+                        onClick={() => handleDelete(entry.id, entry.contestantName)}
+                      >
+                        <FaTrash className="btn-icon" /> Delete
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}
       </div>
+
+      {/* Delete All Confirmation Modal */}
+      {showDeleteAllModal && (
+        <div className="admin-modal-backdrop fade-in" onClick={() => !isDeletingAll && setShowDeleteAllModal(false)}>
+          <div className="admin-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="admin-modal-danger-icon">
+              <FaTriangleExclamation />
+            </div>
+            <h2 className="admin-modal-title">Delete All Contestant Submissions?</h2>
+            <p className="admin-modal-desc">
+              Warning: This action will permanently wipe <strong>ALL {overview?.totalSubmissions || 0} entries</strong> from the database and remove all associated photos from storage.
+            </p>
+            <div className="admin-modal-callout">
+              This cannot be undone. All leaderboard scores and verdicts will be lost immediately.
+            </div>
+
+            <form onSubmit={handleDeleteAll}>
+              <div className="admin-modal-input-group">
+                <label className="admin-modal-input-label">
+                  Type <strong>DELETE ALL</strong> to confirm:
+                </label>
+                <input
+                  type="text"
+                  className="form-input text-center"
+                  placeholder="DELETE ALL"
+                  value={deleteAllConfirmText}
+                  onChange={e => setDeleteAllConfirmText(e.target.value)}
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <div className="admin-modal-actions">
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={() => setShowDeleteAllModal(false)}
+                  disabled={isDeletingAll}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-danger-confirm"
+                  disabled={
+                    isDeletingAll || 
+                    (deleteAllConfirmText.trim().toUpperCase() !== 'DELETE ALL' && 
+                     deleteAllConfirmText.trim().toUpperCase() !== 'DELETE')
+                  }
+                >
+                  {isDeletingAll ? (
+                    <>
+                      <span className="spinner"></span> Purging Database...
+                    </>
+                  ) : (
+                    <>
+                      <FaTrash className="btn-icon" /> Permanently Delete All
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

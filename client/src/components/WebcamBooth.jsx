@@ -32,6 +32,16 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const fileInputRef = useRef(null);
+  const nativeCameraInputRef = useRef(null);
+  const detailsCardRef = useRef(null);
+
+  const scrollToDetails = () => {
+    if (detailsCardRef.current && window.innerWidth <= 768) {
+      setTimeout(() => {
+        detailsCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  };
 
   // Initialize camera stream
   const startCamera = useCallback(async () => {
@@ -127,6 +137,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
           const url = URL.createObjectURL(blob);
           setPreviewUrl(url);
           setValidationError('');
+          scrollToDetails();
         }
       },
       'image/jpeg',
@@ -152,6 +163,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     setValidationError('');
+    scrollToDetails();
   };
 
   const handleRetake = () => {
@@ -170,10 +182,12 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     e.preventDefault();
     if (!name.trim()) {
       setValidationError('Contestant name is required.');
+      scrollToDetails();
       return;
     }
     if (name.trim().length < 2) {
       setValidationError('Name must be at least 2 characters long.');
+      scrollToDetails();
       return;
     }
     if (!capturedBlob) {
@@ -208,33 +222,64 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
               <div className="snapshot-preview">
                 <img src={previewUrl} alt="Contestant Preview" className="preview-image" />
                 <div className="preview-badge">Snapshot Ready</div>
-                <button 
-                  type="button" 
-                  className="retake-button" 
-                  onClick={handleRetake}
-                  disabled={isSubmitting}
-                >
-                  <FaRotate className="btn-icon" /> Retake Photo
-                </button>
+                <div className="snapshot-overlay-actions">
+                  <button 
+                    type="button" 
+                    className="retake-button" 
+                    onClick={handleRetake}
+                    disabled={isSubmitting}
+                  >
+                    <FaRotate className="btn-icon" /> Retake
+                  </button>
+                  <button 
+                    type="button" 
+                    className="proceed-details-btn mobile-only" 
+                    onClick={scrollToDetails}
+                  >
+                    Enter Details ↓
+                  </button>
+                </div>
               </div>
             ) : useUploadFallback ? (
-              <div 
-                className="upload-dropzone"
-                onClick={() => fileInputRef.current?.click()}
-              >
+              <div className="upload-dropzone">
                 <div className="dropzone-icon">
                   <FaUpload />
                 </div>
                 <h3>Upload Your Mustache Photo</h3>
-                <p>Drag & drop or click to browse (JPEG, PNG, WebP up to 8MB)</p>
+                <p>Drag & drop or tap an option below (JPEG, PNG, WebP up to 8MB)</p>
                 {cameraError && (
                   <div className="camera-notice">
-                    Note: Camera unavailable or permission denied. File upload active.
+                    Note: Camera unavailable or permission denied. Direct upload active.
                   </div>
                 )}
-                <button type="button" className="browse-button">
-                  Select Photo File
-                </button>
+                
+                <div className="upload-buttons-group">
+                  <button 
+                    type="button" 
+                    className="browse-button native-cam-btn"
+                    onClick={() => nativeCameraInputRef.current?.click()}
+                  >
+                    <FaCamera className="btn-icon" /> Take Photo
+                  </button>
+                  <button 
+                    type="button" 
+                    className="browse-button photo-lib-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <FaUpload className="btn-icon" /> Choose from Gallery
+                  </button>
+                </div>
+
+                {/* Direct native camera capture for mobile browsers */}
+                <input 
+                  type="file" 
+                  ref={nativeCameraInputRef} 
+                  accept="image/*" 
+                  capture="user"
+                  style={{ display: 'none' }}
+                  onChange={handleFileChange}
+                />
+                {/* Standard file picker */}
                 <input 
                   type="file" 
                   ref={fileInputRef} 
@@ -255,7 +300,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
 
                 {/* Optical HUD Overlay */}
                 <div className="optical-hud-overlay">
-                  <svg className="hud-svg" viewBox="0 0 400 400" preserveAspectRatio="none">
+                  <svg className="hud-svg" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
                     <defs>
                       <linearGradient id="hudCyanGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                         <stop offset="0%" stopColor="#00b4d8" stopOpacity="0.8" />
@@ -287,7 +332,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
 
                   <div className="hud-guidance-banner">
                     <span className="guidance-pulse"></span>
-                    <span>Align upper lip within the cyan reticle</span>
+                    <span>Align upper lip in cyan reticle</span>
                   </div>
 
                   <div className="hud-camera-controls">
@@ -296,6 +341,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                       className="hud-control-btn"
                       onClick={toggleCameraFacing}
                       title="Flip Camera (Front/Rear)"
+                      aria-label="Flip Camera"
                     >
                       <FaRotate className="btn-icon" /> Flip
                     </button>
@@ -304,6 +350,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                       className="hud-control-btn"
                       onClick={() => setUseUploadFallback(true)}
                       title="Switch to File Upload"
+                      aria-label="Upload Photo"
                     >
                       <FaUpload className="btn-icon" /> Upload
                     </button>
@@ -317,15 +364,34 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
             <div className="shutter-bar">
               <button 
                 type="button" 
-                className="shutter-button"
+                className="shutter-button mobile-tactile-shutter"
                 onClick={captureSnapshot}
                 disabled={!cameraActive}
+                aria-label="Snap Mustache Photo"
               >
                 <div className="shutter-inner">
                   <FaCamera className="shutter-icon" />
                   <span className="shutter-text">SNAP MUSTACHE</span>
                 </div>
               </button>
+
+              {/* Mobile quick secondary controls right below shutter */}
+              <div className="mobile-shutter-secondary mobile-only">
+                <button 
+                  type="button" 
+                  className="mobile-secondary-control"
+                  onClick={toggleCameraFacing}
+                >
+                  <FaRotate className="btn-icon" /> Flip Camera
+                </button>
+                <button 
+                  type="button" 
+                  className="mobile-secondary-control"
+                  onClick={() => setUseUploadFallback(true)}
+                >
+                  <FaUpload className="btn-icon" /> Upload File
+                </button>
+              </div>
             </div>
           )}
 
@@ -333,20 +399,20 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
             <div className="shutter-bar">
               <button 
                 type="button" 
-                className="secondary-btn"
+                className="secondary-btn try-cam-btn"
                 onClick={() => {
                   setUseUploadFallback(false);
                   startCamera();
                 }}
               >
-                <FaCamera className="btn-icon" /> Try Camera Again
+                <FaCamera className="btn-icon" /> Try Live Camera Again
               </button>
             </div>
           )}
         </div>
 
         {/* Right: Contestant Details Form */}
-        <div className="details-card">
+        <div className="details-card" ref={detailsCardRef}>
           <h2 className="form-card-title">Contestant Dossier</h2>
           <p className="form-card-desc">Zero sign-in required. Pure frictionless Movember glory.</p>
 

@@ -66,7 +66,11 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
             <FaScaleBalanced className="judicial-seal-icon" />
           </div>
           <div>
-            <div className="verdict-tag">Supreme Movember Court Verdict</div>
+            <div className="verdict-tag">
+              {verdict.isWoodenSpoon 
+                ? `🥄 Wooden Spoon Verdict • ${verdict.woodenSpoonReason || 'Creative Submission'}` 
+                : 'Supreme Movember Court Verdict'}
+            </div>
             <h2 className="contestant-display-name">{verdict.contestantName}</h2>
             <div className="contestant-cohort-tag">
               <FaLocationDot className="pin-icon" /> {verdict.officeLocation || 'REMOTE'}
@@ -84,7 +88,7 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
             <div className="verdict-photo-frame">
               <img 
                 src={verdict.imageUrl || verdict.thumbnailUrl} 
-                alt={verdict.contestantName}
+                alt={verdict.contestantName} 
                 className="verdict-photo"
               />
               <div className="style-chip">
@@ -133,44 +137,89 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
 
             {/* Sub-Score Bars */}
             <div className="subscores-list">
-              <div className="subscore-item">
-                <div className="subscore-labels">
-                  <span>Bristle Density</span>
-                  <span className="subscore-val">{verdict.densityScore}/10</span>
-                </div>
-                <div className="subscore-bar">
-                  <div 
-                    className="subscore-fill density" 
-                    style={{ width: `${verdict.densityScore * 10}%` }}
-                  />
-                </div>
-              </div>
+              {verdict.isWoodenSpoon ? (
+                <>
+                  <div className="subscore-item">
+                    <div className="subscore-labels">
+                      <span>Innovation</span>
+                      <span className="subscore-val text-orange">{verdict.innovationScore || 0}/10</span>
+                    </div>
+                    <div className="subscore-bar">
+                      <div 
+                        className="subscore-fill" 
+                        style={{ width: `${(verdict.innovationScore || 0) * 10}%`, background: 'linear-gradient(90deg, #f97316, #ea580c)' }}
+                      />
+                    </div>
+                  </div>
 
-              <div className="subscore-item">
-                <div className="subscore-labels">
-                  <span>Facial Symmetry</span>
-                  <span className="subscore-val">{verdict.symmetryScore}/10</span>
-                </div>
-                <div className="subscore-bar">
-                  <div 
-                    className="subscore-fill symmetry" 
-                    style={{ width: `${verdict.symmetryScore * 10}%` }}
-                  />
-                </div>
-              </div>
+                  <div className="subscore-item">
+                    <div className="subscore-labels">
+                      <span>Dedication</span>
+                      <span className="subscore-val text-orange">{verdict.dedicationScore || 0}/10</span>
+                    </div>
+                    <div className="subscore-bar">
+                      <div 
+                        className="subscore-fill" 
+                        style={{ width: `${(verdict.dedicationScore || 0) * 10}%`, background: 'linear-gradient(90deg, #f59e0b, #d97706)' }}
+                      />
+                    </div>
+                  </div>
 
-              <div className="subscore-item">
-                <div className="subscore-labels">
-                  <span>Bristle Swagger</span>
-                  <span className="subscore-val">{verdict.swaggerScore}/10</span>
-                </div>
-                <div className="subscore-bar">
-                  <div 
-                    className="subscore-fill swagger" 
-                    style={{ width: `${verdict.swaggerScore * 10}%` }}
-                  />
-                </div>
-              </div>
+                  <div className="subscore-item">
+                    <div className="subscore-labels">
+                      <span>Funniness</span>
+                      <span className="subscore-val text-orange">{verdict.funninessScore || 0}/10</span>
+                    </div>
+                    <div className="subscore-bar">
+                      <div 
+                        className="subscore-fill" 
+                        style={{ width: `${(verdict.funninessScore || 0) * 10}%`, background: 'linear-gradient(90deg, #ef4444, #dc2626)' }}
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="subscore-item">
+                    <div className="subscore-labels">
+                      <span>Bristle Density</span>
+                      <span className="subscore-val">{verdict.densityScore}/10</span>
+                    </div>
+                    <div className="subscore-bar">
+                      <div 
+                        className="subscore-fill density" 
+                        style={{ width: `${verdict.densityScore * 10}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="subscore-item">
+                    <div className="subscore-labels">
+                      <span>Facial Symmetry</span>
+                      <span className="subscore-val">{verdict.symmetryScore}/10</span>
+                    </div>
+                    <div className="subscore-bar">
+                      <div 
+                        className="subscore-fill symmetry" 
+                        style={{ width: `${verdict.symmetryScore * 10}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="subscore-item">
+                    <div className="subscore-labels">
+                      <span>Bristle Swagger</span>
+                      <span className="subscore-val">{verdict.swaggerScore}/10</span>
+                    </div>
+                    <div className="subscore-bar">
+                      <div 
+                        className="subscore-fill swagger" 
+                        style={{ width: `${verdict.swaggerScore * 10}%` }}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

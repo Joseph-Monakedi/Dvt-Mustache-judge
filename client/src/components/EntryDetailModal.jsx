@@ -8,6 +8,7 @@ export default function EntryDetailModal({ entry, onClose }) {
   return (
     <div className="entry-modal-backdrop" onClick={onClose}>
       <div className="entry-modal-wrapper" onClick={e => e.stopPropagation()}>
+        <div className="modal-sheet-handle mobile-only"></div>
         <div className="entry-modal-top">
           <button className="close-btn" onClick={onClose} aria-label="Close">
             <FaXmark />
