@@ -1,0 +1,6 @@
+@DvtMustacheJudge.Api_HostAddress = http://localhost:5182
+
+GET {{DvtMustacheJudge.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

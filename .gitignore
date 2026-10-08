@@ -1,0 +1,49 @@
+# .NET Build Artifacts
+**/bin/
+**/obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.db
+*.db-shm
+*.db-wal
+
+# Local database file
+mustache_judge.db
+mustache_judge.db-journal
+
+# Uploaded contestant images (keep mock-avatars)
+DvtMustacheJudge.Api/wwwroot/uploads/*
+!DvtMustacheJudge.Api/wwwroot/uploads/.gitkeep
+
+# Node & Frontend Build Artifacts
+**/node_modules/
+**/dist/
+**/dist-ssr/
+*.local
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Mac & OS metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+Thumbs.db
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+DvtMustacheJudge.Api/appsettings.json
+DvtMustacheJudge.Api/appsettings.Development.json
+.env.render
+.env.vercel
+.agents
