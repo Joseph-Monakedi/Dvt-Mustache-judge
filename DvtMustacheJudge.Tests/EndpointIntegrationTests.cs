@@ -14,7 +14,12 @@ namespace DvtMustacheJudge.Tests;
 
 public class TestGeminiJudgeService : DvtMustacheJudge.Api.Services.IGeminiJudgeService
 {
-    public Task<GeminiJudgeResult> JudgeMustacheAsync(Stream imageStream, string mimeType, string contestantName, string? officeLocation)
+    public Task<GeminiJudgeResult> JudgeMustacheAsync(
+        Stream imageStream, 
+        string mimeType, 
+        string contestantName, 
+        string? officeLocation, 
+        CancellationToken cancellationToken = default)
     {
         if (contestantName.Contains("FlaggedVisionTest", StringComparison.OrdinalIgnoreCase))
         {

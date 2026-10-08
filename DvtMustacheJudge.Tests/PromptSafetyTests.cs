@@ -1,3 +1,4 @@
+using System.Linq;
 using DvtMustacheJudge.Api.Services;
 using Xunit;
 

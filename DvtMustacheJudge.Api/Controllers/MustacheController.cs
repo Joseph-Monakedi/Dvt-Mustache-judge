@@ -47,7 +47,7 @@ public class MustacheController : ControllerBase
     [ProducesResponseType(typeof(JudgeResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Judge([FromForm] JudgeRequestDto request)
+    public async Task<IActionResult> Judge([FromForm] JudgeRequestDto request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length < 2)
         {
@@ -100,7 +100,7 @@ public class MustacheController : ControllerBase
                 imageBytes = memoryStream.ToArray();
             }
 
-            // 2. Call Gemini AI judge for vision analysis & NSFW/vulgarity detection FIRST
+            // 2. Call Gemini AI judge for vision analysis & NSFW/vulgarity detection FIRST (queues if rate limited)
             GeminiJudgeResult judgeResult;
             using (var aiStream = new MemoryStream(imageBytes))
             {
@@ -108,7 +108,8 @@ public class MustacheController : ControllerBase
                     aiStream,
                     request.Image.ContentType,
                     contestantName,
-                    location);
+                    location,
+                    cancellationToken);
             }
 
             // 2.5 Check for Prompt or SQL injection attempts (all injections are classified as Wooden Spoon)
@@ -446,6 +447,7 @@ public class MustacheController : ControllerBase
             RemainingAiQuota = _rateLimiter.GetRemainingRequests(),
             MaxAiQuotaPerMinute = _rateLimiter.MaxRequestsPerMinute,
             SecondsUntilQuotaReset = (int)Math.Ceiling(_rateLimiter.GetTimeUntilNextWindow().TotalSeconds),
+            QueuedRequestsCount = _rateLimiter.QueuedRequestsCount,
             Entries = entryDtos
         });
     }
@@ -685,7 +687,7 @@ public class MustacheController : ControllerBase
     /// Re-analyse selected entries using the Gemini AI judge, strictly respecting rate limits.
     /// </summary>
     [HttpPost("admin/entries/reanalyse")]
-    public async Task<IActionResult> ReanalyseEntries([FromBody] ReanalyseRequestDto request)
+    public async Task<IActionResult> ReanalyseEntries([FromBody] ReanalyseRequestDto request, CancellationToken cancellationToken = default)
     {
         if (!IsAdminAuthorized())
         {
@@ -713,13 +715,14 @@ public class MustacheController : ControllerBase
 
         foreach (var entry in entries)
         {
-            // Strictly check rate limiter before each AI call (never bypass the 3 req/min limit)
-            if (_rateLimiter.GetRemainingRequests() <= 0)
+            // For bulk re-analysis of multiple entries, if quota is depleted, defer remainder
+            // to avoid long HTTP blocking. Single-entry requests queue naturally.
+            if (entries.Count > 1 && _rateLimiter.GetRemainingRequests() <= 0)
             {
                 var waitTime = _rateLimiter.GetTimeUntilNextWindow();
                 rateLimitedCount = entries.Count - reanalysedCount;
                 rateLimitReason = $"Rate limit reached (max {_rateLimiter.MaxRequestsPerMinute} evaluations per minute). {reanalysedCount} re-analysed, {rateLimitedCount} deferred. Please wait {Math.Ceiling(waitTime.TotalSeconds)}s.";
-                _logger.LogWarning("Re-analysis stopped for remaining {Count} entries: {Reason}", rateLimitedCount, rateLimitReason);
+                _logger.LogWarning("Bulk re-analysis stopped for remaining {Count} entries: {Reason}", rateLimitedCount, rateLimitReason);
                 break;
             }
 
@@ -734,12 +737,13 @@ public class MustacheController : ControllerBase
             try
             {
                 using var aiStream = new MemoryStream(imageBytes);
-                // GeminiJudgeService internally checks _rateLimiter.TryAcquire()
+                // GeminiJudgeService awaits _rateLimiter.AcquireAsync()
                 var result = await _geminiService.JudgeMustacheAsync(
                     aiStream,
                     contentType,
                     entry.ContestantName,
-                    entry.OfficeLocation);
+                    entry.OfficeLocation,
+                    cancellationToken);
 
                 if (InjectionDetector.IsInjectionAttempt(entry.ContestantName, out _) ||
                     InjectionDetector.IsInjectionAttempt(entry.OfficeLocation, out _) ||
@@ -845,11 +849,11 @@ public class MustacheController : ControllerBase
     }
 
     /// <summary>
-    /// Re-analyse a single entry by ID, strictly respecting rate limits.
+    /// Re-analyse a single entry by ID, respecting rate limiter queue.
     /// </summary>
     [HttpPost("admin/entry/{id:guid}/reanalyse")]
-    public async Task<IActionResult> ReanalyseSingleEntry(Guid id)
+    public async Task<IActionResult> ReanalyseSingleEntry(Guid id, CancellationToken cancellationToken = default)
     {
-        return await ReanalyseEntries(new ReanalyseRequestDto { Ids = new List<Guid> { id } });
+        return await ReanalyseEntries(new ReanalyseRequestDto { Ids = new List<Guid> { id } }, cancellationToken);
     }
 }

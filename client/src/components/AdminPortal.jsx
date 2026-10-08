@@ -596,6 +596,11 @@ export default function AdminPortal({ onBackToApp }) {
                 Resets in {overview.secondsUntilQuotaReset}s
               </span>
             )}
+            {(overview.queuedRequestsCount || 0) > 0 && (
+              <span className="stat-subtext text-cyan" style={{ display: 'block', marginTop: '2px' }}>
+                {overview.queuedRequestsCount} in queue
+              </span>
+            )}
           </div>
         </div>
       )}
