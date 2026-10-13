@@ -25,6 +25,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(null);
+  const [isCameraInitializing, setIsCameraInitializing] = useState(true);
   const [facingMode, setFacingMode] = useState('user');
   const [useUploadFallback, setUseUploadFallback] = useState(false);
   const [validationError, setValidationError] = useState('');
@@ -47,6 +48,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
   const startCamera = useCallback(async () => {
     try {
       setCameraError(null);
+      setIsCameraInitializing(true);
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
@@ -83,6 +85,8 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
       setCameraError(err.message || 'Unable to access camera. Please allow camera permissions or upload a photo.');
       setCameraActive(false);
       setUseUploadFallback(true);
+    } finally {
+      setIsCameraInitializing(false);
     }
   }, [facingMode]);
 
@@ -290,6 +294,20 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
               </div>
             ) : (
               <div className="camera-feed-wrapper">
+                {isCameraInitializing && !cameraActive && (
+                  <div className="camera-initializing-overlay fade-in">
+                    <div className="camera-radar-container">
+                      <div className="camera-radar-ring"></div>
+                      <div className="camera-radar-pulse"></div>
+                      <FaCamera className="camera-radar-icon" />
+                    </div>
+                    <div className="camera-init-title">Calibrating Optical Sensor</div>
+                    <p className="camera-init-desc">
+                      Initializing camera lens stream for supreme Movember mustache inspection...
+                    </p>
+                  </div>
+                )}
+
                 <video 
                   ref={videoRef} 
                   autoPlay 
@@ -474,8 +492,9 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
               disabled={!capturedBlob || isSubmitting}
             >
               {isSubmitting ? (
-                <span className="btn-loading">
-                  <span className="spinner"></span> Summoning AI Judge...
+                <span className="btn-loading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <span className="btn-spinner"></span>
+                  <span>Summoning AI Judge...</span>
                 </span>
               ) : (
                 <>

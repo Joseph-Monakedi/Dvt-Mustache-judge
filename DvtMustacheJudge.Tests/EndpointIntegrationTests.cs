@@ -72,6 +72,33 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.EnsureCreated();
             DbInitializer.SeedAsync(db).GetAwaiter().GetResult();
+
+            if (!db.MustacheEntries.Any())
+            {
+                for (int i = 1; i <= 16; i++)
+                {
+                    db.MustacheEntries.Add(new MustacheEntry
+                    {
+                        Id = Guid.NewGuid(),
+                        ContestantName = $"Test Contestant {i}",
+                        OfficeLocation = i % 2 == 0 ? "Johannesburg" : "Cape Town",
+                        StyleCategory = "Chevron",
+                        MustacheTitle = $"The Champion {i}",
+                        RoastCommentary = "Spectacular grooming.",
+                        CelebrityTwin = "Tom Selleck",
+                        VerdictBadge = "Certified Mo Bro",
+                        DensityScore = 8,
+                        SymmetryScore = 8,
+                        SwaggerScore = 8,
+                        OverallScore = Math.Clamp(85 - i, 1, 100),
+                        ImageUrl = "https://example.com/img.jpg",
+                        CreatedAt = DateTime.UtcNow.AddMinutes(-i),
+                        IsHidden = false,
+                        IsWoodenSpoon = i > 14
+                    });
+                }
+                db.SaveChanges();
+            }
         });
     }
 }

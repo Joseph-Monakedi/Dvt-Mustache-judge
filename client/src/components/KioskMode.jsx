@@ -12,7 +12,7 @@ export default function KioskMode({ onExit }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
-
+  const [isLoading, setIsLoading] = useState(true);
 
   // Generate QR code for mobile URL
   useEffect(() => {
@@ -41,6 +41,8 @@ export default function KioskMode({ onExit }) {
       }
     } catch (err) {
       console.warn('Kiosk fetch error:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -209,6 +211,32 @@ export default function KioskMode({ onExit }) {
                 </div>
               </div>
             </div>
+          ) : isLoading ? (
+            <div className="kiosk-skeleton-inner fade-in">
+              <div className="kiosk-skeleton-header">
+                <div className="skeleton-shimmer" style={{ width: '130px', height: '26px', borderRadius: '20px' }}></div>
+                <div className="skeleton-shimmer" style={{ width: '170px', height: '26px', borderRadius: '20px' }}></div>
+              </div>
+              <div className="kiosk-skeleton-split">
+                <div className="skeleton-shimmer kiosk-skeleton-photo-frame"></div>
+                <div className="kiosk-skeleton-info">
+                  <div className="kiosk-skeleton-score-row">
+                    <div className="skeleton-shimmer kiosk-skeleton-gauge"></div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                      <div className="skeleton-shimmer" style={{ width: '70%', height: '32px', borderRadius: '6px' }}></div>
+                      <div className="skeleton-shimmer" style={{ width: '40%', height: '18px', borderRadius: '4px' }}></div>
+                    </div>
+                  </div>
+                  <div className="skeleton-shimmer" style={{ width: '85%', height: '24px', borderRadius: '6px' }}></div>
+                  <div className="kiosk-skeleton-bars">
+                    <div className="skeleton-shimmer" style={{ width: '100%', height: '14px', borderRadius: '6px' }}></div>
+                    <div className="skeleton-shimmer" style={{ width: '100%', height: '14px', borderRadius: '6px' }}></div>
+                    <div className="skeleton-shimmer" style={{ width: '100%', height: '14px', borderRadius: '6px' }}></div>
+                  </div>
+                  <div className="skeleton-shimmer kiosk-skeleton-roast"></div>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="kiosk-empty">
               <h3>Waiting for contestants...</h3>
@@ -231,7 +259,9 @@ export default function KioskMode({ onExit }) {
               {qrCodeDataUrl ? (
                 <img src={qrCodeDataUrl} alt="Scan QR Code to Enter" className="qr-image" />
               ) : (
-                <div className="qr-loading">Generating QR...</div>
+                <div className="skeleton-shimmer kiosk-qr-skeleton" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span className="spinner spinner-lg"></span>
+                </div>
               )}
             </div>
 

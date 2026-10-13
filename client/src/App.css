@@ -794,6 +794,9 @@
   overflow: hidden;
   border: 2px solid var(--border-glow);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.02) 25%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.02) 75%);
+  background-size: 200% 100%;
+  animation: shimmerWave 2s infinite ease-in-out;
 }
 
 .verdict-photo {
@@ -3882,6 +3885,627 @@
     height: 46px;
   }
 }
+
+/* ================================================================
+   COMPREHENSIVE LOADING & SKELETON DESIGN SYSTEM
+   ================================================================ */
+
+/* Shimmer Animation Keyframe */
+@keyframes shimmerWave {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulseAura {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes radarSweep {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spinDualRing {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes livePulseDot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.5;
+  }
+}
+
+/* Core Shimmer Base Utility */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(0, 180, 216, 0.12) 50%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerWave 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  border-radius: var(--radius-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Standalone Modern Spinners */
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0, 180, 216, 0.2);
+  border-top-color: var(--accent-cyan);
+  border-right-color: var(--primary);
+  border-radius: 50%;
+  animation: spinDualRing 0.8s linear infinite;
+  vertical-align: middle;
+}
+
+.spinner-sm {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+}
+
+.spinner-lg {
+  width: 36px;
+  height: 36px;
+  border-width: 3px;
+}
+
+.btn-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spinDualRing 0.7s linear infinite;
+  margin-right: 8px;
+}
+
+/* Global Top Ambient Loading Progress Bar */
+.global-loading-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--accent-cyan), #f59e0b, var(--primary));
+  background-size: 200% 100%;
+  animation: shimmerWave 1.4s linear infinite;
+  z-index: 9999;
+  box-shadow: 0 0 10px rgba(0, 180, 216, 0.8);
+}
+
+/* Background Refresh Pill Badge */
+.bg-refreshing-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 180, 216, 0.12);
+  border: 1px solid rgba(0, 180, 216, 0.3);
+  color: var(--accent-cyan);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  animation: pulseAura 2s infinite ease-in-out;
+}
+
+.bg-refreshing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 6px var(--accent-cyan);
+  animation: livePulseDot 1s infinite;
+}
+
+/* ----------------------------------------------------------------
+   LEADERBOARD PODIUM SKELETON
+   ---------------------------------------------------------------- */
+.podium-skeleton-section {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr 1fr;
+  gap: 20px;
+  align-items: flex-end;
+  max-width: 860px;
+  margin: 0 auto 36px auto;
+  padding: 10px;
+}
+
+.podium-skeleton-card {
+  background: rgba(13, 21, 34, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-lg);
+  padding: 24px 16px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  backdrop-filter: blur(12px);
+}
+
+.podium-skeleton-card.gold-skeleton {
+  padding-top: 32px;
+  border-color: rgba(245, 158, 11, 0.2);
+  background: rgba(245, 158, 11, 0.03);
+  box-shadow: 0 8px 30px rgba(245, 158, 11, 0.08);
+}
+
+.podium-skeleton-rank {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.podium-skeleton-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+}
+
+.podium-skeleton-card.gold-skeleton .podium-skeleton-avatar {
+  width: 100px;
+  height: 100px;
+}
+
+.podium-skeleton-score {
+  width: 50px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+}
+
+.podium-skeleton-name {
+  width: 70%;
+  height: 18px;
+  border-radius: 4px;
+}
+
+.podium-skeleton-title {
+  width: 55%;
+  height: 12px;
+  border-radius: 4px;
+}
+
+.podium-skeleton-badge {
+  width: 60%;
+  height: 22px;
+  border-radius: 20px;
+}
+
+.podium-skeleton-pedestal {
+  width: 100%;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  margin-top: 4px;
+}
+
+/* ----------------------------------------------------------------
+   LEADERBOARD TABLE & MOBILE CARD SKELETONS
+   ---------------------------------------------------------------- */
+.table-skeleton-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+
+.table-skeleton-row {
+  display: grid;
+  grid-template-columns: 60px 1.8fr 1.2fr 1.2fr 1fr 80px 80px;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  background: rgba(13, 21, 34, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-md);
+}
+
+.table-skeleton-contestant {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.table-skeleton-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.table-skeleton-names {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.mobile-skeleton-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+
+.mobile-skeleton-card {
+  background: rgba(13, 21, 34, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-skeleton-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mobile-skeleton-body {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+/* ----------------------------------------------------------------
+   KIOSK MODE BROADCAST HOLOGRAPHIC SKELETON
+   ---------------------------------------------------------------- */
+.kiosk-skeleton-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  height: 100%;
+  padding: 24px;
+}
+
+.kiosk-skeleton-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kiosk-skeleton-split {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 36px;
+  align-items: center;
+}
+
+.kiosk-skeleton-photo-frame {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-xl);
+  border: 2px dashed rgba(0, 180, 216, 0.3);
+}
+
+.kiosk-skeleton-info {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.kiosk-skeleton-score-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.kiosk-skeleton-gauge {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.kiosk-skeleton-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.kiosk-skeleton-roast {
+  height: 72px;
+  border-radius: var(--radius-md);
+  margin-top: 10px;
+}
+
+.kiosk-qr-skeleton {
+  width: 220px;
+  height: 220px;
+  border-radius: var(--radius-lg);
+  margin: 0 auto;
+}
+
+/* ----------------------------------------------------------------
+   WEBCAM BOOTH CAMERA INITIALIZING OVERLAY
+   ---------------------------------------------------------------- */
+.camera-initializing-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(13, 21, 34, 0.95), rgba(7, 12, 20, 0.98));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 30;
+  backdrop-filter: blur(8px);
+}
+
+.camera-radar-container {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-radar-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px dashed var(--accent-cyan);
+  border-radius: 50%;
+  animation: radarSweep 6s linear infinite;
+}
+
+.camera-radar-pulse {
+  position: absolute;
+  inset: 10px;
+  border: 2px solid rgba(0, 180, 216, 0.35);
+  border-radius: 50%;
+  animation: pulseAura 2s ease-in-out infinite;
+}
+
+.camera-radar-icon {
+  font-size: 32px;
+  color: var(--accent-cyan);
+}
+
+.camera-init-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+.camera-init-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  max-width: 260px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ----------------------------------------------------------------
+   JUDGING SUSPENSE MODAL MULTI-STAGE STEPPER & QUEUE BANNER
+   ---------------------------------------------------------------- */
+.judging-stepper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin: 18px 0 22px 0;
+  text-align: left;
+}
+
+.judging-step-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: all 0.3s ease;
+}
+
+.judging-step-item.active {
+  background: rgba(0, 180, 216, 0.1);
+  border-color: rgba(0, 180, 216, 0.35);
+  box-shadow: 0 0 12px rgba(0, 180, 216, 0.15);
+}
+
+.judging-step-item.completed {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+.judging-step-icon-wrap {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.judging-step-item.active .judging-step-icon-wrap {
+  background: var(--accent-cyan);
+  color: #070c14;
+}
+
+.judging-step-item.completed .judging-step-icon-wrap {
+  background: #22c55e;
+  color: #ffffff;
+}
+
+.judging-step-item.pending .judging-step-icon-wrap {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-dim);
+}
+
+.judging-step-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.judging-step-item.active .judging-step-text {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.judging-step-item.completed .judging-step-text {
+  color: #86efac;
+}
+
+/* Rate Limiter Queue Alert in Suspense Modal */
+.queue-waiting-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  margin-bottom: 18px;
+  width: 100%;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.12);
+  animation: pulseAura 2.2s infinite ease-in-out;
+}
+
+.queue-beacon-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+  animation: livePulseDot 0.8s infinite;
+  flex-shrink: 0;
+}
+
+.queue-banner-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fde68a;
+  text-align: left;
+  line-height: 1.35;
+}
+
+/* Interactive Movember Court Tip Box */
+.court-tip-box {
+  background: rgba(0, 0, 0, 0.35);
+  border-left: 3px solid var(--accent-cyan);
+  padding: 8px 14px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin-top: 14px;
+  width: 100%;
+  text-align: left;
+}
+
+.court-tip-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  letter-spacing: 0.5px;
+}
+
+.court-tip-text {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* ----------------------------------------------------------------
+   ADMIN PORTAL SKELETONS & LIVE ACTION PROGRESS
+   ---------------------------------------------------------------- */
+.admin-stats-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.admin-stat-skeleton-card {
+  background: rgba(13, 21, 34, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-operation-progress-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 180, 216, 0.12);
+  border: 1px solid rgba(0, 180, 216, 0.35);
+  border-radius: var(--radius-md);
+  padding: 12px 18px;
+  margin-bottom: 18px;
+  animation: pulseAura 2.5s infinite ease-in-out;
+}
+
+.admin-op-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+}
+
+/* ----------------------------------------------------------------
+   SHAREABLE CANVAS CARD PREVIEW SKELETON
+   ---------------------------------------------------------------- */
+.canvas-loading-skeleton {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.canvas-loading-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+}
+
 
 
 

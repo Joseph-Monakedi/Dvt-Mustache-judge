@@ -15,6 +15,88 @@ const CATEGORIES = [
   'Peach Fuzz'
 ];
 
+function PodiumSkeleton() {
+  return (
+    <div className="podium-skeleton-section fade-in">
+      {/* 2nd Place (Silver) */}
+      <div className="podium-skeleton-card">
+        <div className="skeleton-shimmer podium-skeleton-rank"></div>
+        <div className="skeleton-shimmer podium-skeleton-avatar"></div>
+        <div className="skeleton-shimmer podium-skeleton-score"></div>
+        <div className="skeleton-shimmer podium-skeleton-name"></div>
+        <div className="skeleton-shimmer podium-skeleton-title"></div>
+        <div className="skeleton-shimmer podium-skeleton-badge"></div>
+        <div className="skeleton-shimmer podium-skeleton-pedestal"></div>
+      </div>
+      {/* 1st Place (Gold) */}
+      <div className="podium-skeleton-card gold-skeleton">
+        <div className="skeleton-shimmer podium-skeleton-rank"></div>
+        <div className="skeleton-shimmer podium-skeleton-avatar"></div>
+        <div className="skeleton-shimmer podium-skeleton-score"></div>
+        <div className="skeleton-shimmer podium-skeleton-name"></div>
+        <div className="skeleton-shimmer podium-skeleton-title"></div>
+        <div className="skeleton-shimmer podium-skeleton-badge"></div>
+        <div className="skeleton-shimmer podium-skeleton-pedestal"></div>
+      </div>
+      {/* 3rd Place (Bronze) */}
+      <div className="podium-skeleton-card">
+        <div className="skeleton-shimmer podium-skeleton-rank"></div>
+        <div className="skeleton-shimmer podium-skeleton-avatar"></div>
+        <div className="skeleton-shimmer podium-skeleton-score"></div>
+        <div className="skeleton-shimmer podium-skeleton-name"></div>
+        <div className="skeleton-shimmer podium-skeleton-title"></div>
+        <div className="skeleton-shimmer podium-skeleton-badge"></div>
+        <div className="skeleton-shimmer podium-skeleton-pedestal"></div>
+      </div>
+    </div>
+  );
+}
+
+function TableSkeleton() {
+  const rows = [1, 2, 3, 4, 5, 6];
+  return (
+    <div className="table-skeleton-container fade-in">
+      <div className="desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {rows.map(i => (
+          <div key={i} className="table-skeleton-row">
+            <div className="skeleton-shimmer" style={{ width: '34px', height: '24px', borderRadius: '12px' }}></div>
+            <div className="table-skeleton-contestant">
+              <div className="skeleton-shimmer table-skeleton-avatar"></div>
+              <div className="table-skeleton-names">
+                <div className="skeleton-shimmer" style={{ width: '140px', height: '16px', borderRadius: '4px' }}></div>
+                <div className="skeleton-shimmer" style={{ width: '90px', height: '12px', borderRadius: '4px' }}></div>
+              </div>
+            </div>
+            <div className="skeleton-shimmer" style={{ width: '100px', height: '16px', borderRadius: '4px' }}></div>
+            <div className="skeleton-shimmer" style={{ width: '90px', height: '22px', borderRadius: '12px' }}></div>
+            <div className="skeleton-shimmer" style={{ width: '110px', height: '14px', borderRadius: '4px' }}></div>
+            <div className="skeleton-shimmer" style={{ width: '48px', height: '26px', borderRadius: '14px' }}></div>
+            <div className="skeleton-shimmer" style={{ width: '70px', height: '28px', borderRadius: '6px' }}></div>
+          </div>
+        ))}
+      </div>
+      <div className="mobile-skeleton-cards mobile-only">
+        {rows.slice(0, 4).map(i => (
+          <div key={i} className="mobile-skeleton-card">
+            <div className="mobile-skeleton-top">
+              <div className="skeleton-shimmer" style={{ width: '40px', height: '22px', borderRadius: '12px' }}></div>
+              <div className="skeleton-shimmer" style={{ width: '80px', height: '14px', borderRadius: '4px' }}></div>
+              <div className="skeleton-shimmer" style={{ width: '36px', height: '24px', borderRadius: '12px' }}></div>
+            </div>
+            <div className="mobile-skeleton-body">
+              <div className="skeleton-shimmer" style={{ width: '48px', height: '48px', borderRadius: '50%' }}></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                <div className="skeleton-shimmer" style={{ width: '70%', height: '16px', borderRadius: '4px' }}></div>
+                <div className="skeleton-shimmer" style={{ width: '50%', height: '12px', borderRadius: '4px' }}></div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
   const [entries, setEntries] = useState([]);
   const [totalEntries, setTotalEntries] = useState(0);
@@ -81,6 +163,9 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
 
   return (
     <div className="leaderboard-container fade-in">
+      {/* Top Ambient Loading Bar during Background Refresh */}
+      {loading && entries.length > 0 && <div className="global-loading-bar" />}
+
       {/* Header Banner */}
       <div className="leaderboard-header">
         <div>
@@ -101,7 +186,11 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
         <div className="live-status-pill">
           <span className="live-dot"></span>
           <span className="live-text">
-            LIVE • {totalEntries} in Division • Refreshed {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            {loading && entries.length > 0 ? (
+              <span className="bg-refreshing-pill"><span className="bg-refreshing-dot"></span> Syncing Standings...</span>
+            ) : (
+              `LIVE • ${totalEntries} in Division • Refreshed ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+            )}
           </span>
         </div>
       </div>
@@ -136,9 +225,12 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
         </div>
       )}
 
-      {/* Top 3 Podium */}
-      {selectedCategory === 'All' && !searchQuery.trim() && topThree.length >= 3 && (
-        <div className="podium-section">
+      {/* Top 3 Podium or Loading Skeleton */}
+      {selectedCategory === 'All' && !searchQuery.trim() && (
+        loading && entries.length === 0 ? (
+          <PodiumSkeleton />
+        ) : topThree.length >= 3 ? (
+          <div className="podium-section">
           {/* 2nd Place (Silver) */}
           <div 
             className={`podium-card silver-card ${isSpoonDivision ? 'spoon-podium-card' : ''}`}
@@ -227,7 +319,8 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
             <div className="podium-pedestal bronze-pedestal">3RD PLACE</div>
           </div>
         </div>
-      )}
+      ) : null
+    )}
 
       {/* Filter and Search Bar */}
       <div className="leaderboard-controls">
@@ -264,9 +357,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       {/* Standings Table / List */}
       <div className="standings-card">
         {loading && entries.length === 0 ? (
-          <div className="loading-state">
-            <span className="spinner"></span> Loading standings...
-          </div>
+          <TableSkeleton />
         ) : filteredEntries.length === 0 ? (
           <div className="empty-state">
             <GiMustache className="empty-icon" />

@@ -515,7 +515,15 @@ export default function AdminPortal({ onBackToApp }) {
             )}
 
             <button type="submit" className="submit-judge-btn" disabled={loggingIn}>
-              {loggingIn ? 'Authenticating...' : 'Unlock Admin Portal'}
+              {loggingIn ? (
+                <>
+                  <span className="btn-spinner"></span> Authenticating Session...
+                </>
+              ) : (
+                <>
+                  <FaLock className="btn-icon" /> Unlock Admin Portal
+                </>
+              )}
             </button>
 
             <button type="button" className="secondary-btn" onClick={onBackToApp}>
@@ -529,6 +537,9 @@ export default function AdminPortal({ onBackToApp }) {
 
   return (
     <div className="admin-portal-container fade-in">
+      {/* Top ambient loading bar on sync */}
+      {loading && <div className="global-loading-bar" />}
+
       {/* Admin Top Header */}
       <div className="admin-header">
         <div>
@@ -542,8 +553,8 @@ export default function AdminPortal({ onBackToApp }) {
         </div>
 
         <div className="admin-header-actions">
-          <button className="kiosk-btn" onClick={() => fetchAdminData()}>
-            <FaRotate className="btn-icon" /> Refresh
+          <button className="kiosk-btn" onClick={() => fetchAdminData()} disabled={loading}>
+            <FaRotate className={`btn-icon ${loading ? 'spin-icon' : ''}`} /> {loading ? 'Refreshing...' : 'Refresh'}
           </button>
           <button 
             type="button" 
@@ -565,8 +576,25 @@ export default function AdminPortal({ onBackToApp }) {
         </div>
       )}
 
-      {/* Stats Cards Row */}
-      {overview && (
+      {/* Operational Progress Banner */}
+      {(isReanalysing || isBatchDeleting) && (
+        <div className="admin-operation-progress-banner fade-in">
+          <div className="admin-op-text">
+            <span className="spinner-sm"></span>
+            <span>
+              {isReanalysing 
+                ? `Gemini AI Judicial Review in progress${reanalysingId ? ' (processing queued entry)' : ''}... Adhering to rate limit quota.`
+                : 'Executing secure batch deletion from records...'}
+            </span>
+          </div>
+          <span className="live-pulse-dot"></span>
+        </div>
+      )}
+
+      {/* Stats Cards Row or Skeleton */}
+      {loading && !overview ? (
+        <AdminStatsSkeleton />
+      ) : overview ? (
         <div className="admin-stats-grid">
           <div className="admin-stat-card">
             <div className="stat-label">Total Submissions</div>
@@ -603,7 +631,7 @@ export default function AdminPortal({ onBackToApp }) {
             )}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Filter and Search Bar */}
       <div className="leaderboard-controls">
@@ -734,9 +762,7 @@ export default function AdminPortal({ onBackToApp }) {
       {/* Admin Moderation Table */}
       <div className="standings-card">
         {loading && !overview ? (
-          <div className="loading-state">
-            <span className="spinner"></span> Loading administrative records...
-          </div>
+          <AdminTableSkeleton />
         ) : filteredEntries.length === 0 ? (
           <div className="empty-state">
             <h3>No entries found</h3>
@@ -1071,6 +1097,40 @@ export default function AdminPortal({ onBackToApp }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function AdminStatsSkeleton() {
+  return (
+    <div className="admin-stats-skeleton-grid fade-in">
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className="admin-stat-skeleton-card">
+          <div className="skeleton-shimmer" style={{ width: '65%', height: '14px', borderRadius: '4px' }}></div>
+          <div className="skeleton-shimmer" style={{ width: '40%', height: '28px', borderRadius: '6px' }}></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AdminTableSkeleton() {
+  return (
+    <div className="table-skeleton-wrap fade-in">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="table-skeleton-row">
+          <div className="skeleton-shimmer" style={{ width: '24px', height: '24px', borderRadius: '4px' }}></div>
+          <div className="skeleton-shimmer table-skel-avatar" style={{ borderRadius: '8px' }}></div>
+          <div className="table-skel-info" style={{ flex: 2 }}>
+            <div className="skeleton-shimmer" style={{ width: '50%', height: '16px', borderRadius: '4px' }}></div>
+            <div className="skeleton-shimmer" style={{ width: '30%', height: '12px', borderRadius: '4px' }}></div>
+          </div>
+          <div className="table-skel-info" style={{ flex: 1 }}>
+            <div className="skeleton-shimmer" style={{ width: '60%', height: '16px', borderRadius: '4px' }}></div>
+          </div>
+          <div className="skeleton-shimmer" style={{ width: '130px', height: '32px', borderRadius: '6px' }}></div>
+        </div>
+      ))}
     </div>
   );
 }

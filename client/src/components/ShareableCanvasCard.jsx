@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { FaCamera, FaXmark, FaDownload, FaCopy, FaCheck, FaShareNodes } from 'react-icons/fa6';
 
 export default function ShareableCanvasCard({ verdict, onClose }) {
@@ -6,6 +6,18 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [canvasReady, setCanvasReady] = useState(false);
+
+  // Auto-render canvas preview on mount
+  useEffect(() => {
+    let isMounted = true;
+    renderCardToCanvas().then(() => {
+      if (isMounted) setCanvasReady(true);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Generate canvas rendering
   const renderCardToCanvas = () => {
@@ -298,7 +310,17 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
         </div>
 
         <div className="sharecard-preview-container">
-          <canvas ref={canvasRef} className="sharecard-canvas" />
+          {!canvasReady && (
+            <div className="canvas-loading-skeleton skeleton-shimmer">
+              <span className="spinner"></span>
+              <span className="canvas-loading-text">Rendering Official Verdict Card...</span>
+            </div>
+          )}
+          <canvas 
+            ref={canvasRef} 
+            className="sharecard-canvas" 
+            style={{ display: canvasReady ? 'block' : 'none' }} 
+          />
         </div>
 
         <div className="sharecard-actions">
@@ -306,24 +328,41 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
             <button 
               className="action-btn native-share-btn"
               onClick={handleNativeShare}
-              disabled={sharing}
+              disabled={sharing || !canvasReady}
             >
-              <FaShareNodes className="btn-icon" /> {sharing ? 'Opening Share...' : 'Share to WhatsApp / Apps'}
+              {sharing ? (
+                <>
+                  <span className="btn-spinner"></span> Preparing Share...
+                </>
+              ) : (
+                <>
+                  <FaShareNodes className="btn-icon" /> Share to WhatsApp / Apps
+                </>
+              )}
             </button>
           )}
 
           <button 
             className="action-btn download-btn" 
             onClick={handleDownload}
-            disabled={downloading}
+            disabled={downloading || !canvasReady}
           >
-            <FaDownload className="btn-icon" /> {downloading ? 'Rendering...' : 'Download Image'}
+            {downloading ? (
+              <>
+                <span className="btn-spinner"></span> Generating Image...
+              </>
+            ) : (
+              <>
+                <FaDownload className="btn-icon" /> Download Image
+              </>
+            )}
           </button>
 
           {navigator.clipboard && window.ClipboardItem && (
             <button 
               className="action-btn copy-btn"
               onClick={handleCopyToClipboard}
+              disabled={!canvasReady}
             >
               {copySuccess ? (
                 <>
