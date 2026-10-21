@@ -15,9 +15,6 @@ public class User
     [MaxLength(100)]
     public string FullName { get; set; } = string.Empty;
 
-    [MaxLength(100)]
-    public string OfficeLocation { get; set; } = "Johannesburg";
-
     [Required]
     public string PasswordHash { get; set; } = string.Empty;
 

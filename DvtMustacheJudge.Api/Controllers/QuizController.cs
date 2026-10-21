@@ -116,14 +116,14 @@ public class QuizController : ControllerBase
         var quiz = await _context.QuizGames
             .Include(q => q.Players)
             .OrderByDescending(q => q.CreatedAt)
-            .FirstOrDefaultAsync(q => q.PinCode == pin || pin == "69420");
+            .FirstOrDefaultAsync(q => q.PinCode == pin);
 
         if (quiz == null)
         {
-            return NotFound(new { error = "Invalid Game PIN. Please check the screen." });
+            return NotFound(new { error = "Invalid Game PIN. Please enter the PIN communicated by the Admin." });
         }
 
-        // Verify R50 Quiz payment if user token is provided
+        // Verify R50 Quiz payment and authentication
         Guid? userId = null;
         var authHeader = Request.Headers.Authorization.ToString();
         if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
@@ -140,7 +140,7 @@ public class QuizController : ControllerBase
                     {
                         return StatusCode(StatusCodes.Status403Forbidden, new
                         {
-                            error = "R50 Movember Quiz Pass required. Please pay the R50 entry fee and have an Admin mark your pass active before entering the arena!",
+                            error = "R50 Mustache Quiz Pass required. Please pay the R50 entry fee and have an Admin mark your pass active before entering the arena!",
                             paywall = true,
                             fee = "R50",
                             userId = user.Id
@@ -148,6 +148,11 @@ public class QuizController : ControllerBase
                     }
                 }
             }
+        }
+
+        if (!userId.HasValue)
+        {
+            return Unauthorized(new { error = "Please sign in or register to enter the Mustache Quiz Arena." });
         }
 
         // Find or create player
@@ -163,7 +168,6 @@ public class QuizController : ControllerBase
                 playerId = existingPlayer.Id,
                 quizId = quiz.Id,
                 contestantName = existingPlayer.ContestantName,
-                officeLocation = existingPlayer.OfficeLocation,
                 totalScore = existingPlayer.TotalScore,
                 streak = existingPlayer.Streak
             });
@@ -175,7 +179,6 @@ public class QuizController : ControllerBase
             QuizGameId = quiz.Id,
             UserId = userId,
             ContestantName = cleanName,
-            OfficeLocation = string.IsNullOrWhiteSpace(request.OfficeLocation) ? "Johannesburg" : request.OfficeLocation.Trim(),
             TotalScore = 0,
             Streak = 0,
             JoinedAt = DateTime.UtcNow
@@ -189,7 +192,6 @@ public class QuizController : ControllerBase
             playerId = player.Id,
             quizId = quiz.Id,
             contestantName = player.ContestantName,
-            officeLocation = player.OfficeLocation,
             totalScore = player.TotalScore,
             streak = player.Streak
         });
@@ -292,7 +294,6 @@ public class QuizController : ControllerBase
             rank = idx + 1,
             id = p.Id,
             name = p.ContestantName,
-            officeLocation = p.OfficeLocation,
             score = p.TotalScore,
             streak = p.Streak
         }).ToList();
@@ -451,7 +452,6 @@ public class QuizController : ControllerBase
             {
                 rank = idx + 1,
                 name = p.ContestantName,
-                office = p.OfficeLocation,
                 score = p.TotalScore
             }).ToList();
 
@@ -496,6 +496,30 @@ public class QuizController : ControllerBase
         return Ok(new { message = "Quiz scores and answers reset to zero. Returned to Lobby." });
     }
 
+    /// <summary>
+    /// Admin endpoint to set or generate a fresh game PIN to communicate to players manually.
+    /// </summary>
+    [HttpPost("admin/set-pin")]
+    public async Task<IActionResult> AdminSetPin([FromBody] SetPinRequest request)
+    {
+        if (!IsAdmin()) return Unauthorized();
+
+        var quiz = await _context.QuizGames
+            .OrderByDescending(q => q.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (quiz == null) return NotFound(new { error = "No quiz found." });
+
+        var newPin = string.IsNullOrWhiteSpace(request?.Pin)
+            ? Random.Shared.Next(100000, 999999).ToString()
+            : request.Pin.Trim();
+
+        quiz.PinCode = newPin;
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = $"Game PIN updated to {newPin}", pinCode = newPin });
+    }
+
     private bool IsAdmin()
     {
         var adminPassword = _config["Admin:Password"] ?? "dvt-movember-admin-2026";
@@ -519,6 +543,7 @@ public class QuizController : ControllerBase
     }
 }
 
-public record JoinQuizRequest(string Pin, string Name, string? OfficeLocation);
+public record JoinQuizRequest(string Pin, string Name);
+public record SetPinRequest(string? Pin);
 public record SubmitAnswerRequest(Guid PlayerId, Guid QuestionId, int SelectedOption, int ResponseTimeMs);
 public record AdminNextQuestionRequest(int? QuestionIndex);

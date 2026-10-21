@@ -152,7 +152,6 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
     const q = searchQuery.toLowerCase();
     return (
       e.contestantName.toLowerCase().includes(q) ||
-      (e.officeLocation && e.officeLocation.toLowerCase().includes(q)) ||
       e.mustacheTitle.toLowerCase().includes(q) ||
       (e.woodenSpoonReason && e.woodenSpoonReason.toLowerCase().includes(q))
     );
@@ -342,7 +341,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
           <input
             type="text"
             className="search-input"
-            placeholder="Search contestant, office, or reason..."
+            placeholder="Search contestant or style..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
@@ -380,7 +379,6 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                   <tr>
                     <th>Rank</th>
                     <th>Contestant</th>
-                    <th>Office Location</th>
                     <th>Style Archetype</th>
                     {isSpoonDivision && <th>Wooden Spoon Reason</th>}
                     <th>
@@ -414,9 +412,6 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                             <div className="table-stache-title">"{entry.mustacheTitle}"</div>
                           </div>
                         </div>
-                      </td>
-                      <td className="cohort-col">
-                        <span className="cohort-text">{entry.officeLocation || 'DVT'}</span>
                       </td>
                       <td className="category-col">
                         <span className="style-tag">{entry.styleCategory}</span>
@@ -484,7 +479,6 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                     <span className={`rank-pill ${isSpoonDivision ? 'rank-spoon' : entry.rank <= 3 ? `rank-${entry.rank}` : 'rank-other'}`}>
                       #{entry.rank}
                     </span>
-                    <span className="mobile-card-location">{entry.officeLocation || 'REMOTE'}</span>
                     <div className={`score-badge ${isSpoonDivision ? 'score-woodenspoon' : entry.overallScore === 0 ? 'score-zero' : entry.overallScore >= 90 ? 'score-gold' : entry.overallScore >= 80 ? 'score-cyan' : 'score-standard'}`}>
                       {entry.overallScore}
                     </div>

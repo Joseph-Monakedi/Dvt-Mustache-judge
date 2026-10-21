@@ -8,7 +8,6 @@ public interface IGeminiJudgeService
         Stream imageStream, 
         string mimeType, 
         string contestantName, 
-        string? officeLocation,
         Stream? cleanShaveStream = null,
         string? cleanShaveMimeType = null,
         CancellationToken cancellationToken = default);

@@ -109,7 +109,7 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
 
         ctx.fillStyle = '#94a3b8';
         ctx.font = '500 22px Poppins, system-ui, sans-serif';
-        ctx.fillText(verdict.officeLocation || 'DVT Team', contentX, 225);
+        ctx.fillText('Movember 2026 Contestant', contentX, 225);
 
         ctx.fillStyle = '#00b4d8';
         ctx.font = 'bold 28px Poppins, system-ui, sans-serif';

@@ -73,7 +73,7 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
             </div>
             <h2 className="contestant-display-name">{verdict.contestantName}</h2>
             <div className="contestant-cohort-tag">
-              <FaLocationDot className="pin-icon" /> {verdict.officeLocation || 'REMOTE'}
+              Movember 2026 Contestant
             </div>
           </div>
           <div className="archetype-badge">

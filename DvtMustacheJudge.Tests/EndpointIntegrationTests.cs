@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text.Json;
 using DvtMustacheJudge.Api.Data;
 using DvtMustacheJudge.Api.Models;
@@ -18,7 +19,6 @@ public class TestGeminiJudgeService : DvtMustacheJudge.Api.Services.IGeminiJudge
         Stream imageStream, 
         string mimeType, 
         string contestantName, 
-        string? officeLocation,
         Stream? cleanShaveStream = null,
         string? cleanShaveMimeType = null,
         CancellationToken cancellationToken = default)
@@ -33,7 +33,7 @@ public class TestGeminiJudgeService : DvtMustacheJudge.Api.Services.IGeminiJudge
             });
         }
 
-        var verdict = DvtMustacheJudge.Api.Services.GeminiJudgeService.GenerateFallbackVerdict(contestantName, officeLocation);
+        var verdict = DvtMustacheJudge.Api.Services.GeminiJudgeService.GenerateFallbackVerdict(contestantName);
         return Task.FromResult(verdict);
     }
 }
@@ -83,7 +83,6 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                     {
                         Id = Guid.NewGuid(),
                         ContestantName = $"Test Contestant {i}",
-                        OfficeLocation = i % 2 == 0 ? "Johannesburg" : "Cape Town",
                         StyleCategory = "Chevron",
                         MustacheTitle = $"The Champion {i}",
                         RoastCommentary = "Spectacular grooming.",
@@ -123,6 +122,33 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
                          ?? string.Empty;
     }
 
+    private async Task<(string Token, Guid UserId)> CreatePaidContestantWithCleanShaveAsync(string name)
+    {
+        var email = $"contestant_{Guid.NewGuid():N}@example.com";
+        var reg = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, name, "password123"));
+        var regDoc = JsonDocument.Parse(await reg.Content.ReadAsStringAsync());
+        var token = regDoc.RootElement.GetProperty("token").GetString()!;
+        var userId = regDoc.RootElement.GetProperty("id").GetGuid();
+
+        // Admin approves R100 leaderboard fee
+        var adminToggle = new HttpRequestMessage(HttpMethod.Post, $"/api/mustache/admin/contestant/{userId}/toggle-leaderboard-paid");
+        adminToggle.Headers.Add("X-Admin-Password", _adminPassword);
+        await _client.SendAsync(adminToggle);
+
+        // Upload Day 1 Clean Shave
+        using var csFormData = new MultipartFormDataContent();
+        var dummyCsBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
+        var csImageContent = new ByteArrayContent(dummyCsBytes);
+        csImageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        csFormData.Add(csImageContent, "image", "baseline.jpg");
+
+        var uploadReq = new HttpRequestMessage(HttpMethod.Post, "/api/mustache/clean-shave") { Content = csFormData };
+        uploadReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        await _client.SendAsync(uploadReq);
+
+        return (token, userId);
+    }
+
     [Fact]
     public async Task GetLeaderboard_ReturnsOkAndSeededEntries()
     {
@@ -160,6 +186,7 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<LeaderboardResponseDto>(json, _jsonOptions);
 
@@ -203,9 +230,10 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
     public async Task JudgeEndpoint_ValidSubmission_ReturnsVerdictAndPersists()
     {
         // Arrange
+        var (token, _) = await CreatePaidContestantWithCleanShaveAsync("Integration Test Contestant");
+
         using var formData = new MultipartFormDataContent();
         formData.Add(new StringContent("Integration Test Contestant"), "Name");
-        formData.Add(new StringContent("Cape Town"), "Location");
 
         // Dummy 1x1 GIF / JPEG image bytes
         var dummyImageBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
@@ -214,7 +242,9 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         formData.Add(imageContent, "Image", "test_stache.jpg");
 
         // Act
-        var response = await _client.PostAsync("/api/mustache/judge", formData);
+        var req = new HttpRequestMessage(HttpMethod.Post, "/api/mustache/judge") { Content = formData };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(req);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -224,7 +254,6 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
 
         Assert.NotNull(verdict);
         Assert.Equal("Integration Test Contestant", verdict.ContestantName);
-        Assert.Equal("Cape Town", verdict.OfficeLocation);
         Assert.True(verdict.OverallScore is >= 1 and <= 100);
         Assert.True(verdict.DensityScore is >= 1 and <= 10);
         Assert.True(verdict.SymmetryScore is >= 1 and <= 10);
@@ -238,6 +267,8 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
     [Fact]
     public async Task JudgeEndpoint_MissingName_ReturnsBadRequest()
     {
+        var (token, _) = await CreatePaidContestantWithCleanShaveAsync("Valid Contestant");
+
         using var formData = new MultipartFormDataContent();
         formData.Add(new StringContent(""), "Name");
 
@@ -246,7 +277,9 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
         formData.Add(imageContent, "Image", "test.jpg");
 
-        var response = await _client.PostAsync("/api/mustache/judge", formData);
+        var req = new HttpRequestMessage(HttpMethod.Post, "/api/mustache/judge") { Content = formData };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(req);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
@@ -335,9 +368,10 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         var initialResult = JsonSerializer.Deserialize<LeaderboardResponseDto>(initialJson, _jsonOptions);
         var initialCount = initialResult?.TotalEntries ?? 0;
 
+        var (token, _) = await CreatePaidContestantWithCleanShaveAsync("Paid Contestant");
+
         using var formData = new MultipartFormDataContent();
         formData.Add(new StringContent("John Motherfucker Doe"), "Name");
-        formData.Add(new StringContent("Johannesburg"), "Location");
 
         var dummyImageBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
         var imageContent = new ByteArrayContent(dummyImageBytes);
@@ -345,7 +379,9 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         formData.Add(imageContent, "Image", "test_stache.jpg");
 
         // Act
-        var response = await _client.PostAsync("/api/mustache/judge", formData);
+        var req = new HttpRequestMessage(HttpMethod.Post, "/api/mustache/judge") { Content = formData };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(req);
 
         // Assert: 400 Bad Request
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -372,10 +408,11 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         var initialResult = JsonSerializer.Deserialize<LeaderboardResponseDto>(initialJson, _jsonOptions);
         var initialCount = initialResult?.TotalEntries ?? 0;
 
+        var (token, _) = await CreatePaidContestantWithCleanShaveAsync("Flagged Contestant");
+
         using var formData = new MultipartFormDataContent();
         // Triggers the TestGeminiJudgeService NSFW simulation
         formData.Add(new StringContent("Alex Clean Guy FlaggedVisionTest"), "Name");
-        formData.Add(new StringContent("Cape Town"), "Location");
 
         var dummyImageBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
         var imageContent = new ByteArrayContent(dummyImageBytes);
@@ -383,7 +420,9 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         formData.Add(imageContent, "Image", "test_nsfw.jpg");
 
         // Act
-        var response = await _client.PostAsync("/api/mustache/judge", formData);
+        var req = new HttpRequestMessage(HttpMethod.Post, "/api/mustache/judge") { Content = formData };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(req);
 
         // Assert: 400 Bad Request
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

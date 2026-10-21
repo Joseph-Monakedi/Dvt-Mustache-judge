@@ -165,7 +165,7 @@ export default function KioskMode({ onExit }) {
                     <div>
                       <h2 className="featured-contestant-name">{currentEntry.contestantName}</h2>
                       <div className="featured-office-tag">
-                        <FaLocationDot className="pin-icon" /> {currentEntry.officeLocation || 'REMOTE'}
+                        <GiMustache className="pin-icon" /> Movember Contestant
                       </div>
                     </div>
                   </div>

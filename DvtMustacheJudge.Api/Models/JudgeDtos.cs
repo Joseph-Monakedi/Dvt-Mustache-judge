@@ -62,26 +62,14 @@ public class GeminiJudgeResult
 public class JudgeRequestDto
 {
     public string Name { get; set; } = string.Empty;
-    public string? OfficeLocation { get; set; }
-    public string? Location { get; set; }
-    public string? Cohort { get; set; }
     public IFormFile? Image { get; set; }
     public IFormFile? CleanShaveImage { get; set; }
-
-    public string GetResolvedLocation()
-    {
-        if (!string.IsNullOrWhiteSpace(OfficeLocation)) return OfficeLocation.Trim();
-        if (!string.IsNullOrWhiteSpace(Location)) return Location.Trim();
-        if (!string.IsNullOrWhiteSpace(Cohort)) return Cohort.Trim();
-        return "REMOTE";
-    }
 }
 
 public class JudgeResponseDto
 {
     public Guid Id { get; set; }
     public string ContestantName { get; set; } = string.Empty;
-    public string? OfficeLocation { get; set; }
     public string ImageUrl { get; set; } = string.Empty;
     public string ThumbnailUrl { get; set; } = string.Empty;
     public string? CleanShaveImageUrl { get; set; }
@@ -117,7 +105,6 @@ public class UserEntriesResponseDto
     public Guid UserId { get; set; }
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
-    public string OfficeLocation { get; set; } = string.Empty;
     public bool LeaderboardPaid { get; set; }
     public bool QuizPaid { get; set; }
     public string? CleanShaveImageUrl { get; set; }
@@ -133,7 +120,6 @@ public class LeaderboardEntryDto
     public int Rank { get; set; }
     public Guid Id { get; set; }
     public string ContestantName { get; set; } = string.Empty;
-    public string? OfficeLocation { get; set; }
     public string ImageUrl { get; set; } = string.Empty;
     public string ThumbnailUrl { get; set; } = string.Empty;
     public string? CleanShaveImageUrl { get; set; }

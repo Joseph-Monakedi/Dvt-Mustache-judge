@@ -591,7 +591,6 @@ export default function AdminPortal({ onBackToApp }) {
       const q = searchQuery.toLowerCase();
       return (
         e.contestantName.toLowerCase().includes(q) ||
-        (e.officeLocation && e.officeLocation.toLowerCase().includes(q)) ||
         e.mustacheTitle.toLowerCase().includes(q) ||
         (e.woodenSpoonReason && e.woodenSpoonReason.toLowerCase().includes(q))
       );
@@ -609,8 +608,7 @@ export default function AdminPortal({ onBackToApp }) {
       const q = contestantSearch.toLowerCase();
       return (
         (c.fullName && c.fullName.toLowerCase().includes(q)) ||
-        (c.email && c.email.toLowerCase().includes(q)) ||
-        (c.officeLocation && c.officeLocation.toLowerCase().includes(q))
+        (c.email && c.email.toLowerCase().includes(q))
       );
     }
     return true;
@@ -861,7 +859,7 @@ export default function AdminPortal({ onBackToApp }) {
               <input
                 type="text"
                 className="search-input"
-                placeholder="Search contestant by name, email, or office..."
+                placeholder="Search contestant by name or email..."
                 value={contestantSearch}
                 onChange={e => setContestantSearch(e.target.value)}
               />
@@ -888,7 +886,6 @@ export default function AdminPortal({ onBackToApp }) {
                   <thead>
                     <tr>
                       <th>Contestant</th>
-                      <th>Office</th>
                       <th>Submissions & Best</th>
                       <th>Leaderboard Entry (R100)</th>
                       <th>Quiz Arena Entry (R50)</th>
@@ -910,9 +907,6 @@ export default function AdminPortal({ onBackToApp }) {
                               <span className="contestant-email-text">{c.email}</span>
                             </div>
                           </div>
-                        </td>
-                        <td>
-                          <span className="location-pill">{c.officeLocation || 'Remote'}</span>
                         </td>
                         <td>
                           <div className="entry-count-meta">
@@ -1069,7 +1063,7 @@ export default function AdminPortal({ onBackToApp }) {
           <input
             type="text"
             className="search-input"
-            placeholder="Search contestant or office..."
+            placeholder="Search contestant or title..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
@@ -1177,7 +1171,6 @@ export default function AdminPortal({ onBackToApp }) {
                     </th>
                     <th>Contestant</th>
                     <th>Division</th>
-                    <th>Office Location</th>
                     <th>Title & Archetype</th>
                     <th>Score</th>
                     <th>Submitted</th>
@@ -1227,7 +1220,6 @@ export default function AdminPortal({ onBackToApp }) {
                             </span>
                           )}
                         </td>
-                        <td className="cohort-col">{entry.officeLocation || 'DVT'}</td>
                         <td className="category-col">
                           <div>"{entry.mustacheTitle}"</div>
                           <span className="style-tag">{entry.styleCategory}</span>
@@ -1336,7 +1328,6 @@ export default function AdminPortal({ onBackToApp }) {
                       />
                       <div className="admin-mobile-meta">
                         <div className="admin-mobile-name">{entry.contestantName}</div>
-                        <div className="admin-mobile-loc">{entry.officeLocation || 'REMOTE'}</div>
                         <div className="admin-mobile-title">"{entry.mustacheTitle}"</div>
                       </div>
                       <div className="admin-mobile-score-wrap">
@@ -1446,7 +1437,36 @@ export default function AdminPortal({ onBackToApp }) {
 
               <div className="quiz-host-pin-box">
                 <span className="quiz-pin-label">GAME PIN</span>
-                <span className="quiz-pin-number">{quizState?.pinCode || '69420'}</span>
+                <span className="quiz-pin-number">{quizState?.pinCode || 'No PIN'}</span>
+                <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                  <button
+                    type="button"
+                    className="admin-mini-btn"
+                    onClick={() => {
+                      if (quizState?.pinCode) {
+                        navigator.clipboard?.writeText(quizState.pinCode);
+                        setActionMessage(`PIN ${quizState.pinCode} copied to clipboard! Communicate this manually to players.`);
+                        setTimeout(() => setActionMessage(''), 3500);
+                      }
+                    }}
+                    disabled={!quizState?.pinCode}
+                    title="Copy PIN to clipboard"
+                  >
+                    Copy PIN
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-mini-btn"
+                    onClick={async () => {
+                      const newPin = Math.floor(10000 + Math.random() * 90000).toString();
+                      await handleQuizAction('set-pin', { pin: newPin });
+                    }}
+                    disabled={quizLoading}
+                    title="Generate a fresh 5-digit PIN"
+                  >
+                    Generate Fresh PIN
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1581,7 +1601,7 @@ export default function AdminPortal({ onBackToApp }) {
             <div className="quiz-waiting-card">
               <FaGamepad className="waiting-icon" />
               <h3>Arena is in Lobby Mode</h3>
-              <p>Players can join using PIN <strong>{quizState?.pinCode || '69420'}</strong>. When all players have arrived, click <strong>Launch Next Question</strong> above.</p>
+              <p>Players can join using PIN <strong>{quizState?.pinCode || 'Pending PIN'}</strong>. When all players have arrived, click <strong>Launch Next Question</strong> above.</p>
             </div>
           )}
         </div>

@@ -1,29 +1,25 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { GiMustache } from 'react-icons/gi';
-import { FaCamera, FaRotate, FaUpload, FaScaleBalanced, FaArrowRight, FaArrowDown, FaCircleCheck } from 'react-icons/fa6';
+import { 
+  FaCamera, 
+  FaRotate, 
+  FaUpload, 
+  FaScaleBalanced, 
+  FaArrowRight, 
+  FaArrowDown, 
+  FaCircleCheck, 
+  FaLock, 
+  FaHandHoldingDollar,
+  FaClock,
+  FaUserCheck
+} from 'react-icons/fa6';
 import { MdOutlineWarningAmber } from 'react-icons/md';
 import { useAuth } from '../context/AuthContext';
 import { apiUrl } from '../utils/api';
 
-const OFFICE_LOCATIONS = [
-  'Johannesburg',
-  'Cape Town',
-  'Durban',
-  'Gqeberha',
-  'London',
-  'Waterford',
-  'Amsterdam',
-  'Baar',
-  'Nairobi',
-  'Dubai',
-  'West Perth',
-  'REMOTE'
-];
-
 export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
-  const { user, token, refreshUser } = useAuth();
+  const { user, token, refreshUser, openAuthModal } = useAuth();
   const [name, setName] = useState(user?.fullName || '');
-  const [officeLocation, setOfficeLocation] = useState(user?.officeLocation || 'Johannesburg');
   const [capturedBlob, setCapturedBlob] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
@@ -32,11 +28,8 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
   const [facingMode, setFacingMode] = useState('user');
   const [useUploadFallback, setUseUploadFallback] = useState(false);
   const [validationError, setValidationError] = useState('');
-  const [saveAsCleanShave, setSaveAsCleanShave] = useState(false);
   const [savingCleanShave, setSavingCleanShave] = useState(false);
   const [cleanShaveSuccess, setCleanShaveSuccess] = useState('');
-  const [cleanShaveBlob, setCleanShaveBlob] = useState(null);
-  const [cleanShavePreview, setCleanShavePreview] = useState(null);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -51,6 +44,19 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
       }, 100);
     }
   };
+
+  // Sync user's name
+  useEffect(() => {
+    if (user?.fullName && !name) {
+      setName(user.fullName);
+    }
+  }, [user]);
+
+  // Determine stage:
+  // Step 1: User needs to take Day 1 clean shave baseline photo
+  // Step 2: Clean shave is on file; user can submit unlimited growth photos
+  const hasCleanShave = Boolean(user?.cleanShaveImageUrl);
+  const isPaidOrAdmin = Boolean(user?.leaderboardPaid || user?.role === 'Admin');
 
   // Initialize camera stream
   const startCamera = useCallback(async () => {
@@ -99,7 +105,10 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
   }, [facingMode]);
 
   useEffect(() => {
-    startCamera();
+    // Only run camera if user is authenticated and paid
+    if (user && isPaidOrAdmin) {
+      startCamera();
+    }
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -109,7 +118,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
         videoRef.current.srcObject = null;
       }
     };
-  }, [startCamera]);
+  }, [startCamera, user, isPaidOrAdmin]);
 
   const toggleCameraFacing = () => {
     setFacingMode(prev => (prev === 'user' ? 'environment' : 'user'));
@@ -153,7 +162,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
         }
       },
       'image/jpeg',
-      0.82
+      0.85
     );
   };
 
@@ -190,31 +199,10 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     }
   };
 
-  useEffect(() => {
-    if (user) {
-      if (!name) setName(user.fullName || '');
-      if (user.officeLocation) setOfficeLocation(user.officeLocation);
-    }
-  }, [user]);
-
-  const handleCleanShaveFileChange = e => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setValidationError('Please select an image file for clean shave baseline.');
-      return;
-    }
-    setCleanShaveBlob(file);
-    setCleanShavePreview(URL.createObjectURL(file));
-  };
-
+  // Step 1: Save Clean Shave Baseline
   const handleSaveCleanShaveBaseline = async () => {
     if (!capturedBlob) {
-      setValidationError('Please snap a photo first to save as your Day 1 Clean Shave baseline.');
-      return;
-    }
-    if (!token) {
-      setValidationError('Please sign in or create an account to save your permanent clean shave baseline.');
+      setValidationError('Please snap or upload your clean-shaven face first.');
       return;
     }
 
@@ -239,8 +227,10 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
         throw new Error(data.error || 'Failed to save clean shave baseline.');
       }
 
-      setCleanShaveSuccess('Day 1 Clean Shave baseline saved! All subsequent entries will be evaluated against it.');
-      setSaveAsCleanShave(false);
+      setCleanShaveSuccess('Day 1 Clean Shave baseline registered! Proceed to submit your mustache growth entries.');
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setCapturedBlob(null);
+      setPreviewUrl(null);
       await refreshUser();
     } catch (err) {
       setValidationError(err.message || 'Error uploading clean shave baseline.');
@@ -249,12 +239,9 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     }
   };
 
-  const handleSubmit = e => {
+  // Step 2: Submit Mustache Growth Entry
+  const handleSubmitEntry = e => {
     e.preventDefault();
-    if (saveAsCleanShave) {
-      handleSaveCleanShaveBaseline();
-      return;
-    }
 
     if (!name.trim()) {
       setValidationError('Contestant name is required.');
@@ -274,20 +261,120 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     setValidationError('');
     onJudgeSubmit({
       name: name.trim(),
-      officeLocation,
-      imageBlob: capturedBlob,
-      cleanShaveBlob: cleanShaveBlob
+      imageBlob: capturedBlob
     });
   };
 
+  // 1. GATE: Unauthenticated user
+  if (!user) {
+    return (
+      <div className="booth-container fade-in">
+        <div className="booth-header">
+          <h1 className="booth-title">
+            Enter the Movember Court <GiMustache className="title-stache-icon" />
+          </h1>
+          <p className="booth-subtitle">
+            Open to all contestants worldwide! Sign in or register to join the competition.
+          </p>
+        </div>
+
+        <div className="quiz-paywall-container fade-in">
+          <div className="quiz-paywall-card">
+            <div className="paywall-icon-wrap">
+              <FaLock className="paywall-lock-icon" />
+            </div>
+            <span className="paywall-pill">Contestant Registration</span>
+            <h2>Sign In Required to Enter</h2>
+            <p>
+              To enter the DVT Movember mustache competition, record your Day 1 clean shave baseline photo, and submit entries for AI judging, please sign in or register with your email.
+            </p>
+
+            <div className="paywall-actions" style={{ marginTop: '24px' }}>
+              <button 
+                type="button" 
+                className="paywall-btn primary"
+                onClick={() => openAuthModal('login')}
+              >
+                <FaUserCheck className="btn-icon" /> Sign In / Register
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. GATE: Unpaid user (Requires R100 contest fee)
+  if (!isPaidOrAdmin) {
+    return (
+      <div className="booth-container fade-in">
+        <div className="booth-header">
+          <h1 className="booth-title">
+            Movember Contest Pass Required <GiMustache className="title-stache-icon" />
+          </h1>
+          <p className="booth-subtitle">
+            Welcome, <strong>{user.fullName}</strong>. Contest entry requires the R100 Movember charity fee.
+          </p>
+        </div>
+
+        <div className="quiz-paywall-container fade-in">
+          <div className="quiz-paywall-card">
+            <div className="paywall-icon-wrap">
+              <FaHandHoldingDollar className="paywall-lock-icon text-gold" />
+            </div>
+            <span className="paywall-pill">Movember Charity Entry Fee</span>
+            <h2>Contest Pass Pending Approval</h2>
+            <p>
+              Entry to the Mustache Contest and live leaderboard requires the <strong>R100</strong> charity donation. 
+              All proceeds support men's mental health, suicide prevention, and prostate/testicular cancer initiatives.
+            </p>
+
+            <div className="paywall-fee-card">
+              <div className="fee-row">
+                <span className="fee-name">Leaderboard Entry Pass</span>
+                <span className="fee-amount text-gold">R100</span>
+              </div>
+              <div className="fee-instruction">
+                Make your payment to the Movember coordinator with payment reference:
+                <div style={{ marginTop: '6px', fontWeight: 'bold', color: '#00b4d8', fontSize: '15px' }}>
+                  MOVEM-{(user.fullName || '').replace(/\s+/g, '').toUpperCase()}
+                </div>
+                Once confirmed, an admin will activate your pass in the Admin Portal!
+              </div>
+            </div>
+
+            <div className="paywall-actions">
+              <button 
+                type="button" 
+                className="paywall-btn primary"
+                onClick={refreshUser}
+              >
+                <FaRotate className="btn-icon" /> Check Approval Status
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. MAIN BOOTH:
+  // Step 1: Clean Shave Baseline (if not yet captured)
+  // Step 2: Mustache Growth Submission (if clean shave exists)
   return (
     <div className="booth-container fade-in">
       <div className="booth-header">
         <h1 className="booth-title">
-          Enter the Movember Court <GiMustache className="title-stache-icon" />
+          {!hasCleanShave ? (
+            <>Step 1: Capture Day 1 Clean Shave Baseline <GiMustache className="title-stache-icon" /></>
+          ) : (
+            <>Enter the Movember Court <GiMustache className="title-stache-icon" /></>
+          )}
         </h1>
         <p className="booth-subtitle">
-          Align your upper lip in the optical reticle. The AI Judge evaluates density, symmetry, curvature & swagger.
+          {!hasCleanShave
+            ? 'Before entering the contest, snap a fresh clean-shaven photo. This baseline is saved to your profile and used by the AI Judge to evaluate your growth over time.'
+            : 'Submit as many photos as you want! The AI Judge evaluates growth alongside your clean-shave baseline, and only your single highest score is featured on the leaderboard.'}
         </p>
       </div>
 
@@ -298,13 +385,15 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
             {previewUrl ? (
               <div className="snapshot-preview">
                 <img src={previewUrl} alt="Contestant Preview" className="preview-image" />
-                <div className="preview-badge">Snapshot Ready</div>
+                <div className="preview-badge">
+                  {!hasCleanShave ? 'Clean Shave Snapshot Ready' : 'Mustache Snapshot Ready'}
+                </div>
                 <div className="snapshot-overlay-actions">
                   <button 
                     type="button" 
                     className="retake-button" 
                     onClick={handleRetake}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || savingCleanShave}
                   >
                     <FaRotate className="btn-icon" /> Retake
                   </button>
@@ -322,11 +411,13 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 <div className="dropzone-icon">
                   <FaUpload />
                 </div>
-                <h3>Upload Your Mustache Photo</h3>
-                <p>Drag & drop or tap an option below (JPEG, PNG, WebP up to 8MB)</p>
+                <h3>
+                  {!hasCleanShave ? 'Upload Day 1 Clean Shave Photo' : 'Upload Your Mustache Photo'}
+                </h3>
+                <p>Drag & drop or choose an option below (JPEG, PNG, WebP up to 8MB)</p>
                 {cameraError && (
                   <div className="camera-notice">
-                    Note: Camera unavailable or permission denied. Direct upload active.
+                    Note: Camera unavailable or permission denied. Direct file upload active.
                   </div>
                 )}
                 
@@ -376,7 +467,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                     </div>
                     <div className="camera-init-title">Calibrating Optical Sensor</div>
                     <p className="camera-init-desc">
-                      Initializing camera lens stream for supreme Movember mustache inspection...
+                      Initializing camera lens stream for supreme Movember inspection...
                     </p>
                   </div>
                 )}
@@ -423,7 +514,9 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
 
                   <div className="hud-guidance-banner">
                     <span className="guidance-pulse"></span>
-                    <span>Align upper lip in cyan reticle</span>
+                    <span>
+                      {!hasCleanShave ? 'Align clean-shaven face in optical HUD' : 'Align upper lip in cyan reticle'}
+                    </span>
                   </div>
 
                   <div className="hud-camera-controls">
@@ -458,15 +551,17 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 className="shutter-button mobile-tactile-shutter"
                 onClick={captureSnapshot}
                 disabled={!cameraActive}
-                aria-label="Snap Mustache Photo"
+                aria-label="Snap Photo"
               >
                 <div className="shutter-inner">
                   <FaCamera className="shutter-icon" />
-                  <span className="shutter-text">SNAP MUSTACHE</span>
+                  <span className="shutter-text">
+                    {!hasCleanShave ? 'SNAP CLEAN SHAVE' : 'SNAP MUSTACHE'}
+                  </span>
                 </div>
               </button>
 
-              {/* Mobile quick secondary controls right below shutter */}
+              {/* Mobile quick secondary controls */}
               <div className="mobile-shutter-secondary mobile-only">
                 <button 
                   type="button" 
@@ -502,12 +597,18 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
           )}
         </div>
 
-        {/* Right: Contestant Details Form */}
+        {/* Right: Submission Form */}
         <div className="details-card" ref={detailsCardRef}>
-          <h2 className="form-card-title">Contestant Dossier</h2>
-          <p className="form-card-desc">Zero sign-in required. Pure frictionless Movember glory.</p>
+          <h2 className="form-card-title">
+            {!hasCleanShave ? 'Clean Shave Baseline' : 'Contestant Dossier'}
+          </h2>
+          <p className="form-card-desc">
+            {!hasCleanShave
+              ? 'Record your Day 1 baseline. All future entries are evaluated against this photo.'
+              : 'Unlimited submissions allowed. Only your highest scored photo reaches the leaderboard.'}
+          </p>
 
-          <form onSubmit={handleSubmit} className="judge-form">
+          <form onSubmit={!hasCleanShave ? (e) => { e.preventDefault(); handleSaveCleanShaveBaseline(); } : handleSubmitEntry} className="judge-form">
             <div className="form-group">
               <label htmlFor="contestant-name" className="form-label">
                 Contestant Name <span className="required-star">*</span>
@@ -520,26 +621,9 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 value={name}
                 maxLength={50}
                 onChange={e => setName(e.target.value)}
-                disabled={isSubmitting}
+                disabled={isSubmitting || savingCleanShave}
                 required
               />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="contestant-location" className="form-label">
-                Office Location
-              </label>
-              <select 
-                id="contestant-location"
-                className="form-select"
-                value={officeLocation}
-                onChange={e => setOfficeLocation(e.target.value)}
-                disabled={isSubmitting}
-              >
-                {OFFICE_LOCATIONS.map(loc => (
-                  <option key={loc} value={loc}>{loc}</option>
-                ))}
-              </select>
             </div>
 
             <div className="rules-box">
@@ -547,59 +631,21 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 <FaScaleBalanced className="rules-icon" /> Judicial Invariants
               </div>
               <ul className="rules-list">
-                <li>Strict Kindness & Safety: Facial hair only (zero body/skin remarks).</li>
-                <li>Growth evaluated alongside your Day 1 Clean Shave baseline photo.</li>
-                <li>Real-time sync with the DVT Office Live Leaderboard.</li>
+                <li>Facial hair only: Zero body or skin remarks (Kindness Invariant).</li>
+                <li>Growth evaluated against your Day 1 Clean Shave baseline photo.</li>
+                <li>Submit unlimited attempts — only your top score features on the leaderboard.</li>
               </ul>
             </div>
 
-            {/* Baseline Status / Clean Shave Prompt */}
-            {user?.cleanShaveImageUrl ? (
+            {/* Baseline Status Card */}
+            {hasCleanShave && user?.cleanShaveImageUrl && (
               <div className="booth-baseline-card active fade-in">
                 <div className="booth-baseline-left">
                   <img src={user.cleanShaveImageUrl} alt="Baseline" className="booth-baseline-thumb" />
                   <div>
                     <span className="booth-baseline-tag"><FaCircleCheck /> Day 1 Baseline Active</span>
-                    <p className="booth-baseline-desc">Your growth is judged alongside this clean shave photo.</p>
+                    <p className="booth-baseline-desc">Your facial hair growth is judged alongside this clean shave photo.</p>
                   </div>
-                </div>
-              </div>
-            ) : token ? (
-              <div className="booth-baseline-card prompt fade-in">
-                <div className="booth-prompt-content">
-                  <span className="booth-baseline-tag pending"><FaCamera /> Clean Shave Baseline</span>
-                  <p className="booth-baseline-desc">
-                    No Day 1 baseline on file yet. Is this a fresh clean-shave photo?
-                  </p>
-                  <label className="baseline-toggle-label">
-                    <input 
-                      type="checkbox"
-                      checked={saveAsCleanShave}
-                      onChange={e => setSaveAsCleanShave(e.target.checked)}
-                    />
-                    <span>Set this photo as my Day 1 Clean Shave baseline</span>
-                  </label>
-                </div>
-              </div>
-            ) : (
-              <div className="booth-baseline-card optional fade-in">
-                <label className="form-label" style={{ marginBottom: '4px' }}>
-                  Day 1 Clean Shave Photo (Optional)
-                </label>
-                <p className="booth-baseline-desc" style={{ marginBottom: '8px' }}>
-                  Attach a clean shave photo so the AI Judge can evaluate growth alongside it!
-                </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <input 
-                    type="file" 
-                    accept="image/*"
-                    onChange={handleCleanShaveFileChange}
-                    className="form-input"
-                    style={{ fontSize: '12px', padding: '6px' }}
-                  />
-                  {cleanShavePreview && (
-                    <img src={cleanShavePreview} alt="Baseline Preview" className="booth-baseline-thumb" />
-                  )}
                 </div>
               </div>
             )}
@@ -618,15 +664,20 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
 
             <button 
               type="submit" 
-              className={`submit-judge-btn ${!capturedBlob ? 'disabled' : ''} ${saveAsCleanShave ? 'save-baseline-btn' : ''}`}
+              className={`submit-judge-btn ${!capturedBlob ? 'disabled' : ''} ${!hasCleanShave ? 'save-baseline-btn' : ''}`}
               disabled={!capturedBlob || isSubmitting || savingCleanShave}
             >
-              {isSubmitting || savingCleanShave ? (
+              {savingCleanShave ? (
                 <span className="btn-loading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <span className="btn-spinner"></span>
-                  <span>{savingCleanShave ? 'Saving Clean Shave Baseline...' : 'Summoning AI Judge...'}</span>
+                  <span>Saving Day 1 Clean Shave Baseline...</span>
                 </span>
-              ) : saveAsCleanShave ? (
+              ) : isSubmitting ? (
+                <span className="btn-loading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <span className="btn-spinner"></span>
+                  <span>Summoning AI Judge...</span>
+                </span>
+              ) : !hasCleanShave ? (
                 <>
                   <FaCamera className="btn-icon" />
                   <span>SAVE DAY 1 CLEAN SHAVE BASELINE</span>

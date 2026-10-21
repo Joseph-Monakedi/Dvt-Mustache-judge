@@ -168,7 +168,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
           <div className="profile-details">
             <div className="profile-badge-row">
               <span className="office-pill">
-                <FaLocationDot className="pill-icon" /> {user.officeLocation || 'Johannesburg'}
+                <GiMustache className="pill-icon" /> Movember Contestant
               </span>
               <span className="date-pill">
                 <FaCalendarDays className="pill-icon" /> Joined Movember 2026

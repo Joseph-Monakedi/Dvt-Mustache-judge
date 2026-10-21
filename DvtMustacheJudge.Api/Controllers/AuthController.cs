@@ -44,14 +44,12 @@ public class AuthController : ControllerBase
         }
 
         var (hash, salt) = PasswordHasher.HashPassword(request.Password);
-        var office = string.IsNullOrWhiteSpace(request.OfficeLocation) ? "Johannesburg" : request.OfficeLocation.Trim();
 
         var user = new User
         {
             Id = Guid.NewGuid(),
             Email = normalizedEmail,
             FullName = request.FullName.Trim(),
-            OfficeLocation = office,
             PasswordHash = hash,
             Salt = salt,
             Role = "Contestant",
@@ -69,7 +67,6 @@ public class AuthController : ControllerBase
             user.Id,
             user.Email,
             user.FullName,
-            user.OfficeLocation,
             user.Role,
             user.LeaderboardPaid,
             user.QuizPaid,
@@ -103,7 +100,6 @@ public class AuthController : ControllerBase
                     Id = Guid.NewGuid(),
                     Email = "admin@dvt.co.za",
                     FullName = "DVT Movember Admin",
-                    OfficeLocation = "Johannesburg",
                     PasswordHash = hash,
                     Salt = salt,
                     Role = "Admin",
@@ -142,7 +138,6 @@ public class AuthController : ControllerBase
             user.Id,
             user.Email,
             user.FullName,
-            user.OfficeLocation,
             user.Role,
             user.LeaderboardPaid,
             user.QuizPaid,
@@ -186,7 +181,6 @@ public class AuthController : ControllerBase
             user.Id,
             user.Email,
             user.FullName,
-            user.OfficeLocation,
             user.Role,
             user.LeaderboardPaid,
             user.QuizPaid,
@@ -203,21 +197,6 @@ public class AuthController : ControllerBase
     [HttpGet("offices")]
     public IActionResult GetOffices()
     {
-        var offices = new[]
-        {
-            "Johannesburg",
-            "Cape Town",
-            "Durban",
-            "Gqeberha",
-            "London",
-            "Waterford",
-            "Amsterdam",
-            "Baar",
-            "Nairobi",
-            "Dubai",
-            "West Perth",
-            "REMOTE"
-        };
-        return Ok(offices);
+        return Ok(Array.Empty<string>());
     }
 }

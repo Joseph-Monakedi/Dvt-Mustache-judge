@@ -5,8 +5,7 @@ namespace DvtMustacheJudge.Api.Models;
 public record RegisterRequest(
     [Required, EmailAddress] string Email,
     [Required, MinLength(2), MaxLength(100)] string FullName,
-    [Required, MinLength(6)] string Password,
-    string? OfficeLocation
+    [Required, MinLength(6)] string Password
 );
 
 public record LoginRequest(
@@ -18,7 +17,6 @@ public record AuthResponse(
     Guid Id,
     string Email,
     string FullName,
-    string OfficeLocation,
     string Role,
     bool LeaderboardPaid,
     bool QuizPaid,
@@ -31,7 +29,6 @@ public record ContestantSummaryDto(
     Guid Id,
     string Email,
     string FullName,
-    string OfficeLocation,
     string Role,
     bool LeaderboardPaid,
     bool QuizPaid,

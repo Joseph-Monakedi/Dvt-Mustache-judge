@@ -40,16 +40,6 @@ export default function Navbar({ activeTab, setActiveTab, totalEntries }) {
           <nav className="navbar-nav desktop-nav">
             <button 
               type="button"
-              className={`nav-btn ${activeTab === 'booth' ? 'active' : ''}`}
-              onClick={() => setActiveTab('booth')}
-              aria-label="Judge Me"
-            >
-              <FaCamera className="nav-icon" />
-              <span className="nav-label">Judge Me</span>
-            </button>
-
-            <button 
-              type="button"
               className={`nav-btn ${activeTab === 'leaderboard' ? 'active' : ''}`}
               onClick={() => setActiveTab('leaderboard')}
               aria-label="Leaderboard"
@@ -61,31 +51,39 @@ export default function Navbar({ activeTab, setActiveTab, totalEntries }) {
               )}
             </button>
 
-            <button 
-              type="button"
-              className={`nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => {
-                if (!isAuthenticated) {
-                  openAuthModal('login');
-                } else {
-                  setActiveTab('dashboard');
-                }
-              }}
-              aria-label="My Mustache Vault"
-            >
-              <FaAward className="nav-icon text-gold" />
-              <span className="nav-label">My Vault</span>
-            </button>
+            {isAuthenticated && (
+              <>
+                <button 
+                  type="button"
+                  className={`nav-btn ${activeTab === 'booth' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('booth')}
+                  aria-label="Enter Contest"
+                >
+                  <FaCamera className="nav-icon" />
+                  <span className="nav-label">Enter Contest</span>
+                </button>
 
-            <button 
-              type="button"
-              className={`nav-btn ${activeTab === 'quiz' ? 'active' : ''}`}
-              onClick={() => setActiveTab('quiz')}
-              aria-label="Mustache Quiz Arena"
-            >
-              <FaGamepad className="nav-icon text-cyan" />
-              <span className="nav-label">Quiz Arena</span>
-            </button>
+                <button 
+                  type="button"
+                  className={`nav-btn ${activeTab === 'quiz' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('quiz')}
+                  aria-label="Mustache Quiz Arena"
+                >
+                  <FaGamepad className="nav-icon text-cyan" />
+                  <span className="nav-label">Quiz Arena</span>
+                </button>
+
+                <button 
+                  type="button"
+                  className={`nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('dashboard')}
+                  aria-label="My Mustache Vault"
+                >
+                  <FaAward className="nav-icon text-gold" />
+                  <span className="nav-label">My Vault</span>
+                </button>
+              </>
+            )}
 
             {/* Kiosk Mode is disabled/hidden on mobile devices */}
             {!isMobile && (
@@ -100,16 +98,18 @@ export default function Navbar({ activeTab, setActiveTab, totalEntries }) {
               </button>
             )}
 
-            <button 
-              type="button"
-              className={`nav-btn admin-nav-btn ${activeTab === 'admin' ? 'active' : ''}`}
-              onClick={() => setActiveTab('admin')}
-              title="Judicial Admin & Moderation Portal"
-              aria-label="Admin Portal"
-            >
-              <FaLock className="nav-icon" />
-              <span className="nav-label">Admin</span>
-            </button>
+            {isAuthenticated && user?.role === 'Admin' && (
+              <button 
+                type="button"
+                className={`nav-btn admin-nav-btn ${activeTab === 'admin' ? 'active' : ''}`}
+                onClick={() => setActiveTab('admin')}
+                title="Judicial Admin & Moderation Portal"
+                aria-label="Admin Portal"
+              >
+                <FaLock className="nav-icon" />
+                <span className="nav-label">Admin</span>
+              </button>
+            )}
           </nav>
 
           {/* Desktop Right User Profile / Sign In Pill */}
@@ -128,11 +128,11 @@ export default function Navbar({ activeTab, setActiveTab, totalEntries }) {
                   <div className="user-nav-info">
                     <span className="user-nav-name">{user?.fullName || 'Contestant'}</span>
                     <span className="user-nav-badges">
-                      <span className={`fee-pill-mini ${user?.leaderboardPaid ? 'paid' : 'pending'}`} title="R100 Leaderboard Status">
-                        {user?.leaderboardPaid ? 'R100 ✓' : 'R100 ⏳'}
+                      <span className={`fee-pill-mini ${user?.leaderboardPaid ? 'paid' : 'pending'}`} title="R100 Contest Entry Status">
+                        {user?.leaderboardPaid ? 'Contest ✓' : 'Contest ⏳'}
                       </span>
                       <span className={`fee-pill-mini ${user?.quizPaid ? 'paid' : 'pending'}`} title="R50 Quiz Arena Status">
-                        {user?.quizPaid ? 'R50 ✓' : 'R50 ⏳'}
+                        {user?.quizPaid ? 'Quiz ✓' : 'Quiz ⏳'}
                       </span>
                     </span>
                   </div>
@@ -188,18 +188,6 @@ export default function Navbar({ activeTab, setActiveTab, totalEntries }) {
       <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">
         <button
           type="button"
-          className={`mobile-nav-item ${activeTab === 'booth' ? 'active' : ''}`}
-          onClick={() => setActiveTab('booth')}
-          aria-label="Judge Me"
-        >
-          <div className="mobile-nav-icon-wrap">
-            <FaCamera className="mobile-nav-icon" />
-          </div>
-          <span className="mobile-nav-text">Judge Me</span>
-        </button>
-
-        <button
-          type="button"
           className={`mobile-nav-item ${activeTab === 'leaderboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('leaderboard')}
           aria-label="Leaderboard"
@@ -213,47 +201,71 @@ export default function Navbar({ activeTab, setActiveTab, totalEntries }) {
           <span className="mobile-nav-text">Leaderboard</span>
         </button>
 
-        <button
-          type="button"
-          className={`mobile-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-          onClick={() => {
-            if (!isAuthenticated) {
-              openAuthModal('login');
-            } else {
-              setActiveTab('dashboard');
-            }
-          }}
-          aria-label="My Vault"
-        >
-          <div className="mobile-nav-icon-wrap">
-            <FaAward className="mobile-nav-icon text-gold" />
-          </div>
-          <span className="mobile-nav-text">My Vault</span>
-        </button>
+        {isAuthenticated ? (
+          <>
+            <button
+              type="button"
+              className={`mobile-nav-item ${activeTab === 'booth' ? 'active' : ''}`}
+              onClick={() => setActiveTab('booth')}
+              aria-label="Enter Contest"
+            >
+              <div className="mobile-nav-icon-wrap">
+                <FaCamera className="mobile-nav-icon" />
+              </div>
+              <span className="mobile-nav-text">Enter Contest</span>
+            </button>
 
-        <button
-          type="button"
-          className={`mobile-nav-item ${activeTab === 'quiz' ? 'active' : ''}`}
-          onClick={() => setActiveTab('quiz')}
-          aria-label="Quiz Arena"
-        >
-          <div className="mobile-nav-icon-wrap">
-            <FaGamepad className="mobile-nav-icon text-cyan" />
-          </div>
-          <span className="mobile-nav-text">Quiz Arena</span>
-        </button>
+            <button
+              type="button"
+              className={`mobile-nav-item ${activeTab === 'quiz' ? 'active' : ''}`}
+              onClick={() => setActiveTab('quiz')}
+              aria-label="Quiz Arena"
+            >
+              <div className="mobile-nav-icon-wrap">
+                <FaGamepad className="mobile-nav-icon text-cyan" />
+              </div>
+              <span className="mobile-nav-text">Quiz Arena</span>
+            </button>
 
-        <button
-          type="button"
-          className={`mobile-nav-item ${activeTab === 'admin' ? 'active' : ''}`}
-          onClick={() => setActiveTab('admin')}
-          aria-label="Admin Portal"
-        >
-          <div className="mobile-nav-icon-wrap">
-            <FaLock className="mobile-nav-icon" />
-          </div>
-          <span className="mobile-nav-text">Admin</span>
-        </button>
+            <button
+              type="button"
+              className={`mobile-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+              onClick={() => setActiveTab('dashboard')}
+              aria-label="My Vault"
+            >
+              <div className="mobile-nav-icon-wrap">
+                <FaAward className="mobile-nav-icon text-gold" />
+              </div>
+              <span className="mobile-nav-text">My Vault</span>
+            </button>
+
+            {user?.role === 'Admin' && (
+              <button
+                type="button"
+                className={`mobile-nav-item ${activeTab === 'admin' ? 'active' : ''}`}
+                onClick={() => setActiveTab('admin')}
+                aria-label="Admin Portal"
+              >
+                <div className="mobile-nav-icon-wrap">
+                  <FaLock className="mobile-nav-icon" />
+                </div>
+                <span className="mobile-nav-text">Admin</span>
+              </button>
+            )}
+          </>
+        ) : (
+          <button
+            type="button"
+            className="mobile-nav-item"
+            onClick={() => openAuthModal('login')}
+            aria-label="Sign In / Register"
+          >
+            <div className="mobile-nav-icon-wrap">
+              <FaRightToBracket className="mobile-nav-icon text-cyan" />
+            </div>
+            <span className="mobile-nav-text">Sign In</span>
+          </button>
+        )}
       </nav>
     </>
   );

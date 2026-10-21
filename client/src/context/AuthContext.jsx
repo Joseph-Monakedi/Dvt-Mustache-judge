@@ -67,7 +67,6 @@ export const AuthProvider = ({ children }) => {
       id: data.id,
       email: data.email,
       fullName: data.fullName,
-      officeLocation: data.officeLocation,
       role: data.role,
       leaderboardPaid: data.leaderboardPaid,
       quizPaid: data.quizPaid,
@@ -82,11 +81,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Register
-  const register = async ({ email, fullName, password, officeLocation }) => {
+  const register = async ({ email, fullName, password }) => {
     const res = await fetch(apiUrl('/api/auth/register'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, fullName, password, officeLocation })
+      body: JSON.stringify({ email, fullName, password })
     });
 
     const data = await res.json();
@@ -100,7 +99,6 @@ export const AuthProvider = ({ children }) => {
       id: data.id,
       email: data.email,
       fullName: data.fullName,
-      officeLocation: data.officeLocation,
       role: data.role,
       leaderboardPaid: data.leaderboardPaid,
       quizPaid: data.quizPaid,

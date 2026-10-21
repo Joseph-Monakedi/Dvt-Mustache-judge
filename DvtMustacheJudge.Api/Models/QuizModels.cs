@@ -15,7 +15,7 @@ public class QuizGame
     public string Status { get; set; } = "Lobby"; // "Lobby", "Question", "AnswerReveal", "Finished"
 
     [MaxLength(10)]
-    public string PinCode { get; set; } = "69420";
+    public string PinCode { get; set; } = string.Empty;
 
     public int CurrentQuestionIndex { get; set; } = 0;
 
@@ -77,9 +77,6 @@ public class QuizPlayer
     [Required]
     [MaxLength(100)]
     public string ContestantName { get; set; } = string.Empty;
-
-    [MaxLength(100)]
-    public string OfficeLocation { get; set; } = "Johannesburg";
 
     public int TotalScore { get; set; } = 0;
 

@@ -18,13 +18,20 @@ import './App.css';
 
 export default function App() {
   const { user, token, authModalOpen, authModalInitialMode, closeAuthModal, refreshUser } = useAuth();
-  const [activeTab, setActiveTab] = useState('booth'); // 'booth' | 'leaderboard' | 'dashboard' | 'quiz' | 'kiosk' | 'admin'
+  const [activeTab, setActiveTab] = useState('leaderboard'); // 'leaderboard' | 'booth' | 'dashboard' | 'quiz' | 'kiosk' | 'admin'
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [judgingModalOpen, setJudgingModalOpen] = useState(false);
   const [activeVerdict, setActiveVerdict] = useState(null);
   const [selectedLeaderboardEntry, setSelectedLeaderboardEntry] = useState(null);
   const [totalEntries, setTotalEntries] = useState(0);
   const [toastMessage, setToastMessage] = useState(null);
+
+  // Auto-redirect if user logs out while in protected tabs
+  useEffect(() => {
+    if (!user && (activeTab === 'dashboard' || activeTab === 'admin')) {
+      setActiveTab('leaderboard');
+    }
+  }, [user, activeTab]);
 
   // Fetch initial entry count
   useEffect(() => {
@@ -44,14 +51,12 @@ export default function App() {
   };
 
   // Handle Judge Submission
-  const handleJudgeSubmit = async ({ name, officeLocation, imageBlob, cleanShaveBlob }) => {
+  const handleJudgeSubmit = async ({ name, imageBlob, cleanShaveBlob }) => {
     setIsSubmitting(true);
     setJudgingModalOpen(true);
 
     const formData = new FormData();
     formData.append('name', name);
-    formData.append('officeLocation', officeLocation);
-    formData.append('location', officeLocation);
     
     // Ensure filename and extension
     const fileName = `mustache_${Date.now()}.jpg`;

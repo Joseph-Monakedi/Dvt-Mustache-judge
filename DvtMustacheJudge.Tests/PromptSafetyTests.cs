@@ -25,7 +25,7 @@ public class PromptSafetyTests
         // Execute 50 sample fallback verdicts to thoroughly test randomness
         for (int i = 0; i < 50; i++)
         {
-            var verdict = GeminiJudgeService.GenerateFallbackVerdict("Test Contestant", "Johannesburg");
+            var verdict = GeminiJudgeService.GenerateFallbackVerdict("Test Contestant");
 
             Assert.True(verdict.OverallScore is >= 1 and <= 100);
             Assert.True(verdict.DensityScore is >= 1 and <= 10);
@@ -63,7 +63,7 @@ public class PromptSafetyTests
 
         for (int i = 0; i < 30; i++)
         {
-            var verdict = GeminiJudgeService.GenerateFallbackVerdict($"Contestant #{i}", "Cape Town");
+            var verdict = GeminiJudgeService.GenerateFallbackVerdict($"Contestant #{i}");
             Assert.Contains(verdict.StyleCategory, allowedCategories);
         }
     }

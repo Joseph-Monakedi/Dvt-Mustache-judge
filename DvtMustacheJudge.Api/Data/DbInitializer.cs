@@ -10,35 +10,67 @@ public static class DbInitializer
 {
     public static async Task SeedAsync(AppDbContext context, IConfiguration? config = null)
     {
-        // 1. Ensure database tables exist and execute idempotent schema migrations
+        // 1. Purge all tables from scratch if not already purged for V3 schema
         try
         {
-            var databaseCreator = (RelationalDatabaseCreator)context.Database.GetService<IDatabaseCreator>();
-            await databaseCreator.CreateTablesAsync();
+            var checkMarkerSql = @"
+                CREATE TABLE IF NOT EXISTS ""__SchemaPurgeV3"" (
+                    ""PurgedAt"" timestamp with time zone NOT NULL PRIMARY KEY
+                );
+            ";
+            await context.Database.ExecuteSqlRawAsync(checkMarkerSql);
+
+            var alreadyPurged = await context.Database.SqlQueryRaw<int>(@"SELECT COUNT(*)::int AS ""Value"" FROM ""__SchemaPurgeV3""").FirstOrDefaultAsync();
+            if (alreadyPurged == 0)
+            {
+                // Purge all legacy tables completely as requested
+                var purgeSql = @"
+                    DROP TABLE IF EXISTS ""QuizPlayerAnswers"", ""QuizPlayers"", ""QuizQuestions"", ""QuizGames"", ""MustacheEntries"", ""Users"" CASCADE;
+                    INSERT INTO ""__SchemaPurgeV3"" (""PurgedAt"") VALUES (CURRENT_TIMESTAMP);
+                ";
+                await context.Database.ExecuteSqlRawAsync(purgeSql);
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            // Primary table exists
+            Console.WriteLine($"DB Purge notice: {ex.Message}");
         }
 
+        // 2. Ensure fresh schema tables exist without OfficeLocation
         try
         {
-            var migrationSql = @"
-                ALTER TABLE ""MustacheEntries"" ADD COLUMN IF NOT EXISTS ""IsWoodenSpoon"" boolean NOT NULL DEFAULT false;
-                ALTER TABLE ""MustacheEntries"" ADD COLUMN IF NOT EXISTS ""WoodenSpoonReason"" character varying(100);
-                ALTER TABLE ""MustacheEntries"" ADD COLUMN IF NOT EXISTS ""InnovationScore"" integer NOT NULL DEFAULT 0;
-                ALTER TABLE ""MustacheEntries"" ADD COLUMN IF NOT EXISTS ""DedicationScore"" integer NOT NULL DEFAULT 0;
-                ALTER TABLE ""MustacheEntries"" ADD COLUMN IF NOT EXISTS ""FunninessScore"" integer NOT NULL DEFAULT 0;
-                ALTER TABLE ""MustacheEntries"" ADD COLUMN IF NOT EXISTS ""UserId"" uuid;
-                ALTER TABLE ""MustacheEntries"" ADD COLUMN IF NOT EXISTS ""CleanShaveImageUrl"" text;
-                ALTER TABLE ""MustacheEntries"" ADD COLUMN IF NOT EXISTS ""GrowthScore"" integer NOT NULL DEFAULT 0;
-                ALTER TABLE ""MustacheEntries"" ADD COLUMN IF NOT EXISTS ""GrowthAnalysis"" text;
+            var schemaSql = @"
+                CREATE TABLE IF NOT EXISTS ""MustacheEntries"" (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""ContestantName"" character varying(100) NOT NULL,
+                    ""ImageUrl"" text NOT NULL,
+                    ""ThumbnailUrl"" text,
+                    ""OverallScore"" integer NOT NULL DEFAULT 0,
+                    ""DensityScore"" integer NOT NULL DEFAULT 0,
+                    ""SymmetryScore"" integer NOT NULL DEFAULT 0,
+                    ""SwaggerScore"" integer NOT NULL DEFAULT 0,
+                    ""IsWoodenSpoon"" boolean NOT NULL DEFAULT false,
+                    ""WoodenSpoonReason"" character varying(100),
+                    ""InnovationScore"" integer NOT NULL DEFAULT 0,
+                    ""DedicationScore"" integer NOT NULL DEFAULT 0,
+                    ""FunninessScore"" integer NOT NULL DEFAULT 0,
+                    ""MustacheTitle"" character varying(150),
+                    ""StyleCategory"" character varying(50),
+                    ""RoastCommentary"" text,
+                    ""CelebrityTwin"" character varying(100),
+                    ""VerdictBadge"" character varying(100),
+                    ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    ""IsHidden"" boolean NOT NULL DEFAULT false,
+                    ""UserId"" uuid,
+                    ""CleanShaveImageUrl"" text,
+                    ""GrowthScore"" integer NOT NULL DEFAULT 0,
+                    ""GrowthAnalysis"" text
+                );
 
                 CREATE TABLE IF NOT EXISTS ""Users"" (
                     ""Id"" uuid NOT NULL PRIMARY KEY,
                     ""Email"" character varying(120) NOT NULL UNIQUE,
                     ""FullName"" character varying(100) NOT NULL,
-                    ""OfficeLocation"" character varying(100) NOT NULL DEFAULT 'Johannesburg',
                     ""PasswordHash"" text NOT NULL,
                     ""Salt"" text NOT NULL,
                     ""Role"" character varying(20) NOT NULL DEFAULT 'Contestant',
@@ -49,14 +81,11 @@ public static class DbInitializer
                     ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
 
-                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""CleanShaveImageUrl"" text;
-                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""CleanShaveUploadedAt"" timestamp with time zone;
-
                 CREATE TABLE IF NOT EXISTS ""QuizGames"" (
                     ""Id"" uuid NOT NULL PRIMARY KEY,
                     ""Title"" character varying(150) NOT NULL,
                     ""Status"" character varying(30) NOT NULL DEFAULT 'Lobby',
-                    ""PinCode"" character varying(10) NOT NULL DEFAULT '69420',
+                    ""PinCode"" character varying(10) NOT NULL,
                     ""CurrentQuestionIndex"" integer NOT NULL DEFAULT 0,
                     ""QuestionStartTime"" timestamp with time zone,
                     ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -82,7 +111,6 @@ public static class DbInitializer
                     ""QuizGameId"" uuid NOT NULL,
                     ""UserId"" uuid,
                     ""ContestantName"" character varying(100) NOT NULL,
-                    ""OfficeLocation"" character varying(100) NOT NULL DEFAULT 'Johannesburg',
                     ""TotalScore"" integer NOT NULL DEFAULT 0,
                     ""Streak"" integer NOT NULL DEFAULT 0,
                     ""JoinedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -99,14 +127,14 @@ public static class DbInitializer
                     ""AnsweredAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
             ";
-            await context.Database.ExecuteSqlRawAsync(migrationSql);
+            await context.Database.ExecuteSqlRawAsync(schemaSql);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Schema migration notice: {ex.Message}");
         }
 
-        // 2. Seed Default Admin User if not exists
+        // 3. Seed Default Admin User
         try
         {
             var adminEmail = "admin@dvt.co.za";
@@ -119,8 +147,7 @@ public static class DbInitializer
                 {
                     Id = Guid.NewGuid(),
                     Email = adminEmail,
-                    FullName = "DVT Movember Admin",
-                    OfficeLocation = "Johannesburg",
+                    FullName = "Movember Admin",
                     PasswordHash = hash,
                     Salt = salt,
                     Role = "Admin",
@@ -137,18 +164,19 @@ public static class DbInitializer
             Console.WriteLine($"Admin seed notice: {ex.Message}");
         }
 
-        // 3. Seed Default Movember Quiz Arena if none exists
+        // 4. Seed Default Movember Quiz Arena with random 6-digit PIN
         try
         {
             var hasQuiz = await context.QuizGames.AnyAsync();
             if (!hasQuiz)
             {
+                var initialPin = Random.Shared.Next(100000, 999999).ToString();
                 var quiz = new QuizGame
                 {
                     Id = Guid.NewGuid(),
-                    Title = "DVT Movember 2026 Grand Mustache Quiz Arena",
+                    Title = "Movember Grand Mustache Quiz Arena",
                     Status = "Lobby",
-                    PinCode = "69420",
+                    PinCode = initialPin,
                     CurrentQuestionIndex = 0,
                     CreatedAt = DateTime.UtcNow
                 };
@@ -161,10 +189,10 @@ public static class DbInitializer
                         QuizGameId = quiz.Id,
                         QuestionOrder = 1,
                         QuestionText = "Which famous 1980s private investigator rocked the world's most iconic Chevron mustache?",
-                        OptionA = "Magnum P.I. (Tom Selleck)", // Red Triangle - Correct
-                        OptionB = "Sherlock Holmes",          // Blue Diamond
-                        OptionC = "Lt. Columbo",               // Yellow Circle
-                        OptionD = "Inspector Clouseau",       // Green Square
+                        OptionA = "Magnum P.I. (Tom Selleck)", // Correct
+                        OptionB = "Sherlock Holmes",
+                        OptionC = "Lt. Columbo",
+                        OptionD = "Inspector Clouseau",
                         CorrectOption = 0,
                         TimeLimitSeconds = 20,
                         Points = 1000
@@ -176,7 +204,7 @@ public static class DbInitializer
                         QuestionOrder = 2,
                         QuestionText = "What is the primary global cause and health mission supported by Movember?",
                         OptionA = "Free barber styling products",
-                        OptionB = "Men's mental health, prostate & testicular cancer awareness", // Blue - Correct
+                        OptionB = "Men's mental health, prostate & testicular cancer awareness", // Correct
                         OptionC = "Artisan beard oil manufacturing",
                         OptionD = "Promoting clean-shaven faces",
                         CorrectOption = 1,
@@ -188,10 +216,10 @@ public static class DbInitializer
                         Id = Guid.NewGuid(),
                         QuizGameId = quiz.Id,
                         QuestionOrder = 3,
-                        QuestionText = "In the DVT Mustache Judge rubric, what 3 dimensions determine your official score?",
+                        QuestionText = "In the Mustache Judge rubric, what 3 dimensions determine your official score?",
                         OptionA = "Length, Curl & Bristle Shine",
                         OptionB = "Beard Ratio, Jawline & Smile",
-                        OptionC = "Density, Symmetry & Swagger", // Yellow - Correct
+                        OptionC = "Density, Symmetry & Swagger", // Correct
                         OptionD = "Thickness, Age & Razor Sharpness",
                         CorrectOption = 2,
                         TimeLimitSeconds = 20,
@@ -204,7 +232,7 @@ public static class DbInitializer
                         QuestionOrder = 4,
                         QuestionText = "Which iconic Queen frontman made the Chevron mustache legendary on stage at Live Aid 1985?",
                         OptionA = "David Bowie",
-                        OptionB = "Freddie Mercury", // Blue - Correct
+                        OptionB = "Freddie Mercury", // Correct
                         OptionC = "Mick Jagger",
                         OptionD = "Elton John",
                         CorrectOption = 1,
@@ -216,10 +244,10 @@ public static class DbInitializer
                         Id = Guid.NewGuid(),
                         QuizGameId = quiz.Id,
                         QuestionOrder = 5,
-                        QuestionText = "What is the official entry fee to feature your mustache on the public DVT Leaderboard for charity?",
+                        QuestionText = "What is the official entry fee to feature your mustache on the live Leaderboard?",
                         OptionA = "Free",
                         OptionB = "R50",
-                        OptionC = "R100", // Yellow - Correct
+                        OptionC = "R100", // Correct
                         OptionD = "R250",
                         CorrectOption = 2,
                         TimeLimitSeconds = 15,
@@ -234,7 +262,7 @@ public static class DbInitializer
                         OptionA = "The Walrus",
                         OptionB = "The Pencil",
                         OptionC = "The Horseshoe",
-                        OptionD = "The Handlebar", // Green - Correct
+                        OptionD = "The Handlebar", // Correct
                         CorrectOption = 3,
                         TimeLimitSeconds = 20,
                         Points = 1000
@@ -245,9 +273,9 @@ public static class DbInitializer
                         QuizGameId = quiz.Id,
                         QuestionOrder = 7,
                         QuestionText = "If an entry is classified into the Wooden Spoon division, what did the contestant submit?",
-                        OptionA = "A drawing, doodle, cartoon or non-human filter", // Red - Correct
+                        OptionA = "A drawing, doodle, cartoon or non-human filter", // Correct
                         OptionB = "A freshly groomed 10/10 handlebar",
-                        OptionC = "An official DVT executive photo",
+                        OptionC = "An official executive photo",
                         OptionD = "A photo with too much beard wax",
                         CorrectOption = 0,
                         TimeLimitSeconds = 20,
@@ -258,12 +286,12 @@ public static class DbInitializer
                         Id = Guid.NewGuid(),
                         QuizGameId = quiz.Id,
                         QuestionOrder = 8,
-                        QuestionText = "Which DVT office is the undisputed reigning champion of facial hair swagger?",
-                        OptionA = "Cape Town",
-                        OptionB = "Johannesburg",
-                        OptionC = "Amsterdam",
-                        OptionD = "All 12 DVT Offices United!", // Green - Correct
-                        CorrectOption = 3,
+                        QuestionText = "What is the ultimate spirit of the Movember Mustache Challenge?",
+                        OptionA = "Personal vanity",
+                        OptionB = "Global solidarity, laughter, and men's health awareness", // Correct
+                        OptionC = "Winning a lifetime supply of razor blades",
+                        OptionD = "Skipping all video calls",
+                        CorrectOption = 1,
                         TimeLimitSeconds = 15,
                         Points = 1000
                     }

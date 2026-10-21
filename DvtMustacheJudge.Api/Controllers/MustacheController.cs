@@ -92,10 +92,7 @@ public class MustacheController : ControllerBase
 
         try
         {
-            var contestantName = request.Name.Trim();
-            var location = request.GetResolvedLocation();
-
-            // Check if user is authenticated via Bearer token
+            // 1. Must be authenticated to enter contest
             Guid? authenticatedUserId = null;
             var authHeader = Request.Headers.Authorization.ToString();
             if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
@@ -108,11 +105,36 @@ public class MustacheController : ControllerBase
                 }
             }
 
-            string? cleanShaveUrl = null;
+            if (!authenticatedUserId.HasValue)
+            {
+                return Unauthorized(new { error = "Please sign in or register to enter the mustache contest." });
+            }
+
+            var user = await _dbContext.Users.FindAsync(authenticatedUserId.Value);
+            if (user == null)
+            {
+                return Unauthorized(new { error = "Contestant account not found. Please register or sign in again." });
+            }
+
+            // Gating: Contestant must have R100 contest fee verified
+            if (!user.LeaderboardPaid && user.Role != "Admin")
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    error = "R100 Contest Entry required. Please have an Admin verify your payment before entering.",
+                    paywall = true,
+                    fee = "R100",
+                    userId = user.Id
+                });
+            }
+
+            var contestantName = !string.IsNullOrWhiteSpace(request.Name) ? request.Name.Trim() : user.FullName;
+
+            string? cleanShaveUrl = user.CleanShaveImageUrl;
             byte[]? cleanShaveBytes = null;
             string? cleanShaveMime = null;
 
-            // Check if contestant submitted a clean shave baseline image directly
+            // Check if contestant submitted a clean shave baseline image in this request
             if (request.CleanShaveImage != null && request.CleanShaveImage.Length > 0)
             {
                 using var cMs = new MemoryStream();
@@ -123,30 +145,35 @@ public class MustacheController : ControllerBase
                 using var cUploadMs = new MemoryStream(cleanShaveBytes);
                 var cUpload = await _storageService.UploadImageAsync(cUploadMs, request.CleanShaveImage.FileName, cleanShaveMime);
                 cleanShaveUrl = cUpload.ImageUrl;
+                user.CleanShaveImageUrl = cleanShaveUrl;
+                user.CleanShaveUploadedAt = DateTime.UtcNow;
+                await _dbContext.SaveChangesAsync(cancellationToken);
             }
 
-            if (authenticatedUserId.HasValue)
+            // Gating: Contestant MUST have a Day 1 clean shave photo saved
+            if (string.IsNullOrWhiteSpace(cleanShaveUrl))
             {
-                var user = await _dbContext.Users.FindAsync(authenticatedUserId.Value);
-                if (user != null)
+                return BadRequest(new { error = "You must first take and submit your Day 1 Clean Shave baseline photo before entering contest photos." });
+            }
+
+            // If cleanShaveBytes is null, load from local disk if available
+            if (cleanShaveBytes == null && !string.IsNullOrWhiteSpace(cleanShaveUrl))
+            {
+                try
                 {
-                    if (string.IsNullOrWhiteSpace(contestantName))
+                    var webRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+                    var uri = new Uri(cleanShaveUrl, UriKind.RelativeOrAbsolute);
+                    var localPath = uri.IsAbsoluteUri ? uri.AbsolutePath : cleanShaveUrl;
+                    var diskPath = Path.Combine(webRoot, localPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (System.IO.File.Exists(diskPath))
                     {
-                        contestantName = user.FullName;
+                        cleanShaveBytes = await System.IO.File.ReadAllBytesAsync(diskPath, cancellationToken);
+                        cleanShaveMime = "image/jpeg";
                     }
-                    if (string.IsNullOrWhiteSpace(location) || location == "REMOTE")
-                    {
-                        location = user.OfficeLocation;
-                    }
-                    if (cleanShaveUrl != null)
-                    {
-                        user.CleanShaveImageUrl = cleanShaveUrl;
-                        user.CleanShaveUploadedAt = DateTime.UtcNow;
-                    }
-                    else if (!string.IsNullOrWhiteSpace(user.CleanShaveImageUrl))
-                    {
-                        cleanShaveUrl = user.CleanShaveImageUrl;
-                    }
+                }
+                catch
+                {
+                    // Ignore fallback if reading baseline fails
                 }
             }
 
@@ -167,7 +194,6 @@ public class MustacheController : ControllerBase
                     aiStream,
                     request.Image.ContentType,
                     contestantName,
-                    location,
                     csStream,
                     cleanShaveMime,
                     cancellationToken);
@@ -175,7 +201,6 @@ public class MustacheController : ControllerBase
 
             // 2.5 Check for Prompt or SQL injection attempts (all injections are classified as Wooden Spoon)
             if (InjectionDetector.IsInjectionAttempt(contestantName, out _) ||
-                InjectionDetector.IsInjectionAttempt(location, out _) ||
                 judgeResult.WoodenSpoonReason == "Prompt / SQL Injection")
             {
                 judgeResult.IsAppropriate = true;
@@ -221,7 +246,6 @@ public class MustacheController : ControllerBase
                 {
                     Id = Guid.NewGuid(),
                     ContestantName = contestantName,
-                    OfficeLocation = location,
                     ImageUrl = imageUrl,
                     ThumbnailUrl = thumbnailUrl,
                     CleanShaveImageUrl = cleanShaveUrl,
@@ -255,30 +279,16 @@ public class MustacheController : ControllerBase
                 _dbContext.MustacheEntries.Add(entry);
                 await _dbContext.SaveChangesAsync();
 
-                bool isEligible = false;
-                if (authenticatedUserId.HasValue)
-                {
-                    var user = await _dbContext.Users.FindAsync(authenticatedUserId.Value);
-                    isEligible = user?.LeaderboardPaid ?? false;
-                }
-                else
-                {
-                    isEligible = true;
-                }
+                bool isEligible = user.LeaderboardPaid || user.Role == "Admin";
 
-                bool isBest = true;
-                if (authenticatedUserId.HasValue)
-                {
-                    var higherScoreExists = await _dbContext.MustacheEntries
-                        .AnyAsync(e => e.UserId == authenticatedUserId.Value && e.Id != entry.Id && !e.IsHidden && e.OverallScore > entry.OverallScore);
-                    isBest = !higherScoreExists;
-                }
+                var higherScoreExists = await _dbContext.MustacheEntries
+                    .AnyAsync(e => e.UserId == authenticatedUserId.Value && e.Id != entry.Id && !e.IsHidden && e.OverallScore > entry.OverallScore);
+                bool isBest = !higherScoreExists;
 
                 var responseDto = new JudgeResponseDto
                 {
                     Id = entry.Id,
                     ContestantName = entry.ContestantName,
-                    OfficeLocation = entry.OfficeLocation,
                     ImageUrl = entry.ImageUrl,
                     ThumbnailUrl = entry.ThumbnailUrl,
                     CleanShaveImageUrl = entry.CleanShaveImageUrl,
@@ -455,7 +465,6 @@ public class MustacheController : ControllerBase
                 Rank = idx + 1,
                 Id = e.Id,
                 ContestantName = e.ContestantName,
-                OfficeLocation = e.OfficeLocation,
                 ImageUrl = e.ImageUrl,
                 ThumbnailUrl = e.ThumbnailUrl,
                 CleanShaveImageUrl = e.CleanShaveImageUrl,
@@ -553,7 +562,6 @@ public class MustacheController : ControllerBase
         {
             Id = e.Id,
             ContestantName = e.ContestantName,
-            OfficeLocation = e.OfficeLocation,
             ImageUrl = e.ImageUrl,
             ThumbnailUrl = e.ThumbnailUrl,
             CleanShaveImageUrl = e.CleanShaveImageUrl,
@@ -582,7 +590,6 @@ public class MustacheController : ControllerBase
             UserId = user.Id,
             FullName = user.FullName,
             Email = user.Email,
-            OfficeLocation = user.OfficeLocation,
             LeaderboardPaid = user.LeaderboardPaid,
             QuizPaid = user.QuizPaid,
             CleanShaveImageUrl = user.CleanShaveImageUrl,
@@ -615,7 +622,6 @@ public class MustacheController : ControllerBase
         {
             Id = entry.Id,
             ContestantName = entry.ContestantName,
-            OfficeLocation = entry.OfficeLocation,
             ImageUrl = entry.ImageUrl,
             ThumbnailUrl = entry.ThumbnailUrl,
             CleanShaveImageUrl = entry.CleanShaveImageUrl,
@@ -722,7 +728,6 @@ public class MustacheController : ControllerBase
             Rank = idx + 1,
             Id = e.Id,
             ContestantName = e.ContestantName,
-            OfficeLocation = e.OfficeLocation,
             ImageUrl = e.ImageUrl,
             ThumbnailUrl = e.ThumbnailUrl,
             CleanShaveImageUrl = e.CleanShaveImageUrl,
@@ -787,7 +792,6 @@ public class MustacheController : ControllerBase
                 u.Id,
                 u.Email,
                 u.FullName,
-                u.OfficeLocation,
                 u.Role,
                 u.LeaderboardPaid,
                 u.QuizPaid,
@@ -1167,11 +1171,9 @@ public class MustacheController : ControllerBase
                     aiStream,
                     contentType,
                     entry.ContestantName,
-                    entry.OfficeLocation,
                     cancellationToken: cancellationToken);
 
                 if (InjectionDetector.IsInjectionAttempt(entry.ContestantName, out _) ||
-                    InjectionDetector.IsInjectionAttempt(entry.OfficeLocation, out _) ||
                     result.WoodenSpoonReason == "Prompt / SQL Injection")
                 {
                     InjectionDetector.ApplyWoodenSpoonInjectionVerdict(result);
@@ -1203,7 +1205,6 @@ public class MustacheController : ControllerBase
                 {
                     Id = entry.Id,
                     ContestantName = entry.ContestantName,
-                    OfficeLocation = entry.OfficeLocation,
                     ImageUrl = entry.ImageUrl,
                     ThumbnailUrl = entry.ThumbnailUrl,
                     OverallScore = entry.OverallScore,

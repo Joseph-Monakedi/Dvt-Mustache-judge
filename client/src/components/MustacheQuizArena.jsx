@@ -38,7 +38,7 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
     }
   });
 
-  const [pinInput, setPinInput] = useState('69420');
+  const [pinInput, setPinInput] = useState('');
   const [nicknameInput, setNicknameInput] = useState(user?.fullName || '');
   const [selectedOption, setSelectedOption] = useState(null);
   const [hasAnswered, setHasAnswered] = useState(false);
@@ -157,8 +157,7 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
         headers,
         body: JSON.stringify({
           pin: pinInput.trim(),
-          name: nameToUse,
-          officeLocation: user?.officeLocation || 'Johannesburg'
+          name: nameToUse
         })
       });
 
@@ -174,7 +173,6 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
         playerId: data.playerId,
         quizId: data.quizId,
         contestantName: data.contestantName,
-        officeLocation: data.officeLocation,
         totalScore: data.totalScore || 0,
         streak: data.streak || 0
       };
@@ -258,7 +256,46 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
 
   const isAdmin = user?.role === 'Admin' || Boolean(sessionStorage.getItem('dvt_admin_token'));
 
-  // 1. Paywall Check if user is logged in but hasn't paid R50 quiz pass
+  // 1. Gate Check if user is not logged in
+  if (!user) {
+    return (
+      <div className="quiz-join-container fade-in">
+        <div className="quiz-join-card">
+          <div className="quiz-brand-header">
+            <div className="quiz-mustache-badge">
+              <GiMustache className="quiz-brand-icon" />
+            </div>
+            <h1 className="quiz-join-title">Mustache Quiz Arena</h1>
+            <p className="quiz-join-subtitle">
+              High-speed facial hair trivia • 1000 points per round • Real-time speed scoring
+            </p>
+          </div>
+
+          <div className="quiz-paywall-card" style={{ border: 'none', background: 'transparent', padding: '10px 0' }}>
+            <div className="paywall-icon-wrap">
+              <FaLock className="paywall-lock-icon" />
+            </div>
+            <span className="paywall-pill">Sign In Required</span>
+            <h2>Sign In to Enter Quiz Arena</h2>
+            <p>
+              Please sign in or register to join the multiplayer Mustache Quiz Arena. Once signed in, you can unlock your pass and play live!
+            </p>
+            <div className="paywall-actions" style={{ marginTop: '20px' }}>
+              <button
+                type="button"
+                className="paywall-btn primary"
+                onClick={() => openAuthModal('login')}
+              >
+                Sign In / Register
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Paywall Check if user is logged in but hasn't paid R50 quiz pass
   if (user && !user.quizPaid && !isAdmin) {
     return (
       <div className="quiz-paywall-container fade-in">
@@ -279,7 +316,7 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
               <span className="fee-amount">R50</span>
             </div>
             <div className="fee-instruction">
-              Pay via SnapScan/EFT and ask your office coordinator or Admin to toggle your pass active in the Admin Portal.
+              Pay via SnapScan/EFT with reference <strong>MOVEM-{(user.fullName || '').replace(/\s+/g, '').toUpperCase()}</strong> and ask an admin to toggle your pass active in the Admin Portal.
             </div>
           </div>
 
@@ -304,7 +341,7 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
     );
   }
 
-  // 2. Joining / Enter PIN screen
+  // 3. Joining / Enter PIN screen
   if (!joinedPlayer && gameState?.status !== 'Finished') {
     return (
       <div className="quiz-join-container fade-in">
@@ -327,12 +364,12 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
 
           <form onSubmit={handleJoinGame} className="quiz-join-form">
             <div className="form-group">
-              <label htmlFor="quiz-pin" className="quiz-label">Game PIN</label>
+              <label htmlFor="quiz-pin" className="quiz-label">Game PIN (from Admin)</label>
               <input
                 id="quiz-pin"
                 type="text"
                 className="quiz-input-pin"
-                placeholder="69420"
+                placeholder="Enter PIN from Admin"
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
                 required
@@ -354,16 +391,10 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
               />
             </div>
 
-            {user ? (
-              <div className="quiz-auth-user-badge">
-                <FaCheck className="badge-icon-check" />
-                <span>Entering as <strong>{user.fullName}</strong> ({user.officeLocation}) • R50 Pass Verified</span>
-              </div>
-            ) : (
-              <div className="quiz-guest-notice">
-                <span>Tip: <button type="button" onClick={() => openAuthModal('login')} className="guest-login-link">Sign in</button> with your DVT account to save your wins!</span>
-              </div>
-            )}
+            <div className="quiz-auth-user-badge">
+              <FaCheck className="badge-icon-check" />
+              <span>Entering as <strong>{user.fullName}</strong> • R50 Pass Active</span>
+            </div>
 
             <button type="submit" className="quiz-enter-btn">
               <FaPlay className="btn-icon" /> Enter Quiz Arena
@@ -460,8 +491,8 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
       {gameState?.status === 'Lobby' && (
         <div className="quiz-lobby-screen fade-in">
           <div className="lobby-pin-card">
-            <span className="lobby-pin-label">Join on mobile at dvt-mustache.internal with PIN</span>
-            <div className="lobby-pin-display">{gameState.pinCode || '69420'}</div>
+            <span className="lobby-pin-label">Join with Game PIN</span>
+            <div className="lobby-pin-display">{gameState.pinCode || 'Pending PIN'}</div>
           </div>
 
           <div className="lobby-main-card">
@@ -640,7 +671,7 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
                 {scoreboardData.topPlayers.slice(0, 5).map((p, idx) => (
                   <div key={p.id} className="scoreboard-row">
                     <span className="score-rank">#{idx + 1}</span>
-                    <span className="score-name">{p.name} ({p.officeLocation})</span>
+                    <span className="score-name">{p.name}</span>
                     <span className="score-pts">{p.score} pts</span>
                   </div>
                 ))}

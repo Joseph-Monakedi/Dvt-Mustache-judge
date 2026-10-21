@@ -4,7 +4,6 @@ import {
   FaUser, 
   FaEnvelope, 
   FaLock, 
-  FaLocationDot, 
   FaRightToBracket, 
   FaUserPlus, 
   FaCircleExclamation,
@@ -12,21 +11,6 @@ import {
 } from 'react-icons/fa6';
 import { GiMustache } from 'react-icons/gi';
 import { useAuth } from '../context/AuthContext';
-
-const DVT_OFFICES = [
-  'Johannesburg',
-  'Cape Town',
-  'Durban',
-  'Gqeberha',
-  'London',
-  'Waterford',
-  'Amsterdam',
-  'Baar',
-  'Nairobi',
-  'Dubai',
-  'West Perth',
-  'Remote'
-];
 
 export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLoginSuccess }) {
   const { login, register } = useAuth();
@@ -36,7 +20,6 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [officeLocation, setOfficeLocation] = useState('Johannesburg');
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -75,7 +58,7 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
           throw new Error('Please enter your full name.');
         }
         if (!email.trim()) {
-          throw new Error('Please enter your work or personal email address.');
+          throw new Error('Please enter your email address.');
         }
         if (password.length < 6) {
           throw new Error('Password must be at least 6 characters long.');
@@ -83,8 +66,7 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
         await register({
           email: email.trim(),
           fullName: fullName.trim(),
-          password,
-          officeLocation
+          password
         });
       }
 
@@ -118,12 +100,12 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
             <GiMustache className="auth-mustache-icon" />
           </div>
           <h2 className="auth-title">
-            {mode === 'login' ? 'Contestant Sign In' : 'Join DVT Movember Court'}
+            {mode === 'login' ? 'Contestant Sign In' : 'Join the Movember Challenge'}
           </h2>
           <p className="auth-subtitle">
             {mode === 'login' 
-              ? 'Access your Mustache Vault, view past verdicts, and track your leaderboard ranking.'
-              : 'Create an account to submit unlimited facial hair verdicts and compete for charity!'}
+              ? 'Access your Mustache Vault, view your verdicts, and enter the contest & quiz arena.'
+              : 'Open to everyone! Register with any email to compete and take the Movember challenge.'}
           </p>
         </div>
 
@@ -166,45 +148,23 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
         {/* Form */}
         <form onSubmit={handleSubmit} className="auth-form">
           {mode === 'register' && (
-            <>
-              <div className="form-group">
-                <label htmlFor="reg-name" className="form-label">Full Name</label>
-                <div className="input-with-icon">
-                  <FaUser className="input-icon" />
-                  <input
-                    id="reg-name"
-                    type="text"
-                    className="auth-input"
-                    placeholder="e.g. Liam Oosthuizen"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                    disabled={loading}
-                    autoComplete="name"
-                  />
-                </div>
+            <div className="form-group">
+              <label htmlFor="reg-name" className="form-label">Full Name</label>
+              <div className="input-with-icon">
+                <FaUser className="input-icon" />
+                <input
+                  id="reg-name"
+                  type="text"
+                  className="auth-input"
+                  placeholder="e.g. Alex Morgan"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  disabled={loading}
+                  autoComplete="name"
+                />
               </div>
-
-              <div className="form-group">
-                <label htmlFor="reg-office" className="form-label">DVT Office Location</label>
-                <div className="input-with-icon">
-                  <FaLocationDot className="input-icon" />
-                  <select
-                    id="reg-office"
-                    className="auth-select"
-                    value={officeLocation}
-                    onChange={(e) => setOfficeLocation(e.target.value)}
-                    disabled={loading}
-                  >
-                    {DVT_OFFICES.map((office) => (
-                      <option key={office} value={office}>
-                        {office}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </>
+            </div>
           )}
 
           <div className="form-group">
@@ -215,7 +175,7 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
                 id="auth-email"
                 type="email"
                 className="auth-input"
-                placeholder="you@dvt.co.za"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

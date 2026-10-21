@@ -11,9 +11,6 @@ public class MustacheEntry
     [MaxLength(100)]
     public string ContestantName { get; set; } = string.Empty;
 
-    [MaxLength(100)]
-    public string? OfficeLocation { get; set; }
-
     [Required]
     public string ImageUrl { get; set; } = string.Empty;
 

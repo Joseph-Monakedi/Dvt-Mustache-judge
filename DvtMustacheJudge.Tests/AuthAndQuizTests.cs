@@ -77,7 +77,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
     public async Task RegisterAndLogin_ShouldAuthenticateUser()
     {
         var email = $"user_{Guid.NewGuid()}@dvt.co.za";
-        var regRequest = new RegisterRequest(email, "Mo Bro", "secret123", "Johannesburg");
+        var regRequest = new RegisterRequest(email, "Mo Bro", "secret123");
         
         var regResponse = await _client.PostAsJsonAsync("/api/auth/register", regRequest);
         Assert.Equal(HttpStatusCode.OK, regResponse.StatusCode);
@@ -104,7 +104,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
     {
         // 1. Create a user
         var email = $"dedup_{Guid.NewGuid()}@dvt.co.za";
-        var regRequest = new RegisterRequest(email, "Deduplication King", "pass123", "Cape Town");
+        var regRequest = new RegisterRequest(email, "Deduplication King", "pass123");
         var regRes = await _client.PostAsJsonAsync("/api/auth/register", regRequest);
         var regJson = await regRes.Content.ReadAsStringAsync();
         using var regDoc = JsonDocument.Parse(regJson);
@@ -120,7 +120,6 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
                 Id = Guid.NewGuid(),
                 UserId = userId,
                 ContestantName = "Deduplication King",
-                OfficeLocation = "Cape Town",
                 ImageUrl = "/mock1.jpg",
                 ThumbnailUrl = "/thumb1.jpg",
                 OverallScore = 60,
@@ -135,7 +134,6 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
                 Id = Guid.NewGuid(),
                 UserId = userId,
                 ContestantName = "Deduplication King",
-                OfficeLocation = "Cape Town",
                 ImageUrl = "/mock2.jpg",
                 ThumbnailUrl = "/thumb2.jpg",
                 OverallScore = 95,
@@ -179,17 +177,23 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
     {
         // 1. Create user
         var email = $"quiz_{Guid.NewGuid()}@dvt.co.za";
-        var regRequest = new RegisterRequest(email, "Quiz Champion", "pass123", "Durban");
+        var regRequest = new RegisterRequest(email, "Quiz Champion", "pass123");
         var regRes = await _client.PostAsJsonAsync("/api/auth/register", regRequest);
         var regJson = await regRes.Content.ReadAsStringAsync();
         using var regDoc = JsonDocument.Parse(regJson);
         var userId = regDoc.RootElement.GetProperty("id").GetGuid();
         var token = regDoc.RootElement.GetProperty("token").GetString();
 
+        // 1.5 Get active quiz PIN
+        var quizStateRes = await _client.GetAsync("/api/quiz/current");
+        var quizStateJson = await quizStateRes.Content.ReadAsStringAsync();
+        using var quizStateDoc = JsonDocument.Parse(quizStateJson);
+        var activePin = quizStateDoc.RootElement.GetProperty("pinCode").GetString()!;
+
         // 2. Try to join quiz before paying R50 fee -> Expect 403 Forbidden
         var joinReq = new HttpRequestMessage(HttpMethod.Post, "/api/quiz/join");
         joinReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        joinReq.Content = JsonContent.Create(new JoinQuizRequest("69420", "Quiz Champion", "Durban"));
+        joinReq.Content = JsonContent.Create(new JoinQuizRequest(activePin, "Quiz Champion"));
         var joinRes = await _client.SendAsync(joinReq);
         Assert.Equal(HttpStatusCode.Forbidden, joinRes.StatusCode);
 
@@ -202,7 +206,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
         // 4. Now join quiz -> Expect OK
         var joinReq2 = new HttpRequestMessage(HttpMethod.Post, "/api/quiz/join");
         joinReq2.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        joinReq2.Content = JsonContent.Create(new JoinQuizRequest("69420", "Quiz Champion", "Durban"));
+        joinReq2.Content = JsonContent.Create(new JoinQuizRequest(activePin, "Quiz Champion"));
         var joinRes2 = await _client.SendAsync(joinReq2);
         Assert.Equal(HttpStatusCode.OK, joinRes2.StatusCode);
 
@@ -234,7 +238,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
     {
         // 1. Register a contestant
         var email = $"cleanshave_{Guid.NewGuid()}@dvt.co.za";
-        var regRequest = new RegisterRequest(email, "Clean Shave Mo", "pass123", "Johannesburg");
+        var regRequest = new RegisterRequest(email, "Clean Shave Mo", "pass123");
         var regRes = await _client.PostAsJsonAsync("/api/auth/register", regRequest);
         var regJson = await regRes.Content.ReadAsStringAsync();
         using var regDoc = JsonDocument.Parse(regJson);
@@ -278,7 +282,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
     {
         // 1. Register a contestant
         var email = $"growth_{Guid.NewGuid()}@dvt.co.za";
-        var regRequest = new RegisterRequest(email, "Growth Hero", "pass123", "Gqeberha");
+        var regRequest = new RegisterRequest(email, "Growth Hero", "pass123");
         var regRes = await _client.PostAsJsonAsync("/api/auth/register", regRequest);
         var regJson = await regRes.Content.ReadAsStringAsync();
         using var regDoc = JsonDocument.Parse(regJson);
@@ -308,7 +312,6 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
         // 4. Submit mustache photo for judging
         using var judgeForm = new MultipartFormDataContent();
         judgeForm.Add(new StringContent("Growth Hero"), "Name");
-        judgeForm.Add(new StringContent("Gqeberha"), "Location");
 
         var dummyMustacheBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
         var mContent = new ByteArrayContent(dummyMustacheBytes);
