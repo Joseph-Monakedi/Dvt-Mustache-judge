@@ -46,6 +46,12 @@ public class GeminiJudgeResult
     [JsonPropertyName("verdictBadge")]
     public string VerdictBadge { get; set; } = string.Empty;
 
+    [JsonPropertyName("growthScore")]
+    public int GrowthScore { get; set; } = 0;
+
+    [JsonPropertyName("growthAnalysis")]
+    public string? GrowthAnalysis { get; set; }
+
     [JsonPropertyName("isAppropriate")]
     public bool IsAppropriate { get; set; } = true;
 
@@ -60,6 +66,7 @@ public class JudgeRequestDto
     public string? Location { get; set; }
     public string? Cohort { get; set; }
     public IFormFile? Image { get; set; }
+    public IFormFile? CleanShaveImage { get; set; }
 
     public string GetResolvedLocation()
     {
@@ -77,10 +84,13 @@ public class JudgeResponseDto
     public string? OfficeLocation { get; set; }
     public string ImageUrl { get; set; } = string.Empty;
     public string ThumbnailUrl { get; set; } = string.Empty;
+    public string? CleanShaveImageUrl { get; set; }
     public int OverallScore { get; set; }
     public int DensityScore { get; set; }
     public int SymmetryScore { get; set; }
     public int SwaggerScore { get; set; }
+    public int GrowthScore { get; set; }
+    public string? GrowthAnalysis { get; set; }
     public bool IsWoodenSpoon { get; set; }
     public string? WoodenSpoonReason { get; set; }
     public int InnovationScore { get; set; }
@@ -92,6 +102,30 @@ public class JudgeResponseDto
     public string CelebrityTwin { get; set; } = string.Empty;
     public string VerdictBadge { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public bool IsLeaderboardEligible { get; set; }
+    public bool IsBestEntry { get; set; }
+    public Guid? UserId { get; set; }
+}
+
+public class UserEntryDto : LeaderboardEntryDto
+{
+    public bool IsBestEntry { get; set; }
+}
+
+public class UserEntriesResponseDto
+{
+    public Guid UserId { get; set; }
+    public string FullName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string OfficeLocation { get; set; } = string.Empty;
+    public bool LeaderboardPaid { get; set; }
+    public bool QuizPaid { get; set; }
+    public string? CleanShaveImageUrl { get; set; }
+    public DateTime? CleanShaveUploadedAt { get; set; }
+    public int TotalSubmissions { get; set; }
+    public int BestScore { get; set; }
+    public int? LeaderboardRank { get; set; }
+    public List<UserEntryDto> Entries { get; set; } = new();
 }
 
 public class LeaderboardEntryDto
@@ -102,10 +136,13 @@ public class LeaderboardEntryDto
     public string? OfficeLocation { get; set; }
     public string ImageUrl { get; set; } = string.Empty;
     public string ThumbnailUrl { get; set; } = string.Empty;
+    public string? CleanShaveImageUrl { get; set; }
     public int OverallScore { get; set; }
     public int DensityScore { get; set; }
     public int SymmetryScore { get; set; }
     public int SwaggerScore { get; set; }
+    public int GrowthScore { get; set; }
+    public string? GrowthAnalysis { get; set; }
     public bool IsWoodenSpoon { get; set; }
     public string? WoodenSpoonReason { get; set; }
     public int InnovationScore { get; set; }

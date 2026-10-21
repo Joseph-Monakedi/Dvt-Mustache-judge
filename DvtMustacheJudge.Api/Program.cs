@@ -40,7 +40,10 @@ builder.Services.AddHttpClient<IGeminiJudgeService, GeminiJudgeService>(client =
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
-// 6. CORS policy for React Vite dev server and mobile testing
+// 6. Token Service for authentication
+builder.Services.AddSingleton<ITokenService, TokenService>();
+
+// 7. CORS policy for React Vite dev server and mobile testing
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowViteClient", policy =>
@@ -66,7 +69,7 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var db = services.GetRequiredService<AppDbContext>();
-        await DbInitializer.SeedAsync(db);
+        await DbInitializer.SeedAsync(db, app.Configuration);
         app.Logger.LogInformation("Supabase PostgreSQL database initialized and verified.");
     }
     catch (Exception ex)

@@ -7,13 +7,18 @@ import Leaderboard from './components/Leaderboard';
 import KioskMode from './components/KioskMode';
 import EntryDetailModal from './components/EntryDetailModal';
 import AdminPortal from './components/AdminPortal';
+import UserDashboard from './components/UserDashboard';
+import MustacheQuizArena from './components/MustacheQuizArena';
+import AuthModal from './components/AuthModal';
+import { useAuth } from './context/AuthContext';
 import { FaTv, FaMobileScreen } from 'react-icons/fa6';
 import { apiUrl } from './utils/api';
 import { useIsMobile } from './utils/useIsMobile';
 import './App.css';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('booth'); // 'booth' | 'leaderboard' | 'kiosk' | 'admin'
+  const { user, token, authModalOpen, authModalInitialMode, closeAuthModal, refreshUser } = useAuth();
+  const [activeTab, setActiveTab] = useState('booth'); // 'booth' | 'leaderboard' | 'dashboard' | 'quiz' | 'kiosk' | 'admin'
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [judgingModalOpen, setJudgingModalOpen] = useState(false);
   const [activeVerdict, setActiveVerdict] = useState(null);
@@ -39,7 +44,7 @@ export default function App() {
   };
 
   // Handle Judge Submission
-  const handleJudgeSubmit = async ({ name, officeLocation, imageBlob }) => {
+  const handleJudgeSubmit = async ({ name, officeLocation, imageBlob, cleanShaveBlob }) => {
     setIsSubmitting(true);
     setJudgingModalOpen(true);
 
@@ -52,12 +57,23 @@ export default function App() {
     const fileName = `mustache_${Date.now()}.jpg`;
     formData.append('image', imageBlob, fileName);
 
+    if (cleanShaveBlob) {
+      const csName = `cleanshave_${Date.now()}.jpg`;
+      formData.append('cleanShaveImage', cleanShaveBlob, csName);
+    }
+
     // Guaranteed minimum 2.5s suspense animation as specified in WP4
     const delayPromise = new Promise(resolve => setTimeout(resolve, 2600));
 
     try {
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const fetchPromise = fetch(apiUrl('/api/mustache/judge'), {
         method: 'POST',
+        headers,
         body: formData
       });
 
@@ -71,6 +87,9 @@ export default function App() {
       const verdictData = await res.json();
       setActiveVerdict(verdictData);
       setTotalEntries(prev => prev + 1);
+      if (token) {
+        refreshUser();
+      }
       showToast(`Verdict in for ${verdictData.contestantName}!`);
     } catch (err) {
       console.error('Submission failed:', err);
@@ -152,6 +171,24 @@ export default function App() {
           />
         )}
 
+        {activeTab === 'dashboard' && (
+          <UserDashboard
+            onGoToBooth={() => {
+              setActiveVerdict(null);
+              setActiveTab('booth');
+            }}
+            onGoToLeaderboard={() => setActiveTab('leaderboard')}
+            onGoToQuiz={() => setActiveTab('quiz')}
+            onSelectEntry={entry => setSelectedLeaderboardEntry(entry)}
+          />
+        )}
+
+        {activeTab === 'quiz' && (
+          <MustacheQuizArena
+            onGoToDashboard={() => setActiveTab('dashboard')}
+          />
+        )}
+
         {activeTab === 'admin' && (
           <AdminPortal 
             onBackToApp={() => setActiveTab('leaderboard')}
@@ -189,6 +226,14 @@ export default function App() {
           onClose={() => setSelectedLeaderboardEntry(null)}
         />
       )}
+
+      {/* Contestant Sign In / Register Modal */}
+      <AuthModal 
+        isOpen={authModalOpen}
+        initialMode={authModalInitialMode}
+        onClose={closeAuthModal}
+        onLoginSuccess={() => refreshUser()}
+      />
     </div>
   );
 }

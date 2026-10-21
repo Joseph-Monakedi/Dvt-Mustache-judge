@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
-import { FaScaleBalanced, FaLocationDot, FaCamera, FaTrophy, FaRotate } from 'react-icons/fa6';
+import { FaScaleBalanced, FaLocationDot, FaCamera, FaTrophy, FaRotate, FaArrowTrendUp } from 'react-icons/fa6';
 import { HiSparkles, HiOutlineDocumentText } from 'react-icons/hi2';
 import ShareableCanvasCard from './ShareableCanvasCard';
 
@@ -81,21 +81,59 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
           </div>
         </div>
 
-        {/* Main Grid: Photo + Gauge + Subscores */}
-        <div className="verdict-main-grid">
-          {/* Photo Frame */}
-          <div className="verdict-photo-col">
-            <div className="verdict-photo-frame">
-              <img 
-                src={verdict.imageUrl || verdict.thumbnailUrl} 
-                alt={verdict.contestantName} 
-                className="verdict-photo"
-              />
-              <div className="style-chip">
-                Style: {verdict.styleCategory}
+        {/* Main Grid: Photo(s) + Gauge + Subscores */}
+        <div className={`verdict-main-grid ${verdict.cleanShaveImageUrl ? 'has-comparison' : ''}`}>
+          {/* Photos: Side-by-side Before & After comparison when clean shave exists */}
+          {verdict.cleanShaveImageUrl ? (
+            <div className="transformation-comparison-wrapper">
+              {/* Before: Day 1 Clean Shave */}
+              <div className="comparison-card before-card">
+                <div className="comparison-badge before-badge">
+                  <span className="comparison-dot"></span> BEFORE: CLEAN SHAVE
+                </div>
+                <div className="comparison-photo-frame">
+                  <img 
+                    src={verdict.cleanShaveImageUrl} 
+                    alt="Day 1 Clean Shave Baseline" 
+                    className="comparison-photo"
+                  />
+                  <div className="comparison-label-chip">
+                    Day 1 Baseline
+                  </div>
+                </div>
+              </div>
+
+              {/* After: Current Movember Growth */}
+              <div className="comparison-card after-card">
+                <div className="comparison-badge after-badge">
+                  <span className="comparison-dot cyan"></span> AFTER: MOVEMBER GROWTH
+                </div>
+                <div className="comparison-photo-frame">
+                  <img 
+                    src={verdict.imageUrl || verdict.thumbnailUrl} 
+                    alt={verdict.contestantName} 
+                    className="comparison-photo"
+                  />
+                  <div className="style-chip">
+                    Style: {verdict.styleCategory}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="verdict-photo-col">
+              <div className="verdict-photo-frame">
+                <img 
+                  src={verdict.imageUrl || verdict.thumbnailUrl} 
+                  alt={verdict.contestantName} 
+                  className="verdict-photo"
+                />
+                <div className="style-chip">
+                  Style: {verdict.styleCategory}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Score & Gauge Column */}
           <div className="verdict-scores-col">
@@ -223,6 +261,40 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
             </div>
           </div>
         </div>
+
+        {/* Follicle Growth & Transformation Analysis */}
+        {(verdict.cleanShaveImageUrl || verdict.growthScore > 0 || verdict.growthAnalysis) && (
+          <div className="follicle-growth-card">
+            <div className="follicle-growth-header">
+              <div className="growth-header-left">
+                <FaArrowTrendUp className="growth-icon text-cyan" />
+                <div>
+                  <h4 className="growth-header-title">Follicle Transformation Analysis</h4>
+                  <span className="growth-header-sub">
+                    {verdict.cleanShaveImageUrl ? 'Evaluated against Day 1 Clean Shave Baseline' : 'Follicle Evolution Assessment'}
+                  </span>
+                </div>
+              </div>
+              <div className="growth-score-badge">
+                <span className="growth-score-label">Growth Rating:</span>
+                <span className="growth-score-val">{verdict.growthScore || Math.min(verdict.overallScore, 98)}%</span>
+              </div>
+            </div>
+
+            <div className="growth-bar-track">
+              <div 
+                className="growth-bar-fill" 
+                style={{ width: `${Math.max(12, Math.min(verdict.growthScore || verdict.overallScore, 100))}%` }}
+              />
+            </div>
+
+            {verdict.growthAnalysis && (
+              <p className="growth-analysis-quote">
+                "{verdict.growthAnalysis}"
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Celebrity Twin Match */}
         <div className="celebrity-twin-box">

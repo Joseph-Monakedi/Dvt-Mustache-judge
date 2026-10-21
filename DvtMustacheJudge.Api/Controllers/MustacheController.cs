@@ -17,6 +17,7 @@ public class MustacheController : ControllerBase
     private readonly IApiRateLimiter _rateLimiter;
     private readonly IWebHostEnvironment _environment;
     private readonly IConfiguration _configuration;
+    private readonly ITokenService _tokenService;
     private readonly ILogger<MustacheController> _logger;
 
     public MustacheController(
@@ -27,6 +28,7 @@ public class MustacheController : ControllerBase
         IApiRateLimiter rateLimiter,
         IWebHostEnvironment environment,
         IConfiguration configuration,
+        ITokenService tokenService,
         ILogger<MustacheController> logger)
     {
         _dbContext = dbContext;
@@ -36,6 +38,7 @@ public class MustacheController : ControllerBase
         _rateLimiter = rateLimiter;
         _environment = environment;
         _configuration = configuration;
+        _tokenService = tokenService;
         _logger = logger;
     }
 
@@ -92,23 +95,81 @@ public class MustacheController : ControllerBase
             var contestantName = request.Name.Trim();
             var location = request.GetResolvedLocation();
 
+            // Check if user is authenticated via Bearer token
+            Guid? authenticatedUserId = null;
+            var authHeader = Request.Headers.Authorization.ToString();
+            if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                var token = authHeader.Substring("Bearer ".Length).Trim();
+                var payload = _tokenService.ValidateToken(token);
+                if (payload != null)
+                {
+                    authenticatedUserId = payload.UserId;
+                }
+            }
+
+            string? cleanShaveUrl = null;
+            byte[]? cleanShaveBytes = null;
+            string? cleanShaveMime = null;
+
+            // Check if contestant submitted a clean shave baseline image directly
+            if (request.CleanShaveImage != null && request.CleanShaveImage.Length > 0)
+            {
+                using var cMs = new MemoryStream();
+                await request.CleanShaveImage.CopyToAsync(cMs, cancellationToken);
+                cleanShaveBytes = cMs.ToArray();
+                cleanShaveMime = request.CleanShaveImage.ContentType;
+
+                using var cUploadMs = new MemoryStream(cleanShaveBytes);
+                var cUpload = await _storageService.UploadImageAsync(cUploadMs, request.CleanShaveImage.FileName, cleanShaveMime);
+                cleanShaveUrl = cUpload.ImageUrl;
+            }
+
+            if (authenticatedUserId.HasValue)
+            {
+                var user = await _dbContext.Users.FindAsync(authenticatedUserId.Value);
+                if (user != null)
+                {
+                    if (string.IsNullOrWhiteSpace(contestantName))
+                    {
+                        contestantName = user.FullName;
+                    }
+                    if (string.IsNullOrWhiteSpace(location) || location == "REMOTE")
+                    {
+                        location = user.OfficeLocation;
+                    }
+                    if (cleanShaveUrl != null)
+                    {
+                        user.CleanShaveImageUrl = cleanShaveUrl;
+                        user.CleanShaveUploadedAt = DateTime.UtcNow;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(user.CleanShaveImageUrl))
+                    {
+                        cleanShaveUrl = user.CleanShaveImageUrl;
+                    }
+                }
+            }
+
             // Read image into a reusable byte array for in-memory moderation and judging
             byte[] imageBytes;
             using (var memoryStream = new MemoryStream())
             {
-                await request.Image.CopyToAsync(memoryStream);
+                await request.Image.CopyToAsync(memoryStream, cancellationToken);
                 imageBytes = memoryStream.ToArray();
             }
 
             // 2. Call Gemini AI judge for vision analysis & NSFW/vulgarity detection FIRST (queues if rate limited)
             GeminiJudgeResult judgeResult;
             using (var aiStream = new MemoryStream(imageBytes))
+            using (var csStream = cleanShaveBytes != null ? new MemoryStream(cleanShaveBytes) : null)
             {
                 judgeResult = await _geminiService.JudgeMustacheAsync(
                     aiStream,
                     request.Image.ContentType,
                     contestantName,
                     location,
+                    csStream,
+                    cleanShaveMime,
                     cancellationToken);
             }
 
@@ -147,6 +208,14 @@ public class MustacheController : ControllerBase
 
             try
             {
+                var calculatedGrowthScore = judgeResult.GrowthScore > 0 
+                    ? Math.Clamp(judgeResult.GrowthScore, 0, 100)
+                    : (cleanShaveUrl != null ? Math.Clamp(judgeResult.OverallScore, 10, 100) : 0);
+
+                var calculatedGrowthAnalysis = !string.IsNullOrWhiteSpace(judgeResult.GrowthAnalysis)
+                    ? judgeResult.GrowthAnalysis
+                    : (cleanShaveUrl != null ? $"Measured transformation from Day 1 Clean Shave! Growth progressed into a solid {judgeResult.StyleCategory}." : null);
+
                 // 5. Save entry to database
                 var entry = new MustacheEntry
                 {
@@ -155,6 +224,9 @@ public class MustacheController : ControllerBase
                     OfficeLocation = location,
                     ImageUrl = imageUrl,
                     ThumbnailUrl = thumbnailUrl,
+                    CleanShaveImageUrl = cleanShaveUrl,
+                    GrowthScore = calculatedGrowthScore,
+                    GrowthAnalysis = calculatedGrowthAnalysis,
                     OverallScore = Math.Clamp(judgeResult.OverallScore, 0, 100),
                     DensityScore = Math.Clamp(judgeResult.DensityScore, 0, 10),
                     SymmetryScore = Math.Clamp(judgeResult.SymmetryScore, 0, 10),
@@ -176,11 +248,31 @@ public class MustacheController : ControllerBase
                         ? (judgeResult.OverallScore == 0 ? "Zero-Bristle Deficit" : "Certified Movember Hero")
                         : judgeResult.VerdictBadge,
                     CreatedAt = DateTime.UtcNow,
-                    IsHidden = false
+                    IsHidden = false,
+                    UserId = authenticatedUserId
                 };
 
                 _dbContext.MustacheEntries.Add(entry);
                 await _dbContext.SaveChangesAsync();
+
+                bool isEligible = false;
+                if (authenticatedUserId.HasValue)
+                {
+                    var user = await _dbContext.Users.FindAsync(authenticatedUserId.Value);
+                    isEligible = user?.LeaderboardPaid ?? false;
+                }
+                else
+                {
+                    isEligible = true;
+                }
+
+                bool isBest = true;
+                if (authenticatedUserId.HasValue)
+                {
+                    var higherScoreExists = await _dbContext.MustacheEntries
+                        .AnyAsync(e => e.UserId == authenticatedUserId.Value && e.Id != entry.Id && !e.IsHidden && e.OverallScore > entry.OverallScore);
+                    isBest = !higherScoreExists;
+                }
 
                 var responseDto = new JudgeResponseDto
                 {
@@ -189,10 +281,13 @@ public class MustacheController : ControllerBase
                     OfficeLocation = entry.OfficeLocation,
                     ImageUrl = entry.ImageUrl,
                     ThumbnailUrl = entry.ThumbnailUrl,
+                    CleanShaveImageUrl = entry.CleanShaveImageUrl,
                     OverallScore = entry.OverallScore,
                     DensityScore = entry.DensityScore,
                     SymmetryScore = entry.SymmetryScore,
                     SwaggerScore = entry.SwaggerScore,
+                    GrowthScore = entry.GrowthScore,
+                    GrowthAnalysis = entry.GrowthAnalysis,
                     IsWoodenSpoon = entry.IsWoodenSpoon,
                     WoodenSpoonReason = entry.WoodenSpoonReason,
                     InnovationScore = entry.InnovationScore,
@@ -203,7 +298,10 @@ public class MustacheController : ControllerBase
                     Roast = entry.RoastCommentary,
                     CelebrityTwin = entry.CelebrityTwin,
                     VerdictBadge = entry.VerdictBadge,
-                    CreatedAt = entry.CreatedAt
+                    CreatedAt = entry.CreatedAt,
+                    IsLeaderboardEligible = isEligible,
+                    IsBestEntry = isBest,
+                    UserId = authenticatedUserId
                 };
 
                 return Ok(responseDto);
@@ -223,7 +321,77 @@ public class MustacheController : ControllerBase
     }
 
     /// <summary>
+    /// Upload or update the logged-in contestant's Day 1 Clean Shave baseline photo.
+    /// </summary>
+    [HttpPost("clean-shave")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadCleanShave([FromForm] IFormFile image, CancellationToken cancellationToken = default)
+    {
+        var authHeader = Request.Headers.Authorization.ToString();
+        string? token = null;
+        if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            token = authHeader.Substring("Bearer ".Length).Trim();
+        }
+
+        var payload = _tokenService.ValidateToken(token);
+        if (payload == null)
+        {
+            return Unauthorized(new { error = "Please log in to upload your Day 1 clean shave baseline photo." });
+        }
+
+        var user = await _dbContext.Users.FindAsync(payload.UserId);
+        if (user == null)
+        {
+            return NotFound(new { error = "User account not found." });
+        }
+
+        if (image == null || image.Length == 0)
+        {
+            return BadRequest(new { error = "Clean shave image is required." });
+        }
+
+        if (image.Length > 8 * 1024 * 1024)
+        {
+            return BadRequest(new { error = "Image file size exceeds the 8MB limit." });
+        }
+
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+        var ext = Path.GetExtension(image.FileName).ToLowerInvariant();
+        if (string.IsNullOrEmpty(ext) || !allowedExtensions.Contains(ext))
+        {
+            if (!image.ContentType.StartsWith("image/"))
+            {
+                return BadRequest(new { error = "Invalid image format. Allowed formats: JPEG, PNG, WebP." });
+            }
+        }
+
+        using var memoryStream = new MemoryStream();
+        await image.CopyToAsync(memoryStream, cancellationToken);
+        var imageBytes = memoryStream.ToArray();
+
+        using var uploadStream = new MemoryStream(imageBytes);
+        var uploadResult = await _storageService.UploadImageAsync(
+            uploadStream,
+            image.FileName,
+            image.ContentType);
+
+        user.CleanShaveImageUrl = uploadResult.ImageUrl;
+        user.CleanShaveUploadedAt = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(new
+        {
+            cleanShaveImageUrl = user.CleanShaveImageUrl,
+            cleanShaveUploadedAt = user.CleanShaveUploadedAt,
+            message = "Day 1 Clean Shave baseline photo saved successfully!"
+        });
+    }
+
+    /// <summary>
     /// Retrieve the live leaderboard.
+    /// Only top-scoring entry per contestant is displayed.
+    /// Non-legacy contestants must have their R100 Leaderboard fee approved by admin.
     /// </summary>
     [HttpGet("leaderboard")]
     [ProducesResponseType(typeof(LeaderboardResponseDto), StatusCodes.Status200OK)]
@@ -237,37 +405,66 @@ public class MustacheController : ControllerBase
 
         var isWoodenSpoon = string.Equals(division, "woodenspoon", StringComparison.OrdinalIgnoreCase);
 
-        var baseQuery = _dbContext.MustacheEntries
+        var allVisible = await _dbContext.MustacheEntries
+            .Include(e => e.User)
             .AsNoTracking()
-            .Where(e => !e.IsHidden);
+            .Where(e => !e.IsHidden)
+            .ToListAsync();
 
-        var championshipCount = await baseQuery.CountAsync(e => !e.IsWoodenSpoon);
-        var woodenSpoonCount = await baseQuery.CountAsync(e => e.IsWoodenSpoon);
+        // Eligible entries:
+        // If UserId is present, user must have LeaderboardPaid == true.
+        // Legacy / seed entries without UserId are preserved.
+        var eligible = allVisible
+            .Where(e => e.UserId == null || (e.User != null && e.User.LeaderboardPaid))
+            .ToList();
 
-        var query = baseQuery.Where(e => e.IsWoodenSpoon == isWoodenSpoon);
+        // Calculate division counts (deduplicated by contestant: only top scoring entry per contestant)
+        var championshipCount = eligible
+            .Where(e => !e.IsWoodenSpoon)
+            .GroupBy(e => e.UserId.HasValue ? e.UserId.Value.ToString() : e.Id.ToString())
+            .Count();
+
+        var woodenSpoonCount = eligible
+            .Where(e => e.IsWoodenSpoon)
+            .GroupBy(e => e.UserId.HasValue ? e.UserId.Value.ToString() : e.Id.ToString())
+            .Count();
+
+        var divisionEntries = eligible.Where(e => e.IsWoodenSpoon == isWoodenSpoon).ToList();
 
         if (!string.IsNullOrWhiteSpace(category) && !category.Equals("All", StringComparison.OrdinalIgnoreCase))
         {
-            query = query.Where(e => e.StyleCategory.ToLower() == category.ToLower());
+            divisionEntries = divisionEntries
+                .Where(e => string.Equals(e.StyleCategory, category, StringComparison.OrdinalIgnoreCase))
+                .ToList();
         }
 
-        var totalEntries = await query.CountAsync();
-
-        var entries = await query
+        // Deduplicate per contestant: single best score entry per contestant!
+        var topPerContestant = divisionEntries
+            .GroupBy(e => e.UserId.HasValue ? e.UserId.Value.ToString() : e.Id.ToString())
+            .Select(g => g.OrderByDescending(e => e.OverallScore).ThenByDescending(e => e.CreatedAt).First())
             .OrderByDescending(e => e.OverallScore)
             .ThenByDescending(e => e.CreatedAt)
+            .ToList();
+
+        var totalEntries = topPerContestant.Count;
+
+        var entries = topPerContestant
             .Take(limit)
-            .Select(e => new LeaderboardEntryDto
+            .Select((e, idx) => new LeaderboardEntryDto
             {
+                Rank = idx + 1,
                 Id = e.Id,
                 ContestantName = e.ContestantName,
                 OfficeLocation = e.OfficeLocation,
                 ImageUrl = e.ImageUrl,
                 ThumbnailUrl = e.ThumbnailUrl,
+                CleanShaveImageUrl = e.CleanShaveImageUrl,
                 OverallScore = e.OverallScore,
                 DensityScore = e.DensityScore,
                 SymmetryScore = e.SymmetryScore,
                 SwaggerScore = e.SwaggerScore,
+                GrowthScore = e.GrowthScore,
+                GrowthAnalysis = e.GrowthAnalysis,
                 IsWoodenSpoon = e.IsWoodenSpoon,
                 WoodenSpoonReason = e.WoodenSpoonReason,
                 InnovationScore = e.InnovationScore,
@@ -280,12 +477,7 @@ public class MustacheController : ControllerBase
                 VerdictBadge = e.VerdictBadge,
                 CreatedAt = e.CreatedAt
             })
-            .ToListAsync();
-
-        for (int i = 0; i < entries.Count; i++)
-        {
-            entries[i].Rank = i + 1;
-        }
+            .ToList();
 
         return Ok(new LeaderboardResponseDto
         {
@@ -294,6 +486,111 @@ public class MustacheController : ControllerBase
             WoodenSpoonEntriesCount = woodenSpoonCount,
             Division = isWoodenSpoon ? "woodenspoon" : "championship",
             Entries = entries
+        });
+    }
+
+    /// <summary>
+    /// Retrieve all submissions for the logged in user's dashboard vault.
+    /// </summary>
+    [HttpGet("my-entries")]
+    [ProducesResponseType(typeof(UserEntriesResponseDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMyEntries()
+    {
+        var authHeader = Request.Headers.Authorization.ToString();
+        string? token = null;
+        if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            token = authHeader.Substring("Bearer ".Length).Trim();
+        }
+
+        var payload = _tokenService.ValidateToken(token);
+        if (payload == null)
+        {
+            return Unauthorized(new { error = "Please log in to access your personal dashboard vault." });
+        }
+
+        var user = await _dbContext.Users.FindAsync(payload.UserId);
+        if (user == null)
+        {
+            return NotFound(new { error = "User account not found." });
+        }
+
+        var userEntries = await _dbContext.MustacheEntries
+            .AsNoTracking()
+            .Where(e => e.UserId == user.Id && !e.IsHidden)
+            .OrderByDescending(e => e.CreatedAt)
+            .ToListAsync();
+
+        var bestEntry = userEntries.OrderByDescending(e => e.OverallScore).ThenByDescending(e => e.CreatedAt).FirstOrDefault();
+
+        // Calculate user's rank on the public leaderboard if their R100 fee is approved
+        int? rank = null;
+        if (user.LeaderboardPaid && bestEntry != null)
+        {
+            var isWoodenSpoon = bestEntry.IsWoodenSpoon;
+            var allLeaderboard = await _dbContext.MustacheEntries
+                .Include(e => e.User)
+                .AsNoTracking()
+                .Where(e => !e.IsHidden && e.IsWoodenSpoon == isWoodenSpoon)
+                .Where(e => e.UserId == null || (e.User != null && e.User.LeaderboardPaid))
+                .ToListAsync();
+
+            var topPerUser = allLeaderboard
+                .GroupBy(e => e.UserId.HasValue ? e.UserId.Value.ToString() : e.Id.ToString())
+                .Select(g => g.OrderByDescending(x => x.OverallScore).ThenByDescending(x => x.CreatedAt).First())
+                .OrderByDescending(x => x.OverallScore)
+                .ThenByDescending(x => x.CreatedAt)
+                .ToList();
+
+            var userIndex = topPerUser.FindIndex(e => e.UserId == user.Id);
+            if (userIndex >= 0)
+            {
+                rank = userIndex + 1;
+            }
+        }
+
+        var entryDtos = userEntries.Select(e => new UserEntryDto
+        {
+            Id = e.Id,
+            ContestantName = e.ContestantName,
+            OfficeLocation = e.OfficeLocation,
+            ImageUrl = e.ImageUrl,
+            ThumbnailUrl = e.ThumbnailUrl,
+            CleanShaveImageUrl = e.CleanShaveImageUrl,
+            OverallScore = e.OverallScore,
+            DensityScore = e.DensityScore,
+            SymmetryScore = e.SymmetryScore,
+            SwaggerScore = e.SwaggerScore,
+            GrowthScore = e.GrowthScore,
+            GrowthAnalysis = e.GrowthAnalysis,
+            IsWoodenSpoon = e.IsWoodenSpoon,
+            WoodenSpoonReason = e.WoodenSpoonReason,
+            InnovationScore = e.InnovationScore,
+            DedicationScore = e.DedicationScore,
+            FunninessScore = e.FunninessScore,
+            MustacheTitle = e.MustacheTitle,
+            StyleCategory = e.StyleCategory,
+            Roast = e.RoastCommentary,
+            CelebrityTwin = e.CelebrityTwin,
+            VerdictBadge = e.VerdictBadge,
+            CreatedAt = e.CreatedAt,
+            IsBestEntry = bestEntry != null && e.Id == bestEntry.Id
+        }).ToList();
+
+        return Ok(new UserEntriesResponseDto
+        {
+            UserId = user.Id,
+            FullName = user.FullName,
+            Email = user.Email,
+            OfficeLocation = user.OfficeLocation,
+            LeaderboardPaid = user.LeaderboardPaid,
+            QuizPaid = user.QuizPaid,
+            CleanShaveImageUrl = user.CleanShaveImageUrl,
+            CleanShaveUploadedAt = user.CleanShaveUploadedAt,
+            TotalSubmissions = userEntries.Count,
+            BestScore = bestEntry?.OverallScore ?? 0,
+            LeaderboardRank = rank,
+            Entries = entryDtos
         });
     }
 
@@ -321,10 +618,13 @@ public class MustacheController : ControllerBase
             OfficeLocation = entry.OfficeLocation,
             ImageUrl = entry.ImageUrl,
             ThumbnailUrl = entry.ThumbnailUrl,
+            CleanShaveImageUrl = entry.CleanShaveImageUrl,
             OverallScore = entry.OverallScore,
             DensityScore = entry.DensityScore,
             SymmetryScore = entry.SymmetryScore,
             SwaggerScore = entry.SwaggerScore,
+            GrowthScore = entry.GrowthScore,
+            GrowthAnalysis = entry.GrowthAnalysis,
             IsWoodenSpoon = entry.IsWoodenSpoon,
             WoodenSpoonReason = entry.WoodenSpoonReason,
             InnovationScore = entry.InnovationScore,
@@ -348,21 +648,29 @@ public class MustacheController : ControllerBase
         var configuredPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
                                  ?? _configuration["Admin:Password"];
 
-        if (string.IsNullOrEmpty(configuredPassword))
-        {
-            return false;
-        }
-
         if (Request.Headers.TryGetValue("X-Admin-Password", out var headerPassword) &&
+            !string.IsNullOrEmpty(configuredPassword) &&
             headerPassword == configuredPassword)
         {
             return true;
         }
 
         if (Request.Query.TryGetValue("password", out var queryPassword) &&
+            !string.IsNullOrEmpty(configuredPassword) &&
             queryPassword == configuredPassword)
         {
             return true;
+        }
+
+        var authHeader = Request.Headers.Authorization.ToString();
+        if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            var token = authHeader.Substring("Bearer ".Length).Trim();
+            var payload = _tokenService.ValidateToken(token);
+            if (payload != null && payload.Role == "Admin")
+            {
+                return true;
+            }
         }
 
         return false;
@@ -417,10 +725,13 @@ public class MustacheController : ControllerBase
             OfficeLocation = e.OfficeLocation,
             ImageUrl = e.ImageUrl,
             ThumbnailUrl = e.ThumbnailUrl,
+            CleanShaveImageUrl = e.CleanShaveImageUrl,
             OverallScore = e.OverallScore,
             DensityScore = e.DensityScore,
             SymmetryScore = e.SymmetryScore,
             SwaggerScore = e.SwaggerScore,
+            GrowthScore = e.GrowthScore,
+            GrowthAnalysis = e.GrowthAnalysis,
             IsWoodenSpoon = e.IsWoodenSpoon,
             WoodenSpoonReason = e.WoodenSpoonReason,
             InnovationScore = e.InnovationScore,
@@ -449,6 +760,120 @@ public class MustacheController : ControllerBase
             SecondsUntilQuotaReset = (int)Math.Ceiling(_rateLimiter.GetTimeUntilNextWindow().TotalSeconds),
             QueuedRequestsCount = _rateLimiter.QueuedRequestsCount,
             Entries = entryDtos
+        });
+    }
+
+    /// <summary>
+    /// List all registered contestants and their R100/R50 payment statuses for the admin payment management panel.
+    /// </summary>
+    [HttpGet("admin/contestants")]
+    public async Task<IActionResult> GetAdminContestants()
+    {
+        if (!IsAdminAuthorized())
+        {
+            return Unauthorized(new { error = "Admin authorization required." });
+        }
+
+        var users = await _dbContext.Users
+            .Include(u => u.Entries.Where(e => !e.IsHidden))
+            .AsNoTracking()
+            .OrderByDescending(u => u.CreatedAt)
+            .ToListAsync();
+
+        var contestantDtos = users.Select(u =>
+        {
+            var best = u.Entries.OrderByDescending(e => e.OverallScore).FirstOrDefault();
+            return new ContestantSummaryDto(
+                u.Id,
+                u.Email,
+                u.FullName,
+                u.OfficeLocation,
+                u.Role,
+                u.LeaderboardPaid,
+                u.QuizPaid,
+                u.Entries.Count,
+                best?.OverallScore ?? 0,
+                best?.MustacheTitle,
+                best?.ThumbnailUrl,
+                u.CreatedAt,
+                u.CleanShaveImageUrl,
+                u.CleanShaveUploadedAt
+            );
+        }).ToList();
+
+        var leaderboardPaidCount = users.Count(u => u.LeaderboardPaid);
+        var quizPaidCount = users.Count(u => u.QuizPaid);
+        var totalFunds = (leaderboardPaidCount * 100) + (quizPaidCount * 50);
+
+        return Ok(new
+        {
+            totalContestants = users.Count,
+            leaderboardPaidCount,
+            quizPaidCount,
+            totalFundsRaisedZar = totalFunds,
+            contestants = contestantDtos
+        });
+    }
+
+    /// <summary>
+    /// Toggle or set a contestant's R100 Leaderboard fee payment status.
+    /// </summary>
+    [HttpPost("admin/contestant/{id:guid}/toggle-leaderboard-paid")]
+    public async Task<IActionResult> ToggleLeaderboardPaid(Guid id, [FromBody] TogglePaymentRequest? req = null)
+    {
+        if (!IsAdminAuthorized())
+        {
+            return Unauthorized(new { error = "Admin authorization required." });
+        }
+
+        var user = await _dbContext.Users.FindAsync(id);
+        if (user == null)
+        {
+            return NotFound(new { error = "Contestant not found." });
+        }
+
+        user.LeaderboardPaid = req != null ? req.Paid : !user.LeaderboardPaid;
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(new
+        {
+            userId = user.Id,
+            fullName = user.FullName,
+            leaderboardPaid = user.LeaderboardPaid,
+            message = user.LeaderboardPaid
+                ? $"{user.FullName}'s R100 Leaderboard fee approved! Their top mustache is now live on the public leaderboard."
+                : $"{user.FullName}'s Leaderboard status set to unpaid."
+        });
+    }
+
+    /// <summary>
+    /// Toggle or set a contestant's R50 Quiz Arena fee payment status.
+    /// </summary>
+    [HttpPost("admin/contestant/{id:guid}/toggle-quiz-paid")]
+    public async Task<IActionResult> ToggleQuizPaid(Guid id, [FromBody] TogglePaymentRequest? req = null)
+    {
+        if (!IsAdminAuthorized())
+        {
+            return Unauthorized(new { error = "Admin authorization required." });
+        }
+
+        var user = await _dbContext.Users.FindAsync(id);
+        if (user == null)
+        {
+            return NotFound(new { error = "Contestant not found." });
+        }
+
+        user.QuizPaid = req != null ? req.Paid : !user.QuizPaid;
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(new
+        {
+            userId = user.Id,
+            fullName = user.FullName,
+            quizPaid = user.QuizPaid,
+            message = user.QuizPaid
+                ? $"{user.FullName}'s R50 Quiz pass approved! They can now enter the Quiz Arena."
+                : $"{user.FullName}'s Quiz pass set to unpaid."
         });
     }
 
@@ -743,7 +1168,7 @@ public class MustacheController : ControllerBase
                     contentType,
                     entry.ContestantName,
                     entry.OfficeLocation,
-                    cancellationToken);
+                    cancellationToken: cancellationToken);
 
                 if (InjectionDetector.IsInjectionAttempt(entry.ContestantName, out _) ||
                     InjectionDetector.IsInjectionAttempt(entry.OfficeLocation, out _) ||

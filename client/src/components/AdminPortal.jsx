@@ -13,7 +13,16 @@ import {
   FaTriangleExclamation,
   FaUtensils,
   FaTrophy,
-  FaBolt
+  FaBolt,
+  FaHandHoldingDollar,
+  FaGamepad,
+  FaPlay,
+  FaArrowRight,
+  FaCrown,
+  FaClock,
+  FaUsers,
+  FaUser,
+  FaCircleCheck
 } from 'react-icons/fa6';
 import { MdOutlineWarningAmber } from 'react-icons/md';
 import { apiUrl } from '../utils/api';
@@ -24,6 +33,19 @@ export default function AdminPortal({ onBackToApp }) {
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(sessionStorage.getItem('dvt_admin_token')));
   const [loginError, setLoginError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
+
+  // Active Admin Tab
+  const [activeAdminTab, setActiveAdminTab] = useState('payments'); // 'payments' | 'entries' | 'quiz'
+
+  // Contestant Payment & Approval state
+  const [contestantData, setContestantData] = useState(null);
+  const [contestantsLoading, setContestantsLoading] = useState(false);
+  const [contestantSearch, setContestantSearch] = useState('');
+  const [contestantFilter, setContestantFilter] = useState('all'); // 'all' | 'leaderboard-unpaid' | 'leaderboard-paid' | 'quiz-unpaid' | 'quiz-paid'
+
+  // Quiz host state
+  const [quizState, setQuizState] = useState(null);
+  const [quizLoading, setQuizLoading] = useState(false);
 
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -75,9 +97,104 @@ export default function AdminPortal({ onBackToApp }) {
     }
   };
 
+  // Fetch contestants and their payment statuses
+  const fetchContestants = async (pwd = adminPassword) => {
+    if (!pwd) return;
+    setContestantsLoading(true);
+    try {
+      const res = await fetch(apiUrl('/api/mustache/admin/contestants'), {
+        headers: { 'X-Admin-Password': pwd }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setContestantData(data);
+      }
+    } catch (err) {
+      console.warn('Error fetching contestants:', err);
+    } finally {
+      setContestantsLoading(false);
+    }
+  };
+
+  // Toggle R100 Leaderboard Payment
+  const toggleLeaderboardPayment = async (userId) => {
+    try {
+      const res = await fetch(apiUrl(`/api/mustache/admin/contestant/${userId}/toggle-leaderboard-paid`), {
+        method: 'POST',
+        headers: { 'X-Admin-Password': adminPassword }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActionMessage(data.message);
+        setTimeout(() => setActionMessage(''), 4500);
+        fetchContestants();
+      }
+    } catch (err) {
+      alert(`Payment toggle failed: ${err.message}`);
+    }
+  };
+
+  // Toggle R50 Quiz Arena Payment
+  const toggleQuizPayment = async (userId) => {
+    try {
+      const res = await fetch(apiUrl(`/api/mustache/admin/contestant/${userId}/toggle-quiz-paid`), {
+        method: 'POST',
+        headers: { 'X-Admin-Password': adminPassword }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActionMessage(data.message);
+        setTimeout(() => setActionMessage(''), 4500);
+        fetchContestants();
+      }
+    } catch (err) {
+      alert(`Quiz pass toggle failed: ${err.message}`);
+    }
+  };
+
+  // Fetch Quiz Game State
+  const fetchQuizAdminState = async () => {
+    try {
+      const res = await fetch(apiUrl('/api/quiz/current'));
+      if (res.ok) {
+        const data = await res.json();
+        setQuizState(data);
+      }
+    } catch (err) {
+      console.warn('Quiz state fetch error:', err);
+    }
+  };
+
+  // Host Quiz Actions
+  const handleQuizAction = async (endpoint, body = {}) => {
+    setQuizLoading(true);
+    try {
+      const res = await fetch(apiUrl(`/api/quiz/admin/${endpoint}`), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Password': adminPassword
+        },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActionMessage(data.message || 'Quiz action executed.');
+        setTimeout(() => setActionMessage(''), 4500);
+        fetchQuizAdminState();
+      }
+    } catch (err) {
+      alert(`Quiz action error: ${err.message}`);
+    } finally {
+      setQuizLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated && adminPassword) {
       fetchAdminData(adminPassword);
+      fetchContestants(adminPassword);
+      fetchQuizAdminState();
     }
   }, [isAuthenticated]);
 
@@ -107,6 +224,8 @@ export default function AdminPortal({ onBackToApp }) {
       setIsAuthenticated(true);
       setPasswordInput('');
       fetchAdminData(token);
+      fetchContestants(token);
+      fetchQuizAdminState();
     } catch (err) {
       setLoginError(err.message || 'Authentication failed.');
     } finally {
@@ -480,6 +599,23 @@ export default function AdminPortal({ onBackToApp }) {
     return true;
   });
 
+  // Filter contestants for payment panel
+  const filteredContestants = (contestantData?.contestants || []).filter(c => {
+    if (contestantFilter === 'leaderboard-unpaid' && c.leaderboardPaid) return false;
+    if (contestantFilter === 'leaderboard-paid' && !c.leaderboardPaid) return false;
+    if (contestantFilter === 'quiz-unpaid' && c.quizPaid) return false;
+    if (contestantFilter === 'quiz-paid' && !c.quizPaid) return false;
+    if (contestantSearch.trim()) {
+      const q = contestantSearch.toLowerCase();
+      return (
+        (c.fullName && c.fullName.toLowerCase().includes(q)) ||
+        (c.email && c.email.toLowerCase().includes(q)) ||
+        (c.officeLocation && c.officeLocation.toLowerCase().includes(q))
+      );
+    }
+    return true;
+  });
+
   const isAllFilteredSelected = filteredEntries.length > 0 && filteredEntries.every(e => selectedIds.has(e.id));
 
   // Password Prompt screen if unauthenticated
@@ -591,7 +727,262 @@ export default function AdminPortal({ onBackToApp }) {
         </div>
       )}
 
-      {/* Stats Cards Row or Skeleton */}
+      {/* Admin Multi-Tab Navigation */}
+      <div className="admin-tabs-nav">
+        <button
+          type="button"
+          className={`admin-tab-btn ${activeAdminTab === 'payments' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveAdminTab('payments');
+            fetchContestants();
+          }}
+        >
+          <FaHandHoldingDollar className="btn-icon text-green" />
+          <span>Charity Fees & Approvals (R100 / R50)</span>
+          {contestantData && (
+            <span className="admin-tab-count-badge">
+              {contestantData.leaderboardPaidCount}/{contestantData.totalContestants}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          className={`admin-tab-btn ${activeAdminTab === 'entries' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveAdminTab('entries');
+            fetchAdminData();
+          }}
+        >
+          <FaTrophy className="btn-icon text-gold" />
+          <span>Submissions & AI Moderation</span>
+          {overview && (
+            <span className="admin-tab-count-badge">
+              {overview.totalSubmissions}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          className={`admin-tab-btn ${activeAdminTab === 'quiz' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveAdminTab('quiz');
+            fetchQuizAdminState();
+          }}
+        >
+          <FaGamepad className="btn-icon text-cyan" />
+          <span>Mustache Quiz Arena Controller</span>
+          {quizState && (
+            <span className="admin-tab-count-badge quiz-status-badge">
+              {quizState.status}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* TAB 1: Charity Fees & Approvals */}
+      {activeAdminTab === 'payments' && (
+        <div className="admin-payments-section fade-in">
+          {/* Top Charity Overview Cards */}
+          <div className="admin-stats-grid">
+            <div className="admin-stat-card">
+              <div className="stat-label">Total Registered Contestants</div>
+              <div className="stat-val">{contestantData?.totalContestants || 0}</div>
+            </div>
+            <div className="admin-stat-card">
+              <div className="stat-label">
+                <FaTrophy className="inline-icon text-gold" /> Leaderboard Approved (R100)
+              </div>
+              <div className="stat-val text-gold">
+                {contestantData?.leaderboardPaidCount || 0}
+              </div>
+            </div>
+            <div className="admin-stat-card">
+              <div className="stat-label">
+                <FaGamepad className="inline-icon text-cyan" /> Quiz Arena Passes (R50)
+              </div>
+              <div className="stat-val text-cyan">
+                {contestantData?.quizPaidCount || 0}
+              </div>
+            </div>
+            <div className="admin-stat-card">
+              <div className="stat-label">
+                <FaHandHoldingDollar className="inline-icon text-green" /> Total Funds Raised
+              </div>
+              <div className="stat-val text-green">
+                R {(contestantData?.totalFundsRaisedZar || 0).toLocaleString()}
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Filter Controls for Payments */}
+          <div className="leaderboard-controls">
+            <div className="category-chips">
+              <button
+                type="button"
+                className={`chip-btn ${contestantFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setContestantFilter('all')}
+              >
+                All ({contestantData?.totalContestants || 0})
+              </button>
+              <button
+                type="button"
+                className={`chip-btn ${contestantFilter === 'leaderboard-unpaid' ? 'active' : ''}`}
+                onClick={() => setContestantFilter('leaderboard-unpaid')}
+              >
+                <FaClock className="inline-icon text-orange" /> Leaderboard Pending ({contestantData ? Math.max(0, contestantData.totalContestants - contestantData.leaderboardPaidCount) : 0})
+              </button>
+              <button
+                type="button"
+                className={`chip-btn ${contestantFilter === 'leaderboard-paid' ? 'active' : ''}`}
+                onClick={() => setContestantFilter('leaderboard-paid')}
+              >
+                <FaCircleCheck className="inline-icon text-green" /> Leaderboard Approved ({contestantData?.leaderboardPaidCount || 0})
+              </button>
+              <button
+                type="button"
+                className={`chip-btn ${contestantFilter === 'quiz-unpaid' ? 'active' : ''}`}
+                onClick={() => setContestantFilter('quiz-unpaid')}
+              >
+                <FaGamepad className="inline-icon text-orange" /> Quiz Pass Pending ({contestantData ? Math.max(0, contestantData.totalContestants - contestantData.quizPaidCount) : 0})
+              </button>
+              <button
+                type="button"
+                className={`chip-btn ${contestantFilter === 'quiz-paid' ? 'active' : ''}`}
+                onClick={() => setContestantFilter('quiz-paid')}
+              >
+                <FaGamepad className="inline-icon text-green" /> Quiz Pass Active ({contestantData?.quizPaidCount || 0})
+              </button>
+            </div>
+
+            <div className="search-bar">
+              <FaMagnifyingGlass className="search-icon" />
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search contestant by name, email, or office..."
+                value={contestantSearch}
+                onChange={e => setContestantSearch(e.target.value)}
+              />
+              {contestantSearch && (
+                <button className="clear-search" onClick={() => setContestantSearch('')}>
+                  <FaXmark />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Contestants Table */}
+          <div className="standings-card">
+            {contestantsLoading && !contestantData ? (
+              <AdminTableSkeleton />
+            ) : filteredContestants.length === 0 ? (
+              <div className="empty-state">
+                <h3>No contestants found</h3>
+                <p>No registered contestants match the selected filter criteria.</p>
+              </div>
+            ) : (
+              <div className="standings-table-wrapper">
+                <table className="standings-table">
+                  <thead>
+                    <tr>
+                      <th>Contestant</th>
+                      <th>Office</th>
+                      <th>Submissions & Best</th>
+                      <th>Leaderboard Entry (R100)</th>
+                      <th>Quiz Arena Entry (R50)</th>
+                      <th>Registered</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredContestants.map(c => (
+                      <tr key={c.id}>
+                        <td>
+                          <div className="contestant-cell">
+                            <div className="contestant-avatar-fallback">
+                              {c.fullName ? c.fullName.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                            <div className="contestant-meta-info">
+                              <span className="contestant-name-text">
+                                {c.fullName} {c.role === 'Admin' && <span className="admin-chip-mini">Admin</span>}
+                              </span>
+                              <span className="contestant-email-text">{c.email}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span className="location-pill">{c.officeLocation || 'Remote'}</span>
+                        </td>
+                        <td>
+                          <div className="entry-count-meta">
+                            <span className="entry-count-num">{c.entryCount} submissions</span>
+                            {c.highestScore > 0 ? (
+                              <span className="best-score-badge">Top: {c.highestScore.toFixed(1)}/100</span>
+                            ) : (
+                              <span className="no-score-text">No uploads yet</span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="payment-action-cell">
+                            {c.leaderboardPaid ? (
+                              <span className="payment-status-badge badge-paid">
+                                <FaCircleCheck className="badge-icon" /> Approved (R100 Paid)
+                              </span>
+                            ) : (
+                              <span className="payment-status-badge badge-pending">
+                                <FaClock className="badge-icon" /> Pending Payment
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className={`payment-toggle-btn ${c.leaderboardPaid ? 'btn-revoke' : 'btn-approve-100'}`}
+                              onClick={() => toggleLeaderboardPayment(c.id)}
+                            >
+                              {c.leaderboardPaid ? 'Revoke Approval' : 'Approve R100'}
+                            </button>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="payment-action-cell">
+                            {c.quizPaid ? (
+                              <span className="payment-status-badge badge-paid">
+                                <FaCircleCheck className="badge-icon" /> Pass Active (R50 Paid)
+                              </span>
+                            ) : (
+                              <span className="payment-status-badge badge-pending">
+                                <FaClock className="badge-icon" /> No Quiz Pass
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className={`payment-toggle-btn ${c.quizPaid ? 'btn-revoke' : 'btn-approve-50'}`}
+                              onClick={() => toggleQuizPayment(c.id)}
+                            >
+                              {c.quizPaid ? 'Revoke Pass' : 'Approve R50'}
+                            </button>
+                          </div>
+                        </td>
+                        <td>
+                          <span className="joined-date-text">
+                            {new Date(c.createdAt).toLocaleDateString()}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: Submissions & AI Moderation */}
+      {activeAdminTab === 'entries' && (
+        <div className="admin-entries-section fade-in">
+          {/* Stats Cards Row or Skeleton */}
       {loading && !overview ? (
         <AdminStatsSkeleton />
       ) : overview ? (
@@ -1032,6 +1423,169 @@ export default function AdminPortal({ onBackToApp }) {
           </>
         )}
       </div>
+      </div>
+      )}
+
+      {/* TAB 3: Mustache Quiz Arena Controller */}
+      {activeAdminTab === 'quiz' && (
+        <div className="admin-quiz-section fade-in">
+          {/* Quiz Host Status Overview Card */}
+          <div className="quiz-host-status-card">
+            <div className="quiz-host-header">
+              <div className="quiz-host-title-wrap">
+                <span className="quiz-host-badge">
+                  <FaGamepad className="btn-icon" /> ARENA MASTER CONTROL
+                </span>
+                <h2 className="quiz-host-title">
+                  {quizState?.title || 'DVT Movember 2026 Grand Mustache Quiz Arena'}
+                </h2>
+                <p className="quiz-host-subtitle">
+                  Direct the live interactive quiz for all contestants. Advance questions, reveal answer distributions, and crown the Mustache Trivia Champion.
+                </p>
+              </div>
+
+              <div className="quiz-host-pin-box">
+                <span className="quiz-pin-label">GAME PIN</span>
+                <span className="quiz-pin-number">{quizState?.pinCode || '69420'}</span>
+              </div>
+            </div>
+
+            <div className="quiz-host-meta-grid">
+              <div className="quiz-meta-item">
+                <span className="quiz-meta-label">Game Status</span>
+                <span className={`quiz-status-tag status-${quizState?.status?.toLowerCase() || 'lobby'}`}>
+                  {quizState?.status || 'Lobby'}
+                </span>
+              </div>
+              <div className="quiz-meta-item">
+                <span className="quiz-meta-label">Connected Players</span>
+                <span className="quiz-meta-value">
+                  <FaUsers className="inline-icon" /> {quizState?.playerCount || 0}
+                </span>
+              </div>
+              <div className="quiz-meta-item">
+                <span className="quiz-meta-label">Question Progress</span>
+                <span className="quiz-meta-value">
+                  {quizState?.currentQuestion 
+                    ? `${(quizState.currentQuestionIndex ?? 0) + 1} / ${quizState.totalQuestions || 8}`
+                    : `0 / ${quizState?.totalQuestions || 8} (In Lobby)`}
+                </span>
+              </div>
+            </div>
+
+            {/* Host Action Buttons */}
+            <div className="quiz-host-action-bar">
+              <button
+                type="button"
+                className="quiz-host-btn btn-lobby"
+                onClick={() => handleQuizAction('start-lobby')}
+                disabled={quizLoading}
+              >
+                <FaRotate className="btn-icon" /> Open / Reset Lobby
+              </button>
+
+              <button
+                type="button"
+                className="quiz-host-btn btn-next-question"
+                onClick={() => handleQuizAction('next-question')}
+                disabled={quizLoading}
+              >
+                <FaPlay className="btn-icon" /> Launch Next Question
+              </button>
+
+              <button
+                type="button"
+                className="quiz-host-btn btn-reveal"
+                onClick={() => handleQuizAction('reveal-round')}
+                disabled={quizLoading || quizState?.status !== 'InQuestion'}
+              >
+                <FaEye className="btn-icon" /> Reveal Answers & Scoring
+              </button>
+
+              <button
+                type="button"
+                className="quiz-host-btn btn-crown"
+                onClick={() => handleQuizAction('end')}
+                disabled={quizLoading}
+              >
+                <FaCrown className="btn-icon" /> Crown Champions (End Quiz)
+              </button>
+
+              <button
+                type="button"
+                className="quiz-host-btn btn-reset-scores"
+                onClick={() => {
+                  if (window.confirm('Reset all player scores to 0 for a new tournament?')) {
+                    handleQuizAction('reset-scores');
+                  }
+                }}
+                disabled={quizLoading}
+              >
+                <FaRotate className="btn-icon" /> Reset Scores to 0
+              </button>
+            </div>
+          </div>
+
+          {/* Current Question Live Display */}
+          {quizState?.currentQuestion ? (
+            <div className="quiz-current-question-card fade-in">
+              <div className="quiz-q-header">
+                <span className="quiz-q-index">Question {(quizState.currentQuestionIndex ?? 0) + 1}</span>
+                <h3 className="quiz-q-text">{quizState.currentQuestion.questionText}</h3>
+              </div>
+
+              {quizState.currentQuestion.imageUrl && (
+                <div className="quiz-q-image-wrap">
+                  <img src={quizState.currentQuestion.imageUrl} alt="Quiz Question" className="quiz-q-img" />
+                </div>
+              )}
+
+              <div className="quiz-q-options-grid">
+                <div className={`quiz-q-option opt-red ${quizState.currentQuestion.correctOption === 1 ? 'is-correct' : ''}`}>
+                  <span className="opt-shape">▲</span>
+                  <span className="opt-label">{quizState.currentQuestion.optionA}</span>
+                  {quizState.answerStats && (
+                    <span className="opt-vote-count">{quizState.answerStats.countA || 0} votes</span>
+                  )}
+                </div>
+                <div className={`quiz-q-option opt-blue ${quizState.currentQuestion.correctOption === 2 ? 'is-correct' : ''}`}>
+                  <span className="opt-shape">◆</span>
+                  <span className="opt-label">{quizState.currentQuestion.optionB}</span>
+                  {quizState.answerStats && (
+                    <span className="opt-vote-count">{quizState.answerStats.countB || 0} votes</span>
+                  )}
+                </div>
+                <div className={`quiz-q-option opt-yellow ${quizState.currentQuestion.correctOption === 3 ? 'is-correct' : ''}`}>
+                  <span className="opt-shape">●</span>
+                  <span className="opt-label">{quizState.currentQuestion.optionC}</span>
+                  {quizState.answerStats && (
+                    <span className="opt-vote-count">{quizState.answerStats.countC || 0} votes</span>
+                  )}
+                </div>
+                <div className={`quiz-q-option opt-green ${quizState.currentQuestion.correctOption === 4 ? 'is-correct' : ''}`}>
+                  <span className="opt-shape">■</span>
+                  <span className="opt-label">{quizState.currentQuestion.optionD}</span>
+                  {quizState.answerStats && (
+                    <span className="opt-vote-count">{quizState.answerStats.countD || 0} votes</span>
+                  )}
+                </div>
+              </div>
+
+              {quizState.answerStats && (
+                <div className="quiz-total-answers-bar">
+                  Total answers collected this round: <strong>{quizState.answerStats.totalAnswers || 0}</strong>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="quiz-waiting-card">
+              <FaGamepad className="waiting-icon" />
+              <h3>Arena is in Lobby Mode</h3>
+              <p>Players can join using PIN <strong>{quizState?.pinCode || '69420'}</strong>. When all players have arrived, click <strong>Launch Next Question</strong> above.</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Delete All Confirmation Modal */}
       {showDeleteAllModal && (

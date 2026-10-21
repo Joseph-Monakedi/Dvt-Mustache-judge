@@ -18,7 +18,9 @@ public class TestGeminiJudgeService : DvtMustacheJudge.Api.Services.IGeminiJudge
         Stream imageStream, 
         string mimeType, 
         string contestantName, 
-        string? officeLocation, 
+        string? officeLocation,
+        Stream? cleanShaveStream = null,
+        string? cleanShaveMimeType = null,
         CancellationToken cancellationToken = default)
     {
         if (contestantName.Contains("FlaggedVisionTest", StringComparison.OrdinalIgnoreCase))

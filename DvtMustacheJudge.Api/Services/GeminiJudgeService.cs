@@ -30,6 +30,8 @@ public class GeminiJudgeService : IGeminiJudgeService
         string mimeType, 
         string contestantName, 
         string? officeLocation,
+        Stream? cleanShaveStream = null,
+        string? cleanShaveMimeType = null,
         CancellationToken cancellationToken = default)
     {
         var apiKey = _configuration["Gemini:ApiKey"];
@@ -64,6 +66,22 @@ public class GeminiJudgeService : IGeminiJudgeService
         var normalizedMime = string.IsNullOrWhiteSpace(mimeType) || !mimeType.StartsWith("image/")
             ? "image/jpeg"
             : mimeType;
+
+        string? cleanShaveBase64 = null;
+        if (cleanShaveStream != null)
+        {
+            if (cleanShaveStream.CanSeek)
+            {
+                cleanShaveStream.Position = 0;
+            }
+            using var cMs = new MemoryStream();
+            await cleanShaveStream.CopyToAsync(cMs);
+            var cBytes = cMs.ToArray();
+            if (cBytes.Length > 0)
+            {
+                cleanShaveBase64 = Convert.ToBase64String(cBytes);
+            }
+        }
 
         var systemPrompt = @"You are the Chief Justice of the DVT Movember Mustache Court.
 Your mission is to evaluate contestant facial hair with sharp wit, swagger, and warm humor.
@@ -165,18 +183,40 @@ CRITICAL KINDNESS & SAFETY INVARIANT:
             {
                 new
                 {
-                    parts = new object[]
-                    {
-                        new { text = userPrompt },
-                        new
+                    parts = cleanShaveBase64 != null
+                        ? new object[]
                         {
-                            inlineData = new
+                            new { text = userPrompt + " (Note: A Day 1 Clean Shave baseline picture is provided second for growth progression comparison)." },
+                            new
                             {
-                                mimeType = normalizedMime,
-                                data = base64Image
+                                inlineData = new
+                                {
+                                    mimeType = normalizedMime,
+                                    data = base64Image
+                                }
+                            },
+                            new { text = "DAY 1 CLEAN SHAVE BASELINE PHOTO: The following photo is the contestant's clean-shaven baseline. Compare the current mustache against this clean shave to measure follicular growth, rate of progress, and overall facial transformation. Supply growthScore (1-100) and growthAnalysis." },
+                            new
+                            {
+                                inlineData = new
+                                {
+                                    mimeType = string.IsNullOrWhiteSpace(cleanShaveMimeType) ? "image/jpeg" : cleanShaveMimeType,
+                                    data = cleanShaveBase64
+                                }
                             }
                         }
-                    }
+                        : new object[]
+                        {
+                            new { text = userPrompt },
+                            new
+                            {
+                                inlineData = new
+                                {
+                                    mimeType = normalizedMime,
+                                    data = base64Image
+                                }
+                            }
+                        }
                 }
             },
             generationConfig = new
@@ -192,6 +232,8 @@ CRITICAL KINDNESS & SAFETY INVARIANT:
                         densityScore = new { type = "INTEGER" },
                         symmetryScore = new { type = "INTEGER" },
                         swaggerScore = new { type = "INTEGER" },
+                        growthScore = new { type = "INTEGER" },
+                        growthAnalysis = new { type = "STRING" },
                         isWoodenSpoon = new { type = "BOOLEAN" },
                         woodenSpoonReason = new { type = "STRING" },
                         innovationScore = new { type = "INTEGER" },
@@ -378,7 +420,7 @@ CRITICAL KINDNESS & SAFETY INVARIANT:
         }
     }
 
-    public static GeminiJudgeResult GenerateFallbackVerdict(string contestantName, string? officeLocation)
+    public static GeminiJudgeResult GenerateFallbackVerdict(string contestantName, string? officeLocation, bool hasCleanShave = false)
     {
         var categories = new[] { "Chevron", "Handlebar", "Pencil", "Horseshoe", "Walrus", "Peach Fuzz", "Stubbled Maverick", "Painter's Brush" };
         var category = categories[Random.Shared.Next(categories.Length)];
@@ -386,6 +428,10 @@ CRITICAL KINDNESS & SAFETY INVARIANT:
         var density = Random.Shared.Next(5, 10);
         var symmetry = Random.Shared.Next(5, 10);
         var swagger = Random.Shared.Next(5, 10);
+        var growthScore = hasCleanShave ? Random.Shared.Next(65, 98) : 0;
+        var growthAnalysis = hasCleanShave
+            ? $"Sensational follicular velocity! Transformed from a Day 1 baby-smooth philtrum into a distinguished {category}."
+            : null;
 
         return new GeminiJudgeResult
         {
@@ -393,6 +439,8 @@ CRITICAL KINDNESS & SAFETY INVARIANT:
             DensityScore = density,
             SymmetryScore = symmetry,
             SwaggerScore = swagger,
+            GrowthScore = growthScore,
+            GrowthAnalysis = growthAnalysis,
             MustacheTitle = "The Bristle Contender",
             StyleCategory = category,
             Roast = $"A magnificent display of facial hair bristles, symmetry, and swagger across the upper lip for {contestantName}.",

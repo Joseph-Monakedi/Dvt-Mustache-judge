@@ -49,7 +49,16 @@ public class MustacheEntry
     [MaxLength(100)]
     public string VerdictBadge { get; set; } = string.Empty;
 
+    // Day 1 Clean Shave baseline picture & growth comparison metrics
+    public string? CleanShaveImageUrl { get; set; }
+    public int GrowthScore { get; set; } = 0;
+    public string? GrowthAnalysis { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public bool IsHidden { get; set; } = false;
+
+    // Foreign key to User
+    public Guid? UserId { get; set; }
+    public User? User { get; set; }
 }
