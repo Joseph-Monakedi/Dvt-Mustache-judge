@@ -1,4 +1,5 @@
 import React from 'react';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { GiMustache } from 'react-icons/gi';
 import { 
   FaCamera, 
@@ -9,22 +10,26 @@ import {
   FaAward, 
   FaUser, 
   FaRightToBracket, 
-  FaRightFromBracket,
-  FaCircleCheck,
-  FaClock
+  FaRightFromBracket
 } from 'react-icons/fa6';
 import { useAuth } from '../context/AuthContext';
 import { useIsMobile } from '../utils/useIsMobile';
 
-export default function Navbar({ activeTab, setActiveTab, totalEntries }) {
+export default function Navbar({ totalEntries = 0 }) {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const { user, isAuthenticated, logout, openAuthModal } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/leaderboard');
+  };
 
   return (
     <>
       <header className="navbar">
         <div className="navbar-container">
-          <div className="navbar-brand" onClick={() => setActiveTab('booth')}>
+          <Link to="/leaderboard" className="navbar-brand">
             <div className="brand-logo-icon-wrap">
               <GiMustache className="brand-logo-icon" />
             </div>
@@ -34,14 +39,13 @@ export default function Navbar({ activeTab, setActiveTab, totalEntries }) {
               </div>
               <div className="brand-tagline">Movember 2026 AI Facial Hair Court</div>
             </div>
-          </div>
+          </Link>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation Links */}
           <nav className="navbar-nav desktop-nav">
-            <button 
-              type="button"
-              className={`nav-btn ${activeTab === 'leaderboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('leaderboard')}
+            <NavLink 
+              to="/leaderboard"
+              className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
               aria-label="Leaderboard"
             >
               <FaTrophy className="nav-icon" />
@@ -49,66 +53,61 @@ export default function Navbar({ activeTab, setActiveTab, totalEntries }) {
               {totalEntries > 0 && (
                 <span className="nav-badge">{totalEntries}</span>
               )}
-            </button>
+            </NavLink>
 
             {isAuthenticated && (
               <>
-                <button 
-                  type="button"
-                  className={`nav-btn ${activeTab === 'booth' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('booth')}
+                <NavLink 
+                  to="/booth"
+                  className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
                   aria-label="Enter Contest"
                 >
                   <FaCamera className="nav-icon" />
                   <span className="nav-label">Enter Contest</span>
-                </button>
+                </NavLink>
 
-                <button 
-                  type="button"
-                  className={`nav-btn ${activeTab === 'quiz' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('quiz')}
+                <NavLink 
+                  to="/quiz"
+                  className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
                   aria-label="Mustache Quiz Arena"
                 >
                   <FaGamepad className="nav-icon text-cyan" />
                   <span className="nav-label">Quiz Arena</span>
-                </button>
+                </NavLink>
 
-                <button 
-                  type="button"
-                  className={`nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('dashboard')}
+                <NavLink 
+                  to="/dashboard"
+                  className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
                   aria-label="My Mustache Vault"
                 >
                   <FaAward className="nav-icon text-gold" />
                   <span className="nav-label">My Vault</span>
-                </button>
+                </NavLink>
               </>
             )}
 
             {/* Kiosk Mode is disabled/hidden on mobile devices */}
             {!isMobile && (
-              <button 
-                type="button"
-                className={`nav-btn kiosk-nav-btn ${activeTab === 'kiosk' ? 'active' : ''}`}
-                onClick={() => setActiveTab('kiosk')}
+              <NavLink 
+                to="/kiosk"
+                className={({ isActive }) => `nav-btn kiosk-nav-btn ${isActive ? 'active' : ''}`}
                 aria-label="TV Kiosk"
               >
                 <FaTv className="nav-icon" />
                 <span className="nav-label">TV Kiosk</span>
-              </button>
+              </NavLink>
             )}
 
             {isAuthenticated && user?.role === 'Admin' && (
-              <button 
-                type="button"
-                className={`nav-btn admin-nav-btn ${activeTab === 'admin' ? 'active' : ''}`}
-                onClick={() => setActiveTab('admin')}
+              <NavLink 
+                to="/admin"
+                className={({ isActive }) => `nav-btn admin-nav-btn ${isActive ? 'active' : ''}`}
                 title="Judicial Admin & Moderation Portal"
                 aria-label="Admin Portal"
               >
                 <FaLock className="nav-icon" />
                 <span className="nav-label">Admin</span>
-              </button>
+              </NavLink>
             )}
           </nav>
 
@@ -119,7 +118,7 @@ export default function Navbar({ activeTab, setActiveTab, totalEntries }) {
                 <button 
                   type="button" 
                   className="user-profile-btn"
-                  onClick={() => setActiveTab('dashboard')}
+                  onClick={() => navigate('/dashboard')}
                   title="View your personal Mustache Vault"
                 >
                   <div className="user-nav-avatar">
@@ -140,7 +139,7 @@ export default function Navbar({ activeTab, setActiveTab, totalEntries }) {
                 <button 
                   type="button" 
                   className="user-nav-logout-btn"
-                  onClick={logout}
+                  onClick={handleLogout}
                   title="Sign Out"
                 >
                   <FaRightFromBracket />
@@ -164,7 +163,7 @@ export default function Navbar({ activeTab, setActiveTab, totalEntries }) {
               <button 
                 type="button" 
                 className="mobile-avatar-pill" 
-                onClick={() => setActiveTab('dashboard')}
+                onClick={() => navigate('/dashboard')}
               >
                 <span className="mobile-avatar-circle">
                   {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
@@ -186,10 +185,9 @@ export default function Navbar({ activeTab, setActiveTab, totalEntries }) {
 
       {/* Modern Mobile Bottom Floating Navigation Bar */}
       <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">
-        <button
-          type="button"
-          className={`mobile-nav-item ${activeTab === 'leaderboard' ? 'active' : ''}`}
-          onClick={() => setActiveTab('leaderboard')}
+        <NavLink
+          to="/leaderboard"
+          className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}
           aria-label="Leaderboard"
         >
           <div className="mobile-nav-icon-wrap">
@@ -199,58 +197,54 @@ export default function Navbar({ activeTab, setActiveTab, totalEntries }) {
             )}
           </div>
           <span className="mobile-nav-text">Leaderboard</span>
-        </button>
+        </NavLink>
 
         {isAuthenticated ? (
           <>
-            <button
-              type="button"
-              className={`mobile-nav-item ${activeTab === 'booth' ? 'active' : ''}`}
-              onClick={() => setActiveTab('booth')}
+            <NavLink
+              to="/booth"
+              className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}
               aria-label="Enter Contest"
             >
               <div className="mobile-nav-icon-wrap">
                 <FaCamera className="mobile-nav-icon" />
               </div>
               <span className="mobile-nav-text">Enter Contest</span>
-            </button>
+            </NavLink>
 
-            <button
-              type="button"
-              className={`mobile-nav-item ${activeTab === 'quiz' ? 'active' : ''}`}
-              onClick={() => setActiveTab('quiz')}
+            <NavLink
+              to="/quiz"
+              className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}
               aria-label="Quiz Arena"
             >
               <div className="mobile-nav-icon-wrap">
                 <FaGamepad className="mobile-nav-icon text-cyan" />
               </div>
               <span className="mobile-nav-text">Quiz Arena</span>
-            </button>
+            </NavLink>
 
-            <button
-              type="button"
-              className={`mobile-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
+            <NavLink
+              to="/dashboard"
+              className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}
               aria-label="My Vault"
             >
               <div className="mobile-nav-icon-wrap">
                 <FaAward className="mobile-nav-icon text-gold" />
               </div>
               <span className="mobile-nav-text">My Vault</span>
-            </button>
+            </NavLink>
 
             {user?.role === 'Admin' && (
-              <button
-                type="button"
-                className={`mobile-nav-item ${activeTab === 'admin' ? 'active' : ''}`}
-                onClick={() => setActiveTab('admin')}
+              <NavLink
+                to="/admin"
+                className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}
                 aria-label="Admin Portal"
               >
                 <div className="mobile-nav-icon-wrap">
                   <FaLock className="mobile-nav-icon" />
                 </div>
                 <span className="mobile-nav-text">Admin</span>
-              </button>
+              </NavLink>
             )}
           </>
         ) : (

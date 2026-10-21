@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import WebcamBooth from './components/WebcamBooth';
 import JudgingModal from './components/JudgingModal';
@@ -17,21 +18,17 @@ import { useIsMobile } from './utils/useIsMobile';
 import './App.css';
 
 export default function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isMobile = useIsMobile();
   const { user, token, authModalOpen, authModalInitialMode, closeAuthModal, refreshUser } = useAuth();
-  const [activeTab, setActiveTab] = useState('leaderboard'); // 'leaderboard' | 'booth' | 'dashboard' | 'quiz' | 'kiosk' | 'admin'
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [judgingModalOpen, setJudgingModalOpen] = useState(false);
   const [activeVerdict, setActiveVerdict] = useState(null);
   const [selectedLeaderboardEntry, setSelectedLeaderboardEntry] = useState(null);
   const [totalEntries, setTotalEntries] = useState(0);
   const [toastMessage, setToastMessage] = useState(null);
-
-  // Auto-redirect if user logs out while in protected tabs
-  useEffect(() => {
-    if (!user && (activeTab === 'dashboard' || activeTab === 'admin')) {
-      setActiveTab('leaderboard');
-    }
-  }, [user, activeTab]);
 
   // Fetch initial entry count
   useEffect(() => {
@@ -49,6 +46,14 @@ export default function App() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
+
+  // If a mobile user navigates to /kiosk, auto-redirect to /leaderboard
+  useEffect(() => {
+    if (location.pathname === '/kiosk' && isMobile) {
+      navigate('/leaderboard', { replace: true });
+      showToast('TV Kiosk mode is disabled on mobile devices (designed for widescreen TV displays).');
+    }
+  }, [location.pathname, isMobile, navigate]);
 
   // Handle Judge Submission
   const handleJudgeSubmit = async ({ name, imageBlob, cleanShaveBlob }) => {
@@ -108,24 +113,13 @@ export default function App() {
 
   const handleResetBooth = () => {
     setActiveVerdict(null);
-    setActiveTab('booth');
   };
 
-  const isMobile = useIsMobile();
-
-  // If a mobile user enters kiosk tab, auto-redirect to leaderboard
-  useEffect(() => {
-    if (activeTab === 'kiosk' && isMobile) {
-      setActiveTab('leaderboard');
-      showToast('TV Kiosk mode is disabled on mobile devices (designed for widescreen TV displays).');
-    }
-  }, [activeTab, isMobile]);
-
   // If in TV Kiosk Mode (desktop/TV only), render standalone fullscreen layout
-  if (activeTab === 'kiosk' && !isMobile) {
+  if (location.pathname === '/kiosk' && !isMobile) {
     return (
       <KioskMode 
-        onExit={() => setActiveTab('leaderboard')} 
+        onExit={() => navigate('/leaderboard')} 
       />
     );
   }
@@ -140,65 +134,82 @@ export default function App() {
       )}
 
       {/* Main Navigation */}
-      <Navbar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        totalEntries={totalEntries} 
-      />
+      <Navbar totalEntries={totalEntries} />
 
-      {/* Main Content Area */}
+      {/* Main Routed Content Area */}
       <main className="main-content">
-        {activeTab === 'booth' && (
-          activeVerdict ? (
-            <VerdictCard
-              verdict={activeVerdict}
-              onReset={handleResetBooth}
-              onViewLeaderboard={() => {
-                setActiveVerdict(null);
-                setActiveTab('leaderboard');
-              }}
-            />
-          ) : (
-            <WebcamBooth 
-              onJudgeSubmit={handleJudgeSubmit}
-              isSubmitting={isSubmitting}
-            />
-          )
-        )}
-
-        {activeTab === 'leaderboard' && (
-          <Leaderboard 
-            onSelectEntry={entry => setSelectedLeaderboardEntry(entry)}
-            onGoToBooth={() => {
-              setActiveVerdict(null);
-              setActiveTab('booth');
-            }}
+        <Routes>
+          <Route path="/" element={<Navigate to="/leaderboard" replace />} />
+          
+          <Route 
+            path="/leaderboard" 
+            element={
+              <Leaderboard 
+                onSelectEntry={entry => setSelectedLeaderboardEntry(entry)}
+                onGoToBooth={() => {
+                  setActiveVerdict(null);
+                  navigate('/booth');
+                }}
+              />
+            } 
           />
-        )}
 
-        {activeTab === 'dashboard' && (
-          <UserDashboard
-            onGoToBooth={() => {
-              setActiveVerdict(null);
-              setActiveTab('booth');
-            }}
-            onGoToLeaderboard={() => setActiveTab('leaderboard')}
-            onGoToQuiz={() => setActiveTab('quiz')}
-            onSelectEntry={entry => setSelectedLeaderboardEntry(entry)}
+          <Route 
+            path="/booth" 
+            element={
+              activeVerdict ? (
+                <VerdictCard
+                  verdict={activeVerdict}
+                  onReset={handleResetBooth}
+                  onViewLeaderboard={() => {
+                    setActiveVerdict(null);
+                    navigate('/leaderboard');
+                  }}
+                />
+              ) : (
+                <WebcamBooth 
+                  onJudgeSubmit={handleJudgeSubmit}
+                  isSubmitting={isSubmitting}
+                />
+              )
+            } 
           />
-        )}
 
-        {activeTab === 'quiz' && (
-          <MustacheQuizArena
-            onGoToDashboard={() => setActiveTab('dashboard')}
+          <Route 
+            path="/dashboard" 
+            element={
+              <UserDashboard
+                onGoToBooth={() => {
+                  setActiveVerdict(null);
+                  navigate('/booth');
+                }}
+                onGoToLeaderboard={() => navigate('/leaderboard')}
+                onGoToQuiz={() => navigate('/quiz')}
+                onSelectEntry={entry => setSelectedLeaderboardEntry(entry)}
+              />
+            } 
           />
-        )}
 
-        {activeTab === 'admin' && (
-          <AdminPortal 
-            onBackToApp={() => setActiveTab('leaderboard')}
+          <Route 
+            path="/quiz" 
+            element={
+              <MustacheQuizArena
+                onGoToDashboard={() => navigate('/dashboard')}
+              />
+            } 
           />
-        )}
+
+          <Route 
+            path="/admin" 
+            element={
+              <AdminPortal 
+                onBackToApp={() => navigate('/leaderboard')}
+              />
+            } 
+          />
+
+          <Route path="*" element={<Navigate to="/leaderboard" replace />} />
+        </Routes>
       </main>
 
       {/* Footer */}
@@ -209,7 +220,11 @@ export default function App() {
           </div>
           <div className="footer-links">
             {!isMobile ? (
-              <button className="footer-link footer-kiosk-btn" onClick={() => setActiveTab('kiosk')}>
+              <button 
+                type="button" 
+                className="footer-link footer-kiosk-btn" 
+                onClick={() => navigate('/kiosk')}
+              >
                 <FaTv className="btn-icon" /> Launch Kiosk TV Mode
               </button>
             ) : (
