@@ -238,9 +238,16 @@ export default function KioskMode({ onExit }) {
               </div>
             </div>
           ) : (
-            <div className="kiosk-empty">
-              <h3>Waiting for contestants...</h3>
-              <p>Scan the QR code to submit your mustache!</p>
+            <div className="kiosk-empty fade-in">
+              <div className="kiosk-empty-badge">
+                <GiMustache className="kiosk-empty-icon" />
+              </div>
+              <h3>Waiting for Contestants...</h3>
+              <p>Open your phone camera, scan the QR code on the right, and submit your mustache for AI judging!</p>
+              <div className="kiosk-live-beacon">
+                <span className="beacon-pulse-dot"></span>
+                <span>Live Optical Calipers Ready</span>
+              </div>
             </div>
           )}
         </div>
