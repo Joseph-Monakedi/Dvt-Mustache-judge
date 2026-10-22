@@ -1,26 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FaCamera, 
   FaTrophy, 
-  FaAward, 
   FaRotate, 
   FaCircleCheck, 
   FaClock, 
   FaGamepad, 
   FaCircleInfo, 
-  FaShareNodes, 
-  FaEye, 
-  FaLocationDot,
   FaCalendarDays,
   FaStar,
-  FaHandHoldingDollar,
   FaXmark,
   FaUpload,
-  FaArrowTrendUp
+  FaUserPlus,
+  FaArrowRightToBracket
 } from 'react-icons/fa6';
 import { GiMustache } from 'react-icons/gi';
 import { useAuth } from '../context/AuthContext';
 import { apiUrl } from '../utils/api';
+import Button from './common/Button';
+import DayOneCleanShaveModal from './dashboard/DayOneCleanShaveModal';
+import VaultEntryCard from './dashboard/VaultEntryCard';
+import CharityPaymentModal from './dashboard/CharityPaymentModal';
 
 export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQuiz, onSelectEntry }) {
   const { user, token, refreshUser, openAuthModal } = useAuth();
@@ -28,60 +28,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showPaymentInfo, setShowPaymentInfo] = useState(false);
-  const cleanShaveInputRef = useRef(null);
-  const [uploadingCleanShave, setUploadingCleanShave] = useState(false);
-  const [cleanShaveMsg, setCleanShaveMsg] = useState('');
-  const [cleanShaveError, setCleanShaveError] = useState('');
-
-  const handleCleanShaveUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setCleanShaveError('Please select a valid image file (JPEG, PNG, WebP).');
-      return;
-    }
-
-    if (file.size > 8 * 1024 * 1024) {
-      setCleanShaveError('File size exceeds the 8MB limit.');
-      return;
-    }
-
-    setUploadingCleanShave(true);
-    setCleanShaveError('');
-    setCleanShaveMsg('');
-
-    try {
-      const formData = new FormData();
-      formData.append('image', file, `cleanshave_${Date.now()}.jpg`);
-
-      const res = await fetch(apiUrl('/api/mustache/clean-shave'), {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Upload failed (${res.status})`);
-      }
-
-      const result = await res.json();
-      setCleanShaveMsg(result.message || 'Day 1 Clean Shave baseline registered successfully!');
-      await refreshUser();
-      await fetchDashboard();
-      setTimeout(() => setCleanShaveMsg(''), 5000);
-    } catch (err) {
-      setCleanShaveError(err.message || 'Failed to upload clean shave baseline.');
-    } finally {
-      setUploadingCleanShave(false);
-      if (cleanShaveInputRef.current) {
-        cleanShaveInputRef.current.value = '';
-      }
-    }
-  };
+  const [showCleanShaveModal, setShowCleanShaveModal] = useState(false);
 
   const fetchDashboard = async () => {
     if (!token) {
@@ -127,65 +74,78 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
 
   if (!user) {
     return (
-      <div className="dashboard-login-gate fade-in">
-        <div className="gate-card">
-          <div className="gate-icon-wrap">
+      <div className="dashboard-login-gate fade-in min-h-[60vh] flex items-center justify-center p-4">
+        <div className="gate-card max-w-lg w-full bg-[#0d1522] border border-white/10 rounded-2xl p-8 text-center shadow-2xl">
+          <div className="gate-icon-wrap w-20 h-20 mx-auto mb-5 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-4xl shadow-lg shadow-cyan-950/50">
             <GiMustache className="gate-icon" />
           </div>
-          <h2>Sign In to View Your Mustache Vault</h2>
-          <p>
+          <h2 className="text-2xl font-bold text-white mb-2">Sign In to View Your Mustache Vault</h2>
+          <p className="text-slate-400 text-sm mb-6 leading-relaxed">
             Track your personal best score, review past AI judging roasts, manage your entry status, and resubmit new facial hair attempts at any time!
           </p>
-          <div className="gate-actions">
-            <button 
-              type="button" 
-              className="gate-btn primary-btn"
+          <div className="gate-actions flex flex-col sm:flex-row gap-3 justify-center">
+            <Button 
+              variant="primary"
+              size="lg"
+              icon={FaArrowRightToBracket}
               onClick={() => openAuthModal('login')}
             >
               Sign In to Your Vault
-            </button>
-            <button 
-              type="button" 
-              className="gate-btn secondary-btn"
+            </Button>
+            <Button 
+              variant="secondary"
+              size="lg"
+              icon={FaUserPlus}
               onClick={() => openAuthModal('register')}
             >
               Create New Account
-            </button>
+            </Button>
           </div>
         </div>
       </div>
     );
   }
 
+  const hasBaseline = Boolean(user.cleanShaveImageUrl || dashboardData?.cleanShaveImageUrl);
+  const baselineDate = user.cleanShaveUploadedAt || dashboardData?.cleanShaveUploadedAt;
+
   return (
-    <div className="user-dashboard-container fade-in">
+    <div className="user-dashboard-container fade-in max-w-7xl mx-auto px-4 py-8 space-y-8">
       {/* Dashboard Top Header Banner */}
-      <div className="dashboard-profile-banner">
-        <div className="profile-main-info">
-          <div className="profile-avatar-wrap">
-            <GiMustache className="profile-avatar-icon" />
+      <div className="dashboard-profile-banner flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 sm:p-8 bg-[#0d1522] border border-white/10 rounded-2xl shadow-xl">
+        <div className="profile-main-info flex items-center gap-5">
+          <div className="profile-avatar-wrap relative shrink-0">
+            <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-[#007FBA] to-[#00b4d8] flex items-center justify-center text-white text-4xl shadow-lg shadow-cyan-500/30 border-2 border-cyan-300/40">
+              <GiMustache className="profile-avatar-icon" />
+            </div>
           </div>
-          <div className="profile-details">
-            <div className="profile-badge-row">
-              <span className="office-pill">
+          <div className="profile-details space-y-1">
+            <div className="profile-badge-row flex flex-wrap items-center gap-2 mb-1.5">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-[#131f33] text-cyan-300 border border-cyan-500/30">
                 <GiMustache className="pill-icon" /> Movember Contestant
               </span>
-              <span className="date-pill">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-white/5 text-slate-400 border border-white/5">
                 <FaCalendarDays className="pill-icon" /> Joined Movember 2026
               </span>
             </div>
-            <h1 className="profile-name">{user.fullName}</h1>
-            <p className="profile-email">{user.email}</p>
+            <h1 className="profile-name text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              {user.fullName}
+            </h1>
+            <p className="profile-email text-sm text-slate-400 font-mono">
+              {user.email}
+            </p>
           </div>
         </div>
 
         {/* Charity & Fee Status Badges */}
-        <div className="payment-status-card">
-          <div className="payment-header">
-            <span className="payment-title">Movember Charity Approvals</span>
+        <div className="payment-status-card bg-[#070c14]/80 border border-white/10 rounded-xl p-4 sm:p-5 min-w-[280px] space-y-3">
+          <div className="payment-header flex items-center justify-between pb-2 border-b border-white/5">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              Charity Approvals
+            </span>
             <button 
               type="button" 
-              className="payment-info-btn"
+              className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 transition-colors"
               onClick={() => setShowPaymentInfo(true)}
               title="View Payment Instructions"
             >
@@ -193,28 +153,36 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
             </button>
           </div>
 
-          <div className="status-pills-wrap">
+          <div className="status-pills-wrap grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {/* Leaderboard R100 Status */}
-            <div className={`status-pill ${user.leaderboardPaid ? 'status-paid' : 'status-pending'}`}>
-              <div className="status-icon">
-                {user.leaderboardPaid ? <FaCircleCheck /> : <FaClock />}
+            <div className={`flex items-center gap-3 p-2.5 rounded-lg border text-xs ${
+              user.leaderboardPaid 
+                ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' 
+                : 'bg-amber-950/30 border-amber-500/30 text-amber-300'
+            }`}>
+              <div className="text-base shrink-0">
+                {user.leaderboardPaid ? <FaCircleCheck className="text-emerald-400" /> : <FaClock className="text-amber-400" />}
               </div>
-              <div className="status-text">
-                <span className="status-label">Leaderboard (R100)</span>
-                <span className="status-value">
+              <div className="min-w-0">
+                <span className="block font-bold text-white text-[11px]">Leaderboard (R100)</span>
+                <span className="block truncate text-[10px]">
                   {user.leaderboardPaid ? 'Approved & Live' : 'Payment Pending'}
                 </span>
               </div>
             </div>
 
             {/* Quiz R50 Status */}
-            <div className={`status-pill ${user.quizPaid ? 'status-paid' : 'status-pending'}`}>
-              <div className="status-icon">
-                {user.quizPaid ? <FaCircleCheck /> : <FaClock />}
+            <div className={`flex items-center gap-3 p-2.5 rounded-lg border text-xs ${
+              user.quizPaid 
+                ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' 
+                : 'bg-amber-950/30 border-amber-500/30 text-amber-300'
+            }`}>
+              <div className="text-base shrink-0">
+                {user.quizPaid ? <FaCircleCheck className="text-emerald-400" /> : <FaClock className="text-amber-400" />}
               </div>
-              <div className="status-text">
-                <span className="status-label">Mustache Quiz (R50)</span>
-                <span className="status-value">
+              <div className="min-w-0">
+                <span className="block font-bold text-white text-[11px]">Quiz Pass (R50)</span>
+                <span className="block truncate text-[10px]">
                   {user.quizPaid ? 'Pass Active' : 'Pass Pending'}
                 </span>
               </div>
@@ -222,7 +190,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
           </div>
 
           {!user.leaderboardPaid && (
-            <p className="status-helper-text">
+            <p className="text-[11px] text-slate-400 italic">
               * Pay R100 to an admin so your single highest score is unlocked on the public office leaderboard!
             </p>
           )}
@@ -230,368 +198,232 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
       </div>
 
       {/* Day 1 Clean Shave Baseline Management Card */}
-      <div className="dashboard-cleanshave-banner">
-        <input 
-          type="file" 
-          ref={cleanShaveInputRef}
-          accept="image/jpeg,image/png,image/webp"
-          capture="user"
-          onChange={handleCleanShaveUpload}
-          style={{ display: 'none' }}
-        />
-
-        <div className="cleanshave-banner-left">
-          {(user.cleanShaveImageUrl || dashboardData?.cleanShaveImageUrl) ? (
-            <div className="cleanshave-photo-wrap">
+      <div className={`dashboard-cleanshave-banner flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 sm:p-7 rounded-2xl border transition-all ${
+        hasBaseline 
+          ? 'bg-[#0d1522] border-emerald-500/30 shadow-lg' 
+          : 'bg-gradient-to-r from-[#0d1522] via-[#101b2c] to-[#0d1522] border-cyan-500/40 shadow-xl shadow-cyan-950/30'
+      }`}>
+        <div className="cleanshave-banner-left flex items-start gap-4 sm:gap-5">
+          {hasBaseline ? (
+            <div className="relative shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-emerald-500/60 shadow-lg group">
               <img 
                 src={user.cleanShaveImageUrl || dashboardData?.cleanShaveImageUrl} 
                 alt="Day 1 Clean Shave Baseline" 
-                className="cleanshave-photo-thumb"
+                className="w-full h-full object-cover"
               />
-              <span className="cleanshave-badge-pill">Day 1 Baseline</span>
+              <span className="absolute bottom-0 inset-x-0 bg-emerald-950/90 text-emerald-300 text-[9px] font-black text-center py-0.5 tracking-wider uppercase">
+                Day 1
+              </span>
             </div>
           ) : (
-            <div className="cleanshave-icon-wrap alert-pulse">
+            <div className="shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-cyan-500/10 border-2 border-cyan-400/50 flex items-center justify-center text-cyan-400 text-3xl shadow-lg shadow-cyan-500/20 animate-pulse">
               <FaCamera className="cleanshave-icon" />
             </div>
           )}
 
-          <div className="cleanshave-banner-info">
-            <div className="cleanshave-header-row">
-              <h3 className="cleanshave-banner-title">
-                {(user.cleanShaveImageUrl || dashboardData?.cleanShaveImageUrl)
+          <div className="cleanshave-banner-info space-y-1.5 max-w-2xl">
+            <div className="cleanshave-header-row flex flex-wrap items-center gap-2.5">
+              <h3 className="text-lg sm:text-xl font-bold text-white">
+                {hasBaseline 
                   ? 'Day 1 Clean Shave Baseline (Active)' 
                   : 'Day 1 Clean Shave Baseline Required'}
               </h3>
-              {(user.cleanShaveImageUrl || dashboardData?.cleanShaveImageUrl) ? (
-                <span className="cleanshave-status-active">
-                  <FaCircleCheck /> Registered
+              {hasBaseline ? (
+                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  <FaCircleCheck className="text-[10px]" /> Registered & Active
                 </span>
               ) : (
-                <span className="cleanshave-status-missing">
-                  <FaClock /> Needed for Growth Scoring
+                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  <FaClock className="text-[10px]" /> Needed for Growth Scoring
                 </span>
               )}
             </div>
 
-            <p className="cleanshave-banner-desc">
-              {(user.cleanShaveImageUrl || dashboardData?.cleanShaveImageUrl)
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              {hasBaseline
                 ? 'Your baseline is locked in! All subsequent mustache entries are evaluated alongside this clean-shave photo to track follicle density evolution and calculate your Growth Score.'
                 : 'Upload or snap your clean-shaven face from Day 1 of Movember. All future submissions will be judged alongside this picture to calculate your follicle growth transformation!'}
             </p>
 
-            {(user.cleanShaveUploadedAt || dashboardData?.cleanShaveUploadedAt) && (
-              <span className="cleanshave-uploaded-date">
-                Baseline saved: {new Date(user.cleanShaveUploadedAt || dashboardData.cleanShaveUploadedAt).toLocaleDateString(undefined, {
+            {baselineDate && (
+              <span className="inline-block text-xs font-medium text-slate-400">
+                Baseline saved: {new Date(baselineDate).toLocaleDateString(undefined, {
                   month: 'short',
                   day: 'numeric',
                   year: 'numeric'
                 })}
               </span>
             )}
-
-            {cleanShaveMsg && (
-              <div className="cleanshave-success-alert fade-in">
-                <FaCircleCheck /> {cleanShaveMsg}
-              </div>
-            )}
-            {cleanShaveError && (
-              <div className="cleanshave-error-alert fade-in">
-                <FaXmark /> {cleanShaveError}
-              </div>
-            )}
           </div>
         </div>
 
-        <div className="cleanshave-banner-right">
-          <button 
-            type="button" 
-            className={`cleanshave-upload-btn ${(user.cleanShaveImageUrl || dashboardData?.cleanShaveImageUrl) ? 'secondary' : 'primary pulse-button'}`}
-            onClick={() => cleanShaveInputRef.current?.click()}
-            disabled={uploadingCleanShave}
+        <div className="cleanshave-banner-right shrink-0">
+          <Button 
+            variant={hasBaseline ? 'secondary' : 'primary'}
+            size="md"
+            icon={hasBaseline ? FaUpload : FaCamera}
+            onClick={() => setShowCleanShaveModal(true)}
+            className={!hasBaseline ? 'shadow-cyan-500/30 animate-pulse' : ''}
           >
-            {uploadingCleanShave ? (
-              <>
-                <span className="btn-spinner-sm"></span>
-                <span>Uploading Baseline...</span>
-              </>
-            ) : (user.cleanShaveImageUrl || dashboardData?.cleanShaveImageUrl) ? (
-              <>
-                <FaUpload className="btn-icon" /> Replace Baseline Photo
-              </>
-            ) : (
-              <>
-                <FaCamera className="btn-icon" /> Upload Day 1 Clean Shave
-              </>
-            )}
-          </button>
+            {hasBaseline ? 'Replace Baseline Photo' : 'Upload or Snap Clean Shave'}
+          </Button>
         </div>
       </div>
 
       {/* Stats Cards Row */}
-      <div className="dashboard-stats-grid">
-        <div className="dash-stat-card">
-          <div className="stat-card-icon stat-blue">
+      <div className="dashboard-stats-grid grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Submissions */}
+        <div className="dash-stat-card bg-[#0d1522] border border-white/10 rounded-2xl p-5 flex items-center gap-4 hover:border-cyan-500/40 transition-all">
+          <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-xl shrink-0">
             <FaCamera />
           </div>
-          <div className="stat-card-content">
-            <span className="stat-card-num">{dashboardData?.totalSubmissions ?? 0}</span>
-            <span className="stat-card-title">Total Submissions</span>
+          <div>
+            <span className="block text-2xl font-black text-white">{dashboardData?.totalSubmissions ?? 0}</span>
+            <span className="block text-xs font-medium text-slate-400">Total Submissions</span>
           </div>
         </div>
 
-        <div className="dash-stat-card">
-          <div className="stat-card-icon stat-gold">
+        {/* Personal Best */}
+        <div className="dash-stat-card bg-[#0d1522] border border-white/10 rounded-2xl p-5 flex items-center gap-4 hover:border-yellow-500/40 transition-all">
+          <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl shrink-0">
             <FaStar />
           </div>
-          <div className="stat-card-content">
-            <span className="stat-card-num">{dashboardData?.bestScore ?? 0}</span>
-            <span className="stat-card-title">Personal Best Score</span>
+          <div>
+            <span className="block text-2xl font-black text-white">{dashboardData?.bestScore ?? 0}</span>
+            <span className="block text-xs font-medium text-slate-400">Personal Best Score</span>
           </div>
         </div>
 
-        <div className="dash-stat-card">
-          <div className="stat-card-icon stat-purple">
+        {/* Leaderboard Standing */}
+        <div className="dash-stat-card bg-[#0d1522] border border-white/10 rounded-2xl p-5 flex items-center gap-4 hover:border-purple-500/40 transition-all">
+          <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 text-xl shrink-0">
             <FaTrophy />
           </div>
-          <div className="stat-card-content">
-            <span className="stat-card-num">
+          <div>
+            <span className="block text-2xl font-black text-white">
               {dashboardData?.leaderboardRank ? `#${dashboardData.leaderboardRank}` : user.leaderboardPaid ? 'Unranked' : 'Pending R100'}
             </span>
-            <span className="stat-card-title">Leaderboard Standing</span>
+            <span className="block text-xs font-medium text-slate-400">Leaderboard Standing</span>
           </div>
         </div>
 
-        <div className="dash-stat-card">
-          <div className="stat-card-icon stat-green">
+        {/* Quiz Arena Pass */}
+        <div className="dash-stat-card bg-[#0d1522] border border-white/10 rounded-2xl p-5 flex items-center gap-4 hover:border-emerald-500/40 transition-all">
+          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xl shrink-0">
             <FaGamepad />
           </div>
-          <div className="stat-card-content">
-            <span className="stat-card-num">
+          <div>
+            <span className="block text-2xl font-black text-white">
               {user.quizPaid ? 'Ready' : 'Locked'}
             </span>
-            <span className="stat-card-title">Quiz Arena Pass</span>
+            <span className="block text-xs font-medium text-slate-400">Quiz Arena Pass</span>
           </div>
         </div>
       </div>
 
-      {/* Action Bar */}
-      <div className="dashboard-action-bar">
-        <div className="action-bar-left">
-          <h2>My Mustache Vault ({dashboardData?.entries?.length ?? 0} attempts)</h2>
-          <p>
+      {/* Action Bar Header */}
+      <div className="dashboard-action-bar flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10">
+        <div className="action-bar-left space-y-1">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-3">
+            <span>My Mustache Vault</span>
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">
+              {dashboardData?.entries?.length ?? 0} attempts
+            </span>
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400">
             Submit as many entries as you like. Only your highest-scoring mustache is submitted to the leaderboard!
           </p>
         </div>
-        <div className="action-bar-buttons">
-          <button 
-            type="button" 
-            className="dash-action-btn primary"
+
+        <div className="action-bar-buttons flex items-center gap-2.5 shrink-0 flex-wrap">
+          <Button 
+            variant="primary"
+            icon={FaCamera}
             onClick={onGoToBooth}
           >
-            <FaCamera className="btn-icon" /> New Mustache Attempt
-          </button>
-          <button 
-            type="button" 
-            className="dash-action-btn secondary"
+            New Mustache Attempt
+          </Button>
+
+          <Button 
+            variant="secondary"
+            icon={FaGamepad}
             onClick={onGoToQuiz}
           >
-            <FaGamepad className="btn-icon" /> Mustache Quiz Arena
-          </button>
-          <button 
-            type="button" 
-            className="dash-action-btn tertiary"
+            Mustache Quiz Arena
+          </Button>
+
+          <Button 
+            variant="ghost"
+            icon={FaRotate}
             onClick={fetchDashboard}
             title="Refresh Vault"
-          >
-            <FaRotate className={loading ? 'spinning' : ''} />
-          </button>
+            className={loading ? 'animate-spin' : ''}
+          />
         </div>
       </div>
 
       {/* Entries List / Grid */}
       {loading ? (
-        <div className="dashboard-loading">
-          <div className="loading-spinner"></div>
-          <p>Loading your mustache portfolio...</p>
+        <div className="dashboard-loading py-20 text-center space-y-4">
+          <div className="w-12 h-12 mx-auto border-3 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-medium text-slate-400">Loading your mustache portfolio...</p>
         </div>
       ) : error ? (
-        <div className="dashboard-error">
-          <p>{error}</p>
-          <button type="button" onClick={fetchDashboard} className="retry-btn">
+        <div className="dashboard-error bg-rose-950/40 border border-rose-500/30 rounded-2xl p-8 text-center space-y-4 max-w-md mx-auto">
+          <p className="text-sm text-rose-300">{error}</p>
+          <Button variant="secondary" size="sm" onClick={fetchDashboard}>
             Retry
-          </button>
+          </Button>
         </div>
       ) : !dashboardData?.entries || dashboardData.entries.length === 0 ? (
-        <div className="dashboard-empty-vault">
-          <div className="empty-icon-wrap">
+        <div className="dashboard-empty-vault bg-[#0d1522] border border-white/10 rounded-2xl p-12 text-center max-w-xl mx-auto space-y-5 shadow-xl">
+          <div className="w-20 h-20 mx-auto rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-4xl shadow-lg shadow-cyan-950/50">
             <GiMustache className="empty-icon" />
           </div>
-          <h3>Your Vault is Empty</h3>
-          <p>
-            You haven't stepped before the AI facial hair judge yet! Take a photo with the webcam booth now to start building your record.
-          </p>
-          <button type="button" className="empty-cta-btn" onClick={onGoToBooth}>
-            <FaCamera className="btn-icon" /> Step into the Booth
-          </button>
+          <div className="space-y-2">
+            <h3 className="text-xl font-bold text-white">Your Vault is Empty</h3>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              You haven't stepped before the AI facial hair judge yet! Take a photo with the webcam booth now to start building your record.
+            </p>
+          </div>
+          <Button 
+            variant="primary" 
+            size="lg" 
+            icon={FaCamera} 
+            onClick={onGoToBooth}
+            className="shadow-xl shadow-cyan-500/25"
+          >
+            Step into the Booth
+          </Button>
         </div>
       ) : (
-        <div className="vault-entries-grid">
+        <div className="vault-entries-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {dashboardData.entries.map((entry) => (
-            <div 
+            <VaultEntryCard 
               key={entry.id} 
-              className={`vault-entry-card ${entry.isBestEntry ? 'best-entry-card' : ''}`}
-            >
-              {/* Best Entry Ribbon */}
-              {entry.isBestEntry && (
-                <div className="best-entry-ribbon">
-                  <FaAward className="ribbon-icon" />
-                  <span>Personal Best • On Leaderboard</span>
-                </div>
-              )}                {/* Photo & Category */}
-              <div className="vault-entry-media">
-                <img 
-                  src={entry.thumbnailUrl || entry.imageUrl} 
-                  alt={entry.mustacheTitle || entry.contestantName}
-                  className="vault-entry-img"
-                  loading="lazy"
-                />
-                <span className="vault-category-badge">
-                  {entry.styleCategory}
-                </span>
-                {entry.growthScore > 0 && (
-                  <span className="vault-growth-score-badge">
-                    <FaArrowTrendUp className="badge-mini-icon" /> {entry.growthScore}% Growth
-                  </span>
-                )}
-                <div className="vault-score-badge">
-                  <span className="score-num">{entry.overallScore}</span>
-                  <span className="score-max">/100</span>
-                </div>
-              </div>
-
-              {/* Entry Body */}
-              <div className="vault-entry-body">
-                <h4 className="vault-entry-title">
-                  {entry.mustacheTitle || 'The Bristle Submission'}
-                </h4>
-                <div className="vault-meta-row">
-                  <span className="vault-date">
-                    {new Date(entry.createdAt).toLocaleDateString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
-                    })}
-                  </span>
-                  <span className="vault-badge-pill">
-                    {entry.verdictBadge}
-                  </span>
-                </div>
-
-                {/* Subscores */}
-                <div className="vault-subscores">
-                  <div className="subscore-item">
-                    <span className="subscore-label">Density</span>
-                    <span className="subscore-val">{entry.densityScore}/10</span>
-                  </div>
-                  <div className="subscore-item">
-                    <span className="subscore-label">Symmetry</span>
-                    <span className="subscore-val">{entry.symmetryScore}/10</span>
-                  </div>
-                  <div className="subscore-item">
-                    <span className="subscore-label">Swagger</span>
-                    <span className="subscore-val">{entry.swaggerScore}/10</span>
-                  </div>
-                  {entry.growthScore > 0 && (
-                    <div className="subscore-item highlight-growth">
-                      <span className="subscore-label">Growth</span>
-                      <span className="subscore-val text-cyan">{entry.growthScore}%</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Celebrity Twin */}
-                {entry.celebrityTwin && (
-                  <div className="vault-celebrity-row">
-                    <span className="celebrity-label">Celebrity Twin:</span>{' '}
-                    <span className="celebrity-name">{entry.celebrityTwin}</span>
-                  </div>
-                )}
-
-                {/* Roast Preview */}
-                {entry.roast && (
-                  <div className="vault-roast-quote">
-                    "{entry.roast}"
-                  </div>
-                )}
-
-                {/* Entry Action Buttons */}
-                <div className="vault-card-actions">
-                  <button
-                    type="button"
-                    className="vault-btn inspect-btn"
-                    onClick={() => onSelectEntry(entry)}
-                  >
-                    <FaEye className="btn-icon" /> {entry.cleanShaveImageUrl ? 'View Transformation & Verdict' : 'View Verdict'}
-                  </button>
-                </div>
-              </div>
-            </div>
+              entry={entry} 
+              onSelectEntry={onSelectEntry} 
+            />
           ))}
         </div>
       )}
 
+      {/* Reusable Clean Shave Capture / Upload Modal */}
+      <DayOneCleanShaveModal
+        isOpen={showCleanShaveModal}
+        onClose={() => setShowCleanShaveModal(false)}
+        onSuccess={() => {
+          fetchDashboard();
+          refreshUser();
+        }}
+      />
+
       {/* Payment Instructions Modal */}
-      {showPaymentInfo && (
-        <div className="modal-backdrop fade-in" onClick={() => setShowPaymentInfo(false)}>
-          <div className="payment-modal-card scale-in" onClick={(e) => e.stopPropagation()}>
-            <button 
-              type="button" 
-              className="modal-close-btn" 
-              onClick={() => setShowPaymentInfo(false)}
-            >
-              <FaXmark />
-            </button>
-
-            <div className="payment-modal-header">
-              <FaHandHoldingDollar className="modal-header-icon" />
-              <h3>DVT Movember 2026 Charity Donations</h3>
-              <p>Entry fees directly support Men's Health, Cancer Awareness, and Suicide Prevention.</p>
-            </div>
-
-            <div className="pricing-tier-row">
-              <div className="pricing-box">
-                <span className="pricing-title">Mustache Leaderboard</span>
-                <span className="pricing-cost">R100</span>
-                <span className="pricing-desc">Unlimited submissions. Single highest score features on the public DVT leaderboard.</span>
-              </div>
-              <div className="pricing-box highlight">
-                <span className="pricing-title">Mustache Trivia Arena</span>
-                <span className="pricing-cost">R50</span>
-                <span className="pricing-desc">Entry pass to the live multiplayer mustache trivia arena with live podium rewards.</span>
-              </div>
-            </div>
-
-            <div className="payment-steps">
-              <h4>How to Get Approved:</h4>
-              <ol>
-                <li>Make payment of <strong>R100</strong> (Leaderboard) and/or <strong>R50</strong> (Quiz) to the office Movember coordinator.</li>
-                <li>Use reference: <strong>MOVEM-{user.fullName.replace(/\s+/g, '').toUpperCase()}</strong></li>
-                <li>Send your payment slip or SnapScan proof to your office Movember Admin or Slack <code>#movember-dvt</code>.</li>
-                <li>An admin will toggle your pass active in the Admin Portal, and your top mustache will immediately go live on the public leaderboard!</li>
-              </ol>
-            </div>
-
-            <button 
-              type="button" 
-              className="payment-modal-done-btn"
-              onClick={() => setShowPaymentInfo(false)}
-            >
-              Got It, Thanks!
-            </button>
-          </div>
-        </div>
-      )}
+      <CharityPaymentModal
+        isOpen={showPaymentInfo}
+        onClose={() => setShowPaymentInfo(false)}
+        userName={user.fullName}
+      />
     </div>
   );
 }
