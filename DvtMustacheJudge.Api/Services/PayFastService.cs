@@ -42,7 +42,7 @@ public class PayFastService : IPayFastService
         _config["PayFast:MerchantKey"] ?? Environment.GetEnvironmentVariable("PAYFAST_MERCHANT_KEY") ?? (IsSandbox ? "46f0cd694581a" : "");
 
     public string Passphrase =>
-        _config["PayFast:Passphrase"] ?? Environment.GetEnvironmentVariable("PAYFAST_PASSPHRASE") ?? "";
+        _config["PayFast:Passphrase"] ?? Environment.GetEnvironmentVariable("PAYFAST_PASSPHRASE") ?? (IsSandbox ? "jt7NOE43FZPn" : "");
 
     public CreatePayFastPaymentResponse CreatePayment(
         User user,
@@ -65,7 +65,7 @@ public class PayFastService : IPayFastService
                 break;
             case "combo":
                 amount = 150.00m;
-                itemName = "DVT Movember 2026 - Combo Pass (Leaderboard + Quiz)";
+                itemName = "DVT Movember 2026 - Combo Pass Leaderboard and Quiz";
                 normalizedType = "Combo";
                 break;
             case "leaderboard":
@@ -81,8 +81,8 @@ public class PayFastService : IPayFastService
 
         // 3. Name parsing
         var nameParts = (user.FullName ?? "Contestant").Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-        var firstName = nameParts.Length > 0 ? nameParts[0] : "Contestant";
-        var lastName = nameParts.Length > 1 ? nameParts[1] : "Movember";
+        var firstName = nameParts.Length > 0 ? nameParts[0].Trim() : "Contestant";
+        var lastName = nameParts.Length > 1 ? nameParts[1].Trim() : "Movember";
 
         // 4. Construct form fields in strict sequence for PayFast
         var fields = new Dictionary<string, string>
@@ -92,19 +92,19 @@ public class PayFastService : IPayFastService
         };
 
         if (!string.IsNullOrWhiteSpace(customReturnUrl))
-            fields["return_url"] = customReturnUrl;
+            fields["return_url"] = customReturnUrl.Trim();
 
         if (!string.IsNullOrWhiteSpace(customCancelUrl))
-            fields["cancel_url"] = customCancelUrl;
+            fields["cancel_url"] = customCancelUrl.Trim();
 
         if (!string.IsNullOrWhiteSpace(customNotifyUrl))
-            fields["notify_url"] = customNotifyUrl;
+            fields["notify_url"] = customNotifyUrl.Trim();
 
         fields["name_first"] = firstName;
         fields["name_last"] = lastName;
-        fields["email_address"] = user.Email;
+        fields["email_address"] = user.Email.Trim();
         fields["m_payment_id"] = reference;
-        fields["amount"] = amount.ToString("F2");
+        fields["amount"] = amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
         fields["item_name"] = itemName;
         fields["custom_str1"] = user.Id.ToString();
         fields["custom_str2"] = normalizedType;

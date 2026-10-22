@@ -84,7 +84,19 @@ public class PayFastController : ControllerBase
             ? request.CancelUrl 
             : $"{baseUrl}/dashboard?payment=cancelled";
 
-        var notifyUrl = $"{baseUrl}/api/payfast/notify";
+        string? notifyUrl = _config["PayFast:NotifyUrl"] ?? Environment.GetEnvironmentVariable("PAYFAST_NOTIFY_URL");
+        if (string.IsNullOrWhiteSpace(notifyUrl))
+        {
+            if (!baseUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase) && 
+                !baseUrl.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase))
+            {
+                notifyUrl = $"{baseUrl}/api/payfast/notify";
+            }
+            else
+            {
+                notifyUrl = null;
+            }
+        }
 
         var paymentResponse = _payFastService.CreatePayment(
             user,
