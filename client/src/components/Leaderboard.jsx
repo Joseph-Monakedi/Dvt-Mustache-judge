@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FaTrophy, FaCrown, FaMagnifyingGlass, FaXmark, FaArrowRight, FaUtensils } from 'react-icons/fa6';
+import { useSearchParams } from 'react-router-dom';
+import { FaTrophy, FaCrown, FaMagnifyingGlass, FaXmark, FaArrowRight, FaUtensils, FaGamepad } from 'react-icons/fa6';
 import { GiMustache } from 'react-icons/gi';
 import { apiUrl } from '../utils/api';
+import QuizLiveLeaderboard from './quiz/QuizLiveLeaderboard';
 
 const CATEGORIES = [
   'All',
@@ -98,6 +100,8 @@ function TableSkeleton() {
 }
 
 export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [boardType, setBoardType] = useState(() => searchParams.get('tab') === 'quiz' ? 'quiz' : 'mustache');
   const [entries, setEntries] = useState([]);
   const [totalEntries, setTotalEntries] = useState(0);
   const [championshipCount, setChampionshipCount] = useState(0);
@@ -108,6 +112,15 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [lastUpdated, setLastUpdated] = useState(() => new Date());
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'quiz' && boardType !== 'quiz') {
+      setBoardType('quiz');
+    } else if (!tab && boardType === 'quiz') {
+      setBoardType('mustache');
+    }
+  }, [searchParams]);
 
   const fetchLeaderboard = async () => {
     try {
@@ -165,8 +178,48 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       {/* Top Ambient Loading Bar during Background Refresh */}
       {loading && entries.length > 0 && <div className="global-loading-bar" />}
 
-      {/* Header Banner */}
-      <div className="leaderboard-header">
+      {/* Tournament Arena Mode Switcher */}
+      <div className="flex items-center justify-center p-1.5 bg-[#0b1320] border border-white/10 rounded-2xl max-w-md mx-auto mb-8 shadow-xl">
+        <button
+          type="button"
+          onClick={() => {
+            setBoardType('mustache');
+            setSearchParams({});
+          }}
+          className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            boardType === 'mustache'
+              ? 'bg-gradient-to-r from-[#007FBA] to-[#00b4d8] text-white shadow-lg shadow-cyan-500/25 border border-cyan-400/40'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <GiMustache className="text-base" /> Mustache Judge
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setBoardType('quiz');
+            setSearchParams({ tab: 'quiz' });
+          }}
+          className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            boardType === 'quiz'
+              ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black shadow-lg shadow-amber-500/25 border border-yellow-300/40'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <FaGamepad className="text-base" /> Quiz Arena Live
+          <span className="flex h-2 w-2 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+          </span>
+        </button>
+      </div>
+
+      {boardType === 'quiz' ? (
+        <QuizLiveLeaderboard embedded={true} />
+      ) : (
+        <>
+          {/* Header Banner */}
+          <div className="leaderboard-header">
         <div>
           <h1 className="leaderboard-title">
             {isSpoonDivision ? (
@@ -523,6 +576,8 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
           </>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }

@@ -8,7 +8,8 @@ export default function QuizTopBar({
   user,
   isAdmin,
   gameState,
-  onAdminAction
+  onAdminAction,
+  onOpenLeaderboard
 }) {
   const streak = joinedPlayer?.streak || 0;
 
@@ -37,9 +38,27 @@ export default function QuizTopBar({
         </div>
       )}
 
-      {/* Admin Host Floating Toolbar */}
-      {isAdmin && (
-        <div className="flex items-center gap-2 flex-wrap">
+      {/* Right Action Bar: Live Standings + Host Toolbar */}
+      <div className="flex items-center gap-2.5 flex-wrap justify-center sm:justify-end">
+        {onOpenLeaderboard && (
+          <button
+            type="button"
+            onClick={onOpenLeaderboard}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500/15 to-yellow-400/20 border border-yellow-400/40 text-yellow-300 text-xs font-bold hover:bg-yellow-400/25 transition-all shadow-md active:scale-95 cursor-pointer"
+            title="Open Live Leaderboard"
+          >
+            <FaTrophy className="text-yellow-400 text-xs" />
+            <span>Live Standings</span>
+            <span className="flex h-1.5 w-1.5 relative ml-0.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
+            </span>
+          </button>
+        )}
+
+        {/* Admin Host Floating Toolbar */}
+        {isAdmin && (
+          <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
             Host Controls
           </span>
@@ -88,6 +107,7 @@ export default function QuizTopBar({
           </Button>
         </div>
       )}
+      </div>
     </div>
   );
 }

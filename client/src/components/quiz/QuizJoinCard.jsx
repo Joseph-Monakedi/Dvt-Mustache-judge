@@ -6,7 +6,8 @@ import {
   FaUser, 
   FaCircleCheck, 
   FaCircleExclamation, 
-  FaCrown 
+  FaCrown,
+  FaTrophy
 } from 'react-icons/fa6';
 
 export default function QuizJoinCard({
@@ -18,7 +19,8 @@ export default function QuizJoinCard({
   error,
   isAdmin,
   onJoinGame,
-  onAdminAction
+  onAdminAction,
+  onOpenLeaderboard
 }) {
   return (
     <div className="quiz-entry-wrapper animate-in fade-in">
@@ -100,6 +102,21 @@ export default function QuizJoinCard({
           >
             <FaPlay className="btn-icon text-sm" /> Enter Quiz Arena
           </button>
+
+          {onOpenLeaderboard && (
+            <button
+              type="button"
+              onClick={onOpenLeaderboard}
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+            >
+              <FaTrophy className="text-yellow-400 text-xs" />
+              <span>View Live Quiz Leaderboard</span>
+              <span className="flex h-1.5 w-1.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
+              </span>
+            </button>
+          )}
         </form>
 
         {/* Admin Quick Jump */}

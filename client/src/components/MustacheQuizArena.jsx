@@ -17,6 +17,7 @@ import QuizQuestionView from './quiz/QuizQuestionView';
 import QuizAnswerRevealView from './quiz/QuizAnswerRevealView';
 import QuizPodiumView from './quiz/QuizPodiumView';
 import QuizJoinCard from './quiz/QuizJoinCard';
+import QuizLiveLeaderboard from './quiz/QuizLiveLeaderboard';
 
 export default function MustacheQuizArena({ onGoToDashboard }) {
   const { user, token, refreshUser, openAuthModal } = useAuth();
@@ -43,6 +44,7 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
   const [answerResult, setAnswerResult] = useState(null);
   const [scoreboardData, setScoreboardData] = useState(null);
   const [timerSeconds, setTimerSeconds] = useState(20);
+  const [showLiveLeaderboard, setShowLiveLeaderboard] = useState(false);
 
   const questionStartTimeRef = useRef(Date.now());
   const timerIntervalRef = useRef(null);
@@ -369,17 +371,26 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
   // 3. Joining / Enter PIN screen
   if (!joinedPlayer && gameState?.status !== 'Finished') {
     return (
-      <QuizJoinCard
-        pinInput={pinInput}
-        setPinInput={setPinInput}
-        nicknameInput={nicknameInput}
-        setNicknameInput={setNicknameInput}
-        user={user}
-        error={error}
-        isAdmin={isAdmin}
-        onJoinGame={handleJoinGame}
-        onAdminAction={handleAdminAction}
-      />
+      <>
+        <QuizJoinCard
+          pinInput={pinInput}
+          setPinInput={setPinInput}
+          nicknameInput={nicknameInput}
+          setNicknameInput={setNicknameInput}
+          user={user}
+          error={error}
+          isAdmin={isAdmin}
+          onJoinGame={handleJoinGame}
+          onAdminAction={handleAdminAction}
+          onOpenLeaderboard={() => setShowLiveLeaderboard(true)}
+        />
+        {showLiveLeaderboard && (
+          <QuizLiveLeaderboard 
+            isModal={true} 
+            onClose={() => setShowLiveLeaderboard(false)} 
+          />
+        )}
+      </>
     );
   }
 
@@ -396,6 +407,7 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
           isAdmin={isAdmin}
           gameState={gameState}
           onAdminAction={handleAdminAction}
+          onOpenLeaderboard={() => setShowLiveLeaderboard(true)}
         />
       )}
 
@@ -443,6 +455,14 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
           isAdmin={isAdmin}
           onGoToDashboard={onGoToDashboard}
           onAdminAction={handleAdminAction}
+        />
+      )}
+
+      {/* Live Leaderboard Modal Popup */}
+      {showLiveLeaderboard && (
+        <QuizLiveLeaderboard 
+          isModal={true} 
+          onClose={() => setShowLiveLeaderboard(false)} 
         />
       )}
     </div>

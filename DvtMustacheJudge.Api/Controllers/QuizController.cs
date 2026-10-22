@@ -277,6 +277,7 @@ public class QuizController : ControllerBase
     {
         var quiz = await _context.QuizGames
             .Include(q => q.Players)
+                .ThenInclude(p => p.Answers)
             .OrderByDescending(q => q.CreatedAt)
             .FirstOrDefaultAsync();
 
@@ -285,18 +286,22 @@ public class QuizController : ControllerBase
             return NotFound(new { error = "No active quiz game found." });
         }
 
+        var totalQuestions = await _context.QuizQuestions.CountAsync(qq => qq.QuizGameId == quiz.Id);
+
         var sortedPlayers = quiz.Players
             .OrderByDescending(p => p.TotalScore)
             .ThenBy(p => p.JoinedAt)
             .ToList();
 
-        var topPlayers = sortedPlayers.Take(10).Select((p, idx) => new
+        var topPlayers = sortedPlayers.Select((p, idx) => new
         {
             rank = idx + 1,
             id = p.Id,
             name = p.ContestantName,
             score = p.TotalScore,
-            streak = p.Streak
+            streak = p.Streak,
+            correctCount = p.Answers.Count(a => a.IsCorrect),
+            totalAnswered = p.Answers.Count
         }).ToList();
 
         int? playerRank = null;
@@ -314,7 +319,9 @@ public class QuizController : ControllerBase
                     rank = playerRank,
                     name = me.ContestantName,
                     score = me.TotalScore,
-                    streak = me.Streak
+                    streak = me.Streak,
+                    correctCount = me.Answers.Count(a => a.IsCorrect),
+                    totalAnswered = me.Answers.Count
                 };
             }
         }
@@ -324,7 +331,12 @@ public class QuizController : ControllerBase
             topPlayers,
             totalPlayers = sortedPlayers.Count,
             playerRank,
-            playerStats
+            playerStats,
+            quizTitle = quiz.Title,
+            status = quiz.Status,
+            currentQuestionIndex = quiz.CurrentQuestionIndex,
+            totalQuestions,
+            pinCode = quiz.PinCode
         });
     }
 

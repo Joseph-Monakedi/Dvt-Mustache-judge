@@ -182,6 +182,52 @@ export default function QuizPodiumView({
         </div>
       )}
 
+      {/* Tournament Standings Table (4th place & beyond) */}
+      {players.length > 3 && (
+        <div className="bg-[#0b1320] border border-white/10 rounded-2xl p-6 shadow-2xl space-y-4 max-w-2xl mx-auto">
+          <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+              <FaTrophy className="text-cyan-400" /> Full Arena Leaderboard ({players.length} Competitors)
+            </h3>
+            <span className="text-[11px] font-mono text-slate-400">
+              Ranks #4 to #{players.length}
+            </span>
+          </div>
+
+          <div className="divide-y divide-white/5 text-sm">
+            {players.slice(3).map((p, idx) => {
+              const rank = idx + 4;
+              const isCurrent = myName && p.name?.toLowerCase() === myName.toLowerCase();
+              return (
+                <div 
+                  key={p.id || idx}
+                  className={`flex items-center justify-between py-2.5 px-3 rounded-lg transition-colors ${
+                    isCurrent ? 'bg-cyan-950/40 border border-cyan-500/30 font-semibold' : 'hover:bg-white/[0.02]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-7 text-center font-mono text-xs font-bold text-slate-500">
+                      #{rank}
+                    </span>
+                    <span className="font-bold text-white text-sm">
+                      {p.name}
+                      {isCurrent && (
+                        <span className="ml-2 px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[10px] font-bold border border-cyan-500/30">
+                          You
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <span className="font-mono font-bold text-cyan-400 text-sm">
+                    {p.score.toLocaleString()} pts
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Non-Podium Participant Finish Notice */}
       {!isUserOnPodium && myStats?.score > 0 && (
         <div className="max-w-md mx-auto p-4 bg-[#0d1522]/90 border border-cyan-500/30 rounded-xl text-center shadow-lg">

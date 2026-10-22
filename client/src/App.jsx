@@ -10,6 +10,7 @@ import EntryDetailModal from './components/EntryDetailModal';
 import AdminPortal from './components/AdminPortal';
 import UserDashboard from './components/UserDashboard';
 import MustacheQuizArena from './components/MustacheQuizArena';
+import QuizLiveLeaderboard from './components/quiz/QuizLiveLeaderboard';
 import AuthModal from './components/AuthModal';
 import { useAuth } from './context/AuthContext';
 import { FaTv, FaMobileScreen } from 'react-icons/fa6';
@@ -206,6 +207,24 @@ export default function App() {
             element={
               <MustacheQuizArena
                 onGoToDashboard={() => navigate('/dashboard')}
+              />
+            } 
+          />
+
+          <Route 
+            path="/quiz-leaderboard" 
+            element={
+              <QuizLiveLeaderboard 
+                onEnterArena={() => navigate('/quiz')}
+              />
+            } 
+          />
+
+          <Route 
+            path="/quiz/leaderboard" 
+            element={
+              <QuizLiveLeaderboard 
+                onEnterArena={() => navigate('/quiz')}
               />
             } 
           />
