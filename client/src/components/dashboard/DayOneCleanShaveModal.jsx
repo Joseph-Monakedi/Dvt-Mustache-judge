@@ -351,13 +351,9 @@ export default function DayOneCleanShaveModal({
                     className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
                   />
 
-                  {/* Face Centering Oval Guide */}
+                  {/* Dotted Head Outline Guide */}
                   <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    <div className="w-52 h-64 border-2 border-dashed border-cyan-400/50 rounded-[50%] shadow-[0_0_20px_rgba(0,180,216,0.25)] flex flex-col items-center justify-end pb-6">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300 bg-slate-900/80 px-2 py-0.5 rounded-md border border-cyan-500/30">
-                        Align Face & Upper Lip
-                      </span>
-                    </div>
+                    <div className="w-56 h-72 border-2 border-dashed border-white/50 rounded-[50%]" />
                   </div>
 
                   {/* Camera Controls Overlay */}

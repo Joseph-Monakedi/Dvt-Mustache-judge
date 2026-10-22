@@ -81,6 +81,7 @@ public class QuizController : ControllerBase
             currentQuestionIndex = quiz.CurrentQuestionIndex,
             totalQuestions,
             playerCount,
+            players = quiz.Players.Select(p => new { id = p.Id, name = p.ContestantName }).ToList(),
             questionStartTime = quiz.QuestionStartTime,
             currentQuestion = currentQuestion == null ? null : new
             {

@@ -18,12 +18,12 @@ export default function Button({
   onClick,
   ...props
 }) {
-  const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 cursor-pointer rounded-xl select-none focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.98]';
+  const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 cursor-pointer select-none focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.98] overflow-hidden';
 
   const sizeStyles = {
-    sm: 'text-xs px-3 py-1.5 gap-1.5',
-    md: 'text-sm px-4 py-2.5 gap-2',
-    lg: 'text-base px-6 py-3.5 gap-2.5 font-semibold'
+    sm: 'text-xs px-4 py-2 gap-2 min-h-[38px] rounded-xl',
+    md: 'text-sm px-5 py-2.5 gap-2.5 min-h-[44px] rounded-xl',
+    lg: 'text-base px-7 py-3.5 gap-3 min-h-[50px] rounded-2xl font-semibold'
   };
 
   const variantStyles = {
@@ -50,9 +50,9 @@ export default function Button({
         </>
       ) : (
         <>
-          {Icon && iconPosition === 'left' && <Icon className="text-base shrink-0" />}
+          {Icon && iconPosition === 'left' && <Icon className="text-base shrink-0 leading-none" />}
           <span>{children}</span>
-          {Icon && iconPosition === 'right' && <Icon className="text-base shrink-0" />}
+          {Icon && iconPosition === 'right' && <Icon className="text-base shrink-0 leading-none" />}
         </>
       )}
     </button>

@@ -86,7 +86,11 @@
 
 .btn-icon {
   font-size: 14px;
-  vertical-align: -1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
 .title-stache-icon {
@@ -325,11 +329,16 @@
   background: rgba(13, 21, 34, 0.85);
   backdrop-filter: blur(6px);
   color: var(--text-main);
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 8px 16px;
+  min-height: 38px;
+  border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
   border: 1px solid rgba(255, 255, 255, 0.15);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
 }
 
 .hud-control-btn:hover {
@@ -6953,15 +6962,18 @@
 .cleanshave-upload-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 22px;
-  border-radius: 10px;
+  gap: 10px;
+  padding: 12px 24px;
+  min-height: 44px;
+  border-radius: 14px;
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
   border: none;
   white-space: nowrap;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .cleanshave-upload-btn.primary {
@@ -7135,14 +7147,26 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 18px;
-  border-radius: 12px;
+  gap: 10px;
+  padding: 12px 24px;
+  min-height: 44px;
+  border-radius: 14px;
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.dash-action-btn svg,
+.empty-cta-btn svg,
+.podium-btn svg,
+.vault-btn svg {
+  flex-shrink: 0;
+  font-size: 15px;
+  line-height: 1;
 }
 
 .dash-action-btn.primary,

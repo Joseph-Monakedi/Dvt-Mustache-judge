@@ -483,40 +483,21 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 {/* Optical HUD Overlay */}
                 <div className="optical-hud-overlay">
                   <svg className="hud-svg" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
-                    <defs>
-                      <linearGradient id="hudCyanGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#00b4d8" stopOpacity="0.8" />
-                        <stop offset="100%" stopColor="#007FBA" stopOpacity="0.9" />
-                      </linearGradient>
-                    </defs>
-
                     <ellipse 
                       cx="200" 
                       cy="190" 
                       rx="125" 
                       ry="160" 
                       fill="none" 
-                      stroke="rgba(255, 255, 255, 0.35)" 
+                      stroke="rgba(255, 255, 255, 0.5)" 
                       strokeWidth="2.5" 
                       strokeDasharray="6,8" 
                     />
-
-                    <line x1="200" y1="30" x2="200" y2="70" stroke="#00b4d8" strokeWidth="2" opacity="0.6" />
-                    <line x1="200" y1="330" x2="200" y2="370" stroke="#00b4d8" strokeWidth="2" opacity="0.6" />
-
-                    <g className="mustache-reticle-group">
-                      <path d="M 125,230 L 110,230 L 110,270 L 125,270" fill="none" stroke="#00b4d8" strokeWidth="3" strokeLinecap="round" />
-                      <path d="M 275,230 L 290,230 L 290,270 L 275,270" fill="none" stroke="#00b4d8" strokeWidth="3" strokeLinecap="round" />
-                      <line x1="180" y1="250" x2="220" y2="250" stroke="#F59E0B" strokeWidth="2" strokeDasharray="3,3" opacity="0.85" />
-                      <path d="M 160,248 Q 180,242 200,246 Q 220,242 240,248 Q 200,258 160,248 Z" fill="rgba(0, 180, 216, 0.25)" stroke="#00b4d8" strokeWidth="1.5" />
-                    </g>
                   </svg>
 
                   <div className="hud-guidance-banner">
                     <span className="guidance-pulse"></span>
-                    <span>
-                      {!hasCleanShave ? 'Align clean-shaven face in optical HUD' : 'Align upper lip in cyan reticle'}
-                    </span>
+                    <span>Center your face within the dotted outline</span>
                   </div>
 
                   <div className="hud-camera-controls">

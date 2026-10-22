@@ -49,22 +49,22 @@ export default function QuizLobby({
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 text-xs font-bold shadow-md">
-              <GiMustache className="text-sm" />
-              {joinedPlayer?.contestantName || user?.fullName} (You)
-            </span>
-            <span className="px-3 py-1.5 rounded-lg bg-white/5 text-slate-300 border border-white/10 text-xs font-medium">
-              Kgothatso M.
-            </span>
-            <span className="px-3 py-1.5 rounded-lg bg-white/5 text-slate-300 border border-white/10 text-xs font-medium">
-              Charl V.
-            </span>
-            <span className="px-3 py-1.5 rounded-lg bg-white/5 text-slate-300 border border-white/10 text-xs font-medium">
-              Liam O.
-            </span>
-            <span className="px-3 py-1.5 rounded-lg bg-white/5 text-slate-300 border border-white/10 text-xs font-medium">
-              Movember Legend
-            </span>
+            {joinedPlayer && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 text-xs font-bold shadow-md">
+                <GiMustache className="text-sm" />
+                {joinedPlayer?.contestantName || user?.fullName} (You)
+              </span>
+            )}
+            {gameState?.players?.filter(p => p.name !== (joinedPlayer?.contestantName || user?.fullName)).map(p => (
+              <span key={p.id} className="px-3 py-1.5 rounded-lg bg-white/5 text-slate-300 border border-white/10 text-xs font-medium">
+                {p.name}
+              </span>
+            ))}
+            {(!joinedPlayer && (!gameState?.players || gameState.players.length === 0)) && (
+              <span className="text-xs text-slate-400 italic">
+                Awaiting contestants to enter with Game PIN...
+              </span>
+            )}
           </div>
         </div>
 
