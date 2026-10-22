@@ -122,18 +122,19 @@ export default function QuizManager({ adminPassword, onQuizChanged }) {
 
   // Open Question Modal for Edit
   const handleOpenEditQuestion = (q) => {
+    if (!q) return;
     setEditingQuestion(q);
     setQuestionForm({
-      questionText: q.questionText,
-      optionA: q.optionA,
-      optionB: q.optionB,
-      optionC: q.optionC,
-      optionD: q.optionD,
-      correctOption: q.correctOption,
-      timeLimitSeconds: q.timeLimitSeconds,
-      points: q.points,
+      questionText: q.questionText || '',
+      optionA: q.optionA || '',
+      optionB: q.optionB || '',
+      optionC: q.optionC || '',
+      optionD: q.optionD || '',
+      correctOption: typeof q.correctOption === 'number' ? q.correctOption : 0,
+      timeLimitSeconds: q.timeLimitSeconds || 20,
+      points: q.points || 1000,
       imageUrl: q.imageUrl || '',
-      questionOrder: q.questionOrder
+      questionOrder: q.questionOrder || 1
     });
     setShowQuestionModal(true);
   };
@@ -322,9 +323,12 @@ export default function QuizManager({ adminPassword, onQuizChanged }) {
               variant="secondary"
               size="sm"
               icon={FaPlus}
-              onClick={() => setShowNewQuizModal(true)}
+              onClick={(e) => {
+                e?.stopPropagation?.();
+                setShowNewQuizModal(true);
+              }}
             >
-              New Tournament
+              Add New Quiz
             </Button>
             <Button
               variant="outline"
@@ -416,7 +420,10 @@ export default function QuizManager({ adminPassword, onQuizChanged }) {
           variant="primary"
           size="md"
           icon={FaPlus}
-          onClick={handleOpenAddQuestion}
+          onClick={(e) => {
+            e?.stopPropagation?.();
+            handleOpenAddQuestion();
+          }}
         >
           Add New Question
         </Button>
@@ -465,7 +472,10 @@ export default function QuizManager({ adminPassword, onQuizChanged }) {
                     variant="secondary"
                     size="sm"
                     icon={FaPen}
-                    onClick={() => handleOpenEditQuestion(q)}
+                    onClick={(e) => {
+                      e?.stopPropagation?.();
+                      handleOpenEditQuestion(q);
+                    }}
                     title="Edit Question"
                   >
                     Edit
@@ -632,11 +642,11 @@ export default function QuizManager({ adminPassword, onQuizChanged }) {
         </form>
       </Modal>
 
-      {/* New Tournament Modal */}
+      {/* New Tournament / Quiz Modal */}
       <Modal
         isOpen={showNewQuizModal}
         onClose={() => setShowNewQuizModal(false)}
-        title="Create New Quiz Tournament"
+        title="Add New Quiz Tournament"
         subtitle="Creates a new tournament seeded with the official 12 Movember questions."
         maxWidth="max-w-md"
       >

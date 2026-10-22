@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FaXmark } from 'react-icons/fa6';
 
 export default function Modal({
@@ -10,6 +11,12 @@ export default function Modal({
   maxWidth = 'max-w-xl',
   showClose = true
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -26,11 +33,12 @@ export default function Modal({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted || typeof document === 'undefined') return null;
 
-  return (
+  const modalNode = (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+      style={{ zIndex: 99999 }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose?.();
       }}
@@ -66,4 +74,6 @@ export default function Modal({
       </div>
     </div>
   );
+
+  return createPortal(modalNode, document.body);
 }
