@@ -780,6 +780,11 @@ public class MustacheController : ControllerBase
         }
 
         var users = await _dbContext.Users
+            .Where(u => u.Role != "Admin" 
+                     && u.Email.ToLower() != "admin@dvt.co.za" 
+                     && u.FullName.ToLower() != "movember admin" 
+                     && !u.FullName.ToLower().Contains("alex movember")
+                     && u.Email.ToLower() != "testparticipant@gmail.com")
             .Include(u => u.Entries.Where(e => !e.IsHidden))
             .AsNoTracking()
             .OrderByDescending(u => u.CreatedAt)

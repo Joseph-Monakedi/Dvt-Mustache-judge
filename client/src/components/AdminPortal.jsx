@@ -602,6 +602,11 @@ export default function AdminPortal({ onBackToApp }) {
 
   // Filter contestants for payment panel
   const filteredContestants = (contestantData?.contestants || []).filter(c => {
+    // Exclude Admin accounts and hardcoded test accounts
+    if (c.role === 'Admin') return false;
+    if (c.fullName && (c.fullName.toLowerCase().includes('movember admin') || c.fullName.toLowerCase().includes('alex movember'))) return false;
+    if (c.email && (c.email.toLowerCase() === 'admin@dvt.co.za' || c.email.toLowerCase() === 'testparticipant@gmail.com')) return false;
+
     if (contestantFilter === 'leaderboard-unpaid' && c.leaderboardPaid) return false;
     if (contestantFilter === 'leaderboard-paid' && !c.leaderboardPaid) return false;
     if (contestantFilter === 'quiz-unpaid' && c.quizPaid) return false;
