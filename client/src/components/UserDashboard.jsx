@@ -72,6 +72,13 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
     }
   }, [token]);
 
+  // Real-time synchronization when payment approval occurs
+  useEffect(() => {
+    if (token) {
+      fetchDashboard();
+    }
+  }, [user?.leaderboardPaid, user?.quizPaid, user?.cleanShaveImageUrl]);
+
   if (!user) {
     return (
       <div className="dashboard-login-gate fade-in min-h-[60vh] flex items-center justify-center p-4">
@@ -423,6 +430,8 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
         isOpen={showPaymentInfo}
         onClose={() => setShowPaymentInfo(false)}
         userName={user.fullName}
+        leaderboardPaid={user.leaderboardPaid}
+        quizPaid={user.quizPaid}
       />
     </div>
   );

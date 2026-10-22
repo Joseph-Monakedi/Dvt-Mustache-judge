@@ -44,8 +44,19 @@ export default function App() {
 
   const showToast = msg => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
+    setTimeout(() => setToastMessage(null), 5000);
   };
+
+  // Real-time payment approval notification listener
+  useEffect(() => {
+    const handlePaymentApproved = (e) => {
+      if (e.detail?.message) {
+        showToast(e.detail.message);
+      }
+    };
+    window.addEventListener('dvt-payment-approved', handlePaymentApproved);
+    return () => window.removeEventListener('dvt-payment-approved', handlePaymentApproved);
+  }, []);
 
   // If a mobile user navigates to /kiosk, auto-redirect to /leaderboard
   useEffect(() => {

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import confetti from 'canvas-confetti';
 import { apiUrl } from '../utils/api';
 
 const AuthContext = createContext(null);
@@ -10,11 +11,15 @@ export const AuthProvider = ({ children }) => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalInitialMode, setAuthModalInitialMode] = useState('login'); // 'login' | 'register'
 
+  // Ref to track payment state transitions
+  const prevPaymentRef = useRef({ leaderboardPaid: null, quizPaid: null, initialCheckDone: false });
+
   // Fetch current user from /api/auth/me if token exists
-  const fetchCurrentUser = useCallback(async (authToken = token) => {
+  const fetchCurrentUser = useCallback(async (authToken = token, isPolling = false) => {
     if (!authToken) {
       setUser(null);
       setIsLoading(false);
+      prevPaymentRef.current = { leaderboardPaid: null, quizPaid: null, initialCheckDone: false };
       return null;
     }
 
@@ -27,6 +32,47 @@ export const AuthProvider = ({ children }) => {
 
       if (res.ok) {
         const userData = await res.json();
+
+        // Check if payment transition occurred from unpaid to paid
+        if (prevPaymentRef.current.initialCheckDone) {
+          const wasLeaderboardPaid = Boolean(prevPaymentRef.current.leaderboardPaid);
+          const wasQuizPaid = Boolean(prevPaymentRef.current.quizPaid);
+          const isLeaderboardPaid = Boolean(userData.leaderboardPaid);
+          const isQuizPaid = Boolean(userData.quizPaid);
+
+          if (!wasLeaderboardPaid && isLeaderboardPaid) {
+            try {
+              confetti({ particleCount: 120, spread: 80, origin: { y: 0.3 } });
+            } catch {}
+            window.dispatchEvent(new CustomEvent('dvt-payment-approved', {
+              detail: {
+                type: 'Leaderboard',
+                title: 'R100 Entry Fee Confirmed!',
+                message: '🎉 Awesome! Admin has confirmed your R100 Movember Contest fee. Your highest mustache score is now live on the Leaderboard!'
+              }
+            }));
+          }
+
+          if (!wasQuizPaid && isQuizPaid) {
+            try {
+              confetti({ particleCount: 120, spread: 80, origin: { y: 0.3 } });
+            } catch {}
+            window.dispatchEvent(new CustomEvent('dvt-payment-approved', {
+              detail: {
+                type: 'Quiz',
+                title: 'R50 Quiz Pass Confirmed!',
+                message: '🎉 Excellent! Admin confirmed your R50 Quiz pass. You are now cleared to join and compete in the Quiz Arena!'
+              }
+            }));
+          }
+        }
+
+        prevPaymentRef.current = {
+          leaderboardPaid: userData.leaderboardPaid,
+          quizPaid: userData.quizPaid,
+          initialCheckDone: true
+        };
+
         setUser(userData);
         return userData;
       } else {
@@ -34,19 +80,54 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('dvt_mustache_token');
         setToken(null);
         setUser(null);
+        prevPaymentRef.current = { leaderboardPaid: null, quizPaid: null, initialCheckDone: false };
         return null;
       }
     } catch (err) {
-      console.warn('Failed to verify user session:', err);
+      if (!isPolling) {
+        console.warn('Failed to verify user session:', err);
+      }
       return null;
     } finally {
       setIsLoading(false);
     }
   }, [token]);
 
+  // Initial load
   useEffect(() => {
     fetchCurrentUser();
   }, [fetchCurrentUser]);
+
+  // Real-time polling for payment approvals without page refresh
+  useEffect(() => {
+    if (!token) return;
+
+    // Fast polling (2.5s) when a contestant has pending unpaid statuses
+    // Relaxed polling (10s) when already fully paid
+    const pollInterval = (user && (!user.leaderboardPaid || !user.quizPaid)) ? 2500 : 10000;
+
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchCurrentUser(token, true);
+      }
+    }, pollInterval);
+
+    // Also immediately refresh whenever user switches back to this browser tab
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        fetchCurrentUser(token, true);
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [token, user?.leaderboardPaid, user?.quizPaid, fetchCurrentUser]);
 
   // Login
   const login = async (email, password) => {
