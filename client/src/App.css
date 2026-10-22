@@ -5933,6 +5933,35 @@
 }
 
 /* ==========================================================================
+   QUIZ ARENA ENTRY MODAL & GATES
+   ========================================================================== */
+.quiz-entry-wrapper {
+  min-height: 75vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+
+.quiz-entry-card {
+  background: #0b1320;
+  border: 1px solid rgba(0, 180, 216, 0.3);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 460px;
+  padding: 36px 32px;
+  position: relative;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 40px rgba(0, 180, 216, 0.12);
+  animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 640px) {
+  .quiz-entry-card {
+    padding: 28px 20px;
+  }
+}
+
+/* ==========================================================================
    LEADERBOARD & STANDINGS EMPTY STATES
    ========================================================================== */
 .empty-state {

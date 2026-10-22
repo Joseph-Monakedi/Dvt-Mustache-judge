@@ -265,36 +265,34 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
   // 1. Gate Check if user is not logged in
   if (!user) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center p-4 animate-in fade-in">
-        <div className="max-w-md w-full bg-[#0d1522] border border-white/10 rounded-2xl p-8 text-center space-y-6 shadow-2xl">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-3xl shadow-lg shadow-cyan-950/50">
-            <GiMustache />
-          </div>
-
-          <div className="space-y-1">
-            <h1 className="text-2xl font-black text-white">Mustache Quiz Arena</h1>
-            <p className="text-xs text-slate-400">
-              High-speed facial hair trivia • 1000 points per round • Real-time speed scoring
-            </p>
-          </div>
-
-          <div className="p-5 bg-[#070c14]/80 border border-white/10 rounded-xl space-y-3 text-center">
-            <div className="w-10 h-10 mx-auto rounded-full bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-lg">
-              <FaLock />
+      <div className="quiz-entry-wrapper animate-in fade-in">
+        <div className="quiz-entry-card auth-modal-card scale-in space-y-6">
+          <div className="auth-header">
+            <div className="auth-logo-badge">
+              <GiMustache className="auth-mustache-icon" />
             </div>
-            <span className="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-              Sign In Required
-            </span>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Please sign in or register to join the multiplayer Mustache Quiz Arena. Once signed in, you can unlock your pass and play live!
+            <h1 className="auth-title">Mustache Quiz Arena</h1>
+            <p className="auth-subtitle">
+              High-speed facial hair trivia • 1,000 points per round • Real-time speed scoring
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="auth-movember-notice !bg-cyan-950/40 !border-cyan-500/30 !text-cyan-100 flex items-start gap-3">
+            <FaLock className="text-cyan-400 text-base shrink-0 mt-0.5" />
+            <div className="text-xs leading-relaxed space-y-1">
+              <div className="font-bold text-white uppercase tracking-wider text-[11px]">Sign In Required</div>
+              <p className="text-slate-300">
+                Please sign in or register to join the multiplayer Mustache Quiz Arena. Once signed in, you can unlock your pass and play live!
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <Button
               variant="primary"
               size="lg"
               icon={FaArrowRightToBracket}
+              className="flex-1 shadow-lg shadow-cyan-500/25"
               onClick={() => openAuthModal('login')}
             >
               Sign In
@@ -303,6 +301,7 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
               variant="secondary"
               size="lg"
               icon={FaUserPlus}
+              className="flex-1"
               onClick={() => openAuthModal('register')}
             >
               Create Account
@@ -317,45 +316,46 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
   if (user && !user.quizPaid && !isAdmin) {
     const reference = `MOVEM-${(user.fullName || '').replace(/\s+/g, '').toUpperCase()}`;
     return (
-      <div className="min-h-[70vh] flex items-center justify-center p-4 animate-in fade-in">
-        <div className="max-w-lg w-full bg-[#0d1522] border border-cyan-500/30 rounded-2xl p-8 text-center space-y-6 shadow-2xl shadow-cyan-950/50">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-3xl shadow-lg shadow-cyan-950/50">
-            <FaLock />
-          </div>
-
-          <div className="space-y-1">
-            <span className="inline-block text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+      <div className="quiz-entry-wrapper animate-in fade-in">
+        <div className="quiz-entry-card auth-modal-card scale-in space-y-6">
+          <div className="auth-header">
+            <div className="auth-logo-badge">
+              <FaLock className="auth-mustache-icon" />
+            </div>
+            <span className="inline-block text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mb-2">
               Movember Charity Pass
             </span>
-            <h2 className="text-2xl font-black text-white">Mustache Quiz Arena Locked</h2>
-            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-              Entry to the live multiplayer Mustache Quiz Arena requires the <strong className="text-white">R50</strong> Movember charity donation. All proceeds go directly to men's health, mental well-being, and cancer initiatives.
+            <h2 className="auth-title">Mustache Quiz Arena Locked</h2>
+            <p className="auth-subtitle">
+              Entry to the live multiplayer Mustache Quiz Arena requires the <strong className="text-white">R50</strong> Movember charity donation. All proceeds support men's health initiatives.
             </p>
           </div>
 
-          <div className="p-4 bg-[#070c14]/80 border border-white/10 rounded-xl space-y-2 text-left">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-300">Quiz Arena Pass</span>
+          <div className="p-4 bg-[#070c14]/90 border border-white/10 rounded-xl space-y-2 text-left">
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Quiz Arena Pass</span>
               <span className="text-lg font-black text-white">R50</span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Pay via SnapScan/EFT with reference <strong className="text-cyan-300 font-mono bg-cyan-950 px-1 py-0.5 rounded border border-cyan-500/30">{reference}</strong> and ask an admin to toggle your pass active in the Admin Portal.
+              Pay via SnapScan/EFT with reference <strong className="text-cyan-300 font-mono bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-500/30">{reference}</strong> and ask an admin to toggle your pass active in the Admin Portal.
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <Button
               variant="primary"
-              size="md"
+              size="lg"
               icon={FaRotate}
+              className="flex-1 shadow-lg shadow-cyan-500/25"
               onClick={refreshUser}
             >
               Check Approval Status
             </Button>
             <Button
               variant="secondary"
-              size="md"
+              size="lg"
               icon={FaShieldHalved}
+              className="flex-1"
               onClick={onGoToDashboard}
             >
               View My Vault
