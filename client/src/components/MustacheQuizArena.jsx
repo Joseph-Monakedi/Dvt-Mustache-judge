@@ -388,14 +388,16 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
 
   return (
     <div className="quiz-gameplay-container max-w-5xl mx-auto px-4 py-6 space-y-6 animate-in fade-in">
-      {/* Top Header Bar */}
-      <QuizTopBar
-        joinedPlayer={joinedPlayer}
-        user={user}
-        isAdmin={isAdmin}
-        gameState={gameState}
-        onAdminAction={handleAdminAction}
-      />
+      {/* Top Header Bar (active gameplay only) */}
+      {gameState?.status !== 'Finished' && (
+        <QuizTopBar
+          joinedPlayer={joinedPlayer}
+          user={user}
+          isAdmin={isAdmin}
+          gameState={gameState}
+          onAdminAction={handleAdminAction}
+        />
+      )}
 
       {/* 4. LOBBY SCREEN */}
       {gameState?.status === 'Lobby' && (
