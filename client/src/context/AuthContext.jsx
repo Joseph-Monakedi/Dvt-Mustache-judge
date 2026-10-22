@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
               detail: {
                 type: 'Leaderboard',
                 title: 'R100 Entry Fee Confirmed!',
-                message: '🎉 Awesome! Admin has confirmed your R100 Movember Contest fee. Your highest mustache score is now live on the Leaderboard!'
+                message: '🎉 Awesome! Your R100 Movember Contest fee is confirmed. Your highest mustache score is now live on the Leaderboard!'
               }
             }));
           }
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
               detail: {
                 type: 'Quiz',
                 title: 'R50 Quiz Pass Confirmed!',
-                message: '🎉 Excellent! Admin confirmed your R50 Quiz pass. You are now cleared to join and compete in the Quiz Arena!'
+                message: '🎉 Excellent! Your R50 Quiz pass is active. You are now cleared to join and compete in the Quiz Arena!'
               }
             }));
           }

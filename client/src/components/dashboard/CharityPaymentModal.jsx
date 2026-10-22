@@ -133,7 +133,7 @@ export default function CharityPaymentModal({
             </div>
 
             <p className="text-xs text-slate-300">
-              Pay securely online with Cards, Instant EFT, SnapScan, or Zapper. Your account activates immediately with no admin manual confirmation required!
+              Pay securely online with Cards, Instant EFT, SnapScan, or Zapper. Your entry pass activates immediately upon payment.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-2 pt-1">
@@ -180,17 +180,6 @@ export default function CharityPaymentModal({
             </div>
           </div>
         )}
-
-        {/* Offline / Admin Manual Mode Info */}
-        <div className="p-4 bg-slate-950/60 rounded-xl border border-white/10 space-y-2 text-xs text-slate-300">
-          <h4 className="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-2">
-            <FaShieldHalved className="text-amber-400" /> Offline or Cash Fallback (Admin Manual Approval)
-          </h4>
-          <p className="text-slate-400 text-[11.5px] leading-relaxed">
-            Prefer to pay cash or EFT directly to your office Movember coordinator? No problem! Use reference <strong className="text-cyan-300 font-mono bg-cyan-950/60 px-1 py-0.5 rounded border border-cyan-500/30">{reference}</strong>.
-            Admins have manual approval controls and can activate your pass in real time.
-          </p>
-        </div>
 
         {/* Done Button */}
         <div className="flex justify-end pt-2">

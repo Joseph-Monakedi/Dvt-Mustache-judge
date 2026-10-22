@@ -11,15 +11,18 @@ import {
   FaLock, 
   FaHandHoldingDollar,
   FaClock,
-  FaUserCheck
+  FaUserCheck,
+  FaBolt
 } from 'react-icons/fa6';
 import { MdOutlineWarningAmber } from 'react-icons/md';
 import { useAuth } from '../context/AuthContext';
 import { apiUrl } from '../utils/api';
+import { initiatePayFastCheckout } from '../utils/payfast';
 
 export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
   const { user, token, refreshUser, openAuthModal } = useAuth();
   const [name, setName] = useState(user?.fullName || '');
+  const [isPaying, setIsPaying] = useState(false);
   const [capturedBlob, setCapturedBlob] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
@@ -335,21 +338,30 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 <span className="fee-amount text-gold">R100</span>
               </div>
               <div className="fee-instruction">
-                Make your payment to the Movember coordinator with payment reference:
-                <div style={{ marginTop: '6px', fontWeight: 'bold', color: '#00b4d8', fontSize: '15px' }}>
-                  MOVEM-{(user.fullName || '').replace(/\s+/g, '').toUpperCase()}
-                </div>
-                Once confirmed, an admin will activate your pass in the Admin Portal!
+                Pay securely online with Cards, Instant EFT, SnapScan, or Zapper. Your entry pass activates immediately upon payment!
               </div>
             </div>
 
-            <div className="paywall-actions">
+            <div className="paywall-actions flex flex-col gap-2">
               <button 
                 type="button" 
-                className="paywall-btn primary"
-                onClick={refreshUser}
+                className="paywall-btn primary flex items-center justify-center gap-2"
+                disabled={isPaying}
+                onClick={async () => {
+                  try {
+                    setIsPaying(true);
+                    await initiatePayFastCheckout({
+                      itemType: 'Leaderboard',
+                      token,
+                      returnPath: '/?payment=success',
+                      cancelPath: '/?payment=cancelled'
+                    });
+                  } catch (e) {
+                    setIsPaying(false);
+                  }
+                }}
               >
-                <FaRotate className="btn-icon" /> Check Approval Status
+                <FaBolt className="btn-icon text-amber-300" /> {isPaying ? 'Connecting to PayFast...' : 'Pay R100 via PayFast & Enter'}
               </button>
             </div>
           </div>

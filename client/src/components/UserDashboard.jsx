@@ -12,7 +12,8 @@ import {
   FaXmark,
   FaUpload,
   FaUserPlus,
-  FaArrowRightToBracket
+  FaArrowRightToBracket,
+  FaBolt
 } from 'react-icons/fa6';
 import { GiMustache } from 'react-icons/gi';
 import { useAuth } from '../context/AuthContext';
@@ -112,7 +113,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
       setPaymentBanner({
         type: 'warning',
         title: 'PayFast Checkout Cancelled',
-        message: 'Your payment was cancelled. You can retry at any time or request manual approval from an admin.'
+        message: 'Your payment was cancelled. You can retry at any time whenever you are ready.'
       });
     }
   }, [token]);
@@ -222,15 +223,27 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
         <div className="payment-status-card bg-[#070c14]/80 border border-white/10 rounded-xl p-4 sm:p-5 min-w-[280px] space-y-3">
           <div className="payment-header flex items-center justify-between pb-2 border-b border-white/5">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-              Charity Approvals
+              Charity Entry Passes
             </span>
             <button 
               type="button" 
-              className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 transition-colors"
+              className={`text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                (!user.leaderboardPaid || !user.quizPaid)
+                  ? 'text-amber-300 hover:text-amber-200 bg-amber-500/15 px-2.5 py-1 rounded-lg border border-amber-500/30 font-bold shadow-sm'
+                  : 'text-cyan-400 hover:text-cyan-300'
+              }`}
               onClick={() => setShowPaymentInfo(true)}
-              title="View Payment Instructions"
+              title="Pay entry fee via PayFast"
             >
-              <FaCircleInfo /> Payment Info
+              {(!user.leaderboardPaid || !user.quizPaid) ? (
+                <>
+                  <FaBolt className="text-amber-400" /> Pay via PayFast
+                </>
+              ) : (
+                <>
+                  <FaCircleCheck className="text-emerald-400" /> Passes Active
+                </>
+              )}
             </button>
           </div>
 
@@ -272,7 +285,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
 
           {!user.leaderboardPaid && (
             <p className="text-[11px] text-slate-400 italic">
-              * Pay R100 to an admin so your single highest score is unlocked on the public office leaderboard!
+              * Pay R100 to unlock your single highest score on the public office leaderboard!
             </p>
           )}
         </div>

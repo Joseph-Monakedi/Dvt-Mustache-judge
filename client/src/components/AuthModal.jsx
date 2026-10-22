@@ -293,17 +293,17 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
                     <span className="plan-title">Pay Later</span>
                     <span className="plan-price">R0</span>
                   </div>
-                  <p className="plan-desc">Register now; pay via dashboard or cash to admin</p>
+                  <p className="plan-desc">Register now; you can pay anytime on your dashboard</p>
                 </div>
               </div>
 
               <div className="payfast-guarantee-box">
                 <div className="payfast-guarantee-header">
                   <FaShieldHalved className="text-cyan-400" />
-                  <span>Automated PayFast Checkout</span>
+                  <span>Secure PayFast Checkout</span>
                 </div>
                 <p className="payfast-guarantee-text">
-                  Pay with Cards, Instant EFT, SnapScan, or Zapper. Auto-approves instantly! Admin manual approval remains available if you pay offline.
+                  Pay with Cards, Instant EFT, SnapScan, or Zapper. Your entry pass activates immediately upon payment.
                 </p>
               </div>
             </div>

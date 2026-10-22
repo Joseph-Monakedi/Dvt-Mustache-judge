@@ -4,12 +4,14 @@ import {
   FaRotate, 
   FaShieldHalved,
   FaArrowRightToBracket,
-  FaUserPlus
+  FaUserPlus,
+  FaBolt
 } from 'react-icons/fa6';
 import { GiMustache } from 'react-icons/gi';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
 import { apiUrl } from '../utils/api';
+import { initiatePayFastCheckout } from '../utils/payfast';
 import Button from './common/Button';
 import QuizTopBar from './quiz/QuizTopBar';
 import QuizLobby from './quiz/QuizLobby';
@@ -21,6 +23,7 @@ import QuizLiveLeaderboard from './quiz/QuizLiveLeaderboard';
 
 export default function MustacheQuizArena({ onGoToDashboard }) {
   const { user, token, refreshUser, openAuthModal } = useAuth();
+  const [isPaying, setIsPaying] = useState(false);
   
   // Game session states
   const [gameState, setGameState] = useState(null);
@@ -341,7 +344,6 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
 
   // 2. Paywall Check if user is logged in but hasn't paid R50 quiz pass
   if (user && !user.quizPaid && !isAdmin) {
-    const reference = `MOVEM-${(user.fullName || '').replace(/\s+/g, '').toUpperCase()}`;
     return (
       <div className="quiz-entry-wrapper animate-in fade-in">
         <div className="quiz-entry-card auth-modal-card scale-in space-y-6">
@@ -364,7 +366,7 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
               <span className="text-lg font-black text-white">R50</span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Pay via SnapScan/EFT with reference <strong className="text-cyan-300 font-mono bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-500/30">{reference}</strong> and ask an admin to toggle your pass active in the Admin Portal.
+              Pay securely online with Cards, Instant EFT, SnapScan, or Zapper. Your quiz pass activates immediately upon payment!
             </p>
           </div>
 
@@ -372,11 +374,24 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
             <Button
               variant="primary"
               size="lg"
-              icon={FaRotate}
+              icon={FaBolt}
               className="flex-1 shadow-lg shadow-cyan-500/25"
-              onClick={refreshUser}
+              disabled={isPaying}
+              onClick={async () => {
+                try {
+                  setIsPaying(true);
+                  await initiatePayFastCheckout({
+                    itemType: 'Quiz',
+                    token,
+                    returnPath: '/?quiz=1&payment=success',
+                    cancelPath: '/?quiz=1&payment=cancelled'
+                  });
+                } catch (e) {
+                  setIsPaying(false);
+                }
+              }}
             >
-              Check Approval Status
+              {isPaying ? 'Connecting to PayFast...' : 'Pay R50 via PayFast & Play'}
             </Button>
             <Button
               variant="secondary"
