@@ -27,6 +27,7 @@ import {
 import { MdOutlineWarningAmber } from 'react-icons/md';
 import { apiUrl } from '../utils/api';
 import QuizManager from './admin/QuizManager';
+import QuizLiveLeaderboard from './quiz/QuizLiveLeaderboard';
 
 export default function AdminPortal({ onBackToApp }) {
   const [adminPassword, setAdminPassword] = useState(() => sessionStorage.getItem('dvt_admin_token') || '');
@@ -208,6 +209,36 @@ export default function AdminPortal({ onBackToApp }) {
       return () => clearInterval(interval);
     }
   }, [isAuthenticated, activeAdminTab]);
+
+  // Live countdown timer for active quiz question in admin host view
+  const [adminTimerSeconds, setAdminTimerSeconds] = useState(0);
+
+  useEffect(() => {
+    if (quizState?.status === 'Question' && quizState?.currentQuestion) {
+      const limit = quizState.currentQuestion.timeLimitSeconds || 20;
+      let remaining = limit;
+      if (quizState.questionStartTime) {
+        const startMs = new Date(quizState.questionStartTime).getTime();
+        const elapsedSec = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+        remaining = Math.max(0, limit - elapsedSec);
+      }
+      setAdminTimerSeconds(remaining);
+
+      const interval = setInterval(() => {
+        setAdminTimerSeconds(prev => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(interval);
+    } else {
+      setAdminTimerSeconds(0);
+    }
+  }, [quizState?.status, quizState?.currentQuestionIndex, quizState?.questionStartTime]);
 
   // Handle Login
   const handleLogin = async (e) => {
@@ -1549,14 +1580,28 @@ export default function AdminPortal({ onBackToApp }) {
                 <FaRotate className="btn-icon" /> Open / Reset Lobby
               </button>
 
-              <button
-                type="button"
-                className="quiz-host-btn btn-next-question"
-                onClick={() => handleQuizAction('next-question')}
-                disabled={quizLoading}
-              >
-                <FaPlay className="btn-icon" /> Launch Next Question
-              </button>
+              {(() => {
+                const isTimerActive = quizState?.status === 'Question' && adminTimerSeconds > 0;
+                return (
+                  <button
+                    type="button"
+                    className={`quiz-host-btn btn-next-question ${isTimerActive ? 'btn-timer-running' : ''}`}
+                    onClick={() => handleQuizAction('next-question')}
+                    disabled={quizLoading || isTimerActive}
+                    title={isTimerActive ? `Disabled: Round timer is active (${adminTimerSeconds}s left). Wait for timer to expire.` : 'Launch next question'}
+                  >
+                    {isTimerActive ? (
+                      <>
+                        <FaClock className="btn-icon text-amber-300 animate-pulse" /> Timer Running ({adminTimerSeconds}s)
+                      </>
+                    ) : (
+                      <>
+                        <FaPlay className="btn-icon" /> Send Next Question
+                      </>
+                    )}
+                  </button>
+                );
+              })()}
 
               <button
                 type="button"
@@ -1646,9 +1691,20 @@ export default function AdminPortal({ onBackToApp }) {
             <div className="quiz-waiting-card">
               <FaGamepad className="waiting-icon" />
               <h3>Arena is in Lobby Mode</h3>
-              <p>Players can join using PIN <strong>{quizState?.pinCode || 'Pending PIN'}</strong>. When all players have arrived, click <strong>Launch Next Question</strong> above.</p>
+              <p>Players can join using PIN <strong>{quizState?.pinCode || 'Pending PIN'}</strong>. When all players have arrived, click <strong>Send Next Question</strong> above.</p>
             </div>
           )}
+
+          {/* Live Quiz Scoring & Leaderboard in Host Controls */}
+          <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <FaTrophy className="text-amber-400" />
+                <span>Live Contestant Standings & Scoring</span>
+              </h3>
+            </div>
+            <QuizLiveLeaderboard embedded={true} />
+          </div>
             </>
           )}
         </div>

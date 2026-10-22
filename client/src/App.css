@@ -4918,6 +4918,15 @@
   box-shadow: 0 6px 18px rgba(0, 180, 216, 0.4);
 }
 
+.quiz-host-btn.btn-next-question.btn-timer-running {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+  box-shadow: none !important;
+  opacity: 0.85 !important;
+  cursor: not-allowed !important;
+}
+
 .quiz-host-btn.btn-reveal {
   background: #f59e0b;
   color: #0b111e;

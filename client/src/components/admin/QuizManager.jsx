@@ -13,16 +13,19 @@ import {
   FaTriangleExclamation,
   FaArrowRight,
   FaXmark,
-  FaListOl
+  FaListOl,
+  FaTrophy
 } from 'react-icons/fa6';
 import { apiUrl } from '../../utils/api';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
+import QuizLiveLeaderboard from '../quiz/QuizLiveLeaderboard';
 
 export default function QuizManager({ adminPassword, onQuizChanged }) {
   const [quizzes, setQuizzes] = useState([]);
   const [selectedQuizId, setSelectedQuizId] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [activeManagerTab, setActiveManagerTab] = useState('questions'); // 'questions' | 'scores'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -320,6 +323,17 @@ export default function QuizManager({ adminPassword, onQuizChanged }) {
 
           <div className="flex items-center gap-2.5 flex-wrap">
             <Button
+              variant={activeManagerTab === 'scores' ? 'accent' : 'secondary'}
+              size="sm"
+              icon={FaTrophy}
+              onClick={(e) => {
+                e?.stopPropagation?.();
+                setActiveManagerTab(prev => prev === 'scores' ? 'questions' : 'scores');
+              }}
+            >
+              {activeManagerTab === 'scores' ? 'View Questions' : 'Live Tournament Scoring'}
+            </Button>
+            <Button
               variant="secondary"
               size="sm"
               icon={FaPlus}
@@ -404,126 +418,167 @@ export default function QuizManager({ adminPassword, onQuizChanged }) {
         )}
       </div>
 
-      {/* Questions List Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h4 className="text-lg font-bold text-white flex items-center gap-2">
-            <FaListOl className="text-cyan-400 text-base" />
-            <span>Questions for this Quiz ({questions.length})</span>
-          </h4>
-          <p className="text-xs text-slate-400">
-            Contestants answer these multiple choice questions in sequence during live arena rounds.
-          </p>
-        </div>
-
-        <Button
-          variant="primary"
-          size="md"
-          icon={FaPlus}
-          onClick={(e) => {
-            e?.stopPropagation?.();
-            handleOpenAddQuestion();
-          }}
+      {/* Sub-navigation tabs: Questions Editor vs Live Quiz Scoring */}
+      <div className="flex items-center gap-3 border-b border-white/10 pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveManagerTab('questions')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            activeManagerTab === 'questions'
+              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50'
+              : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+          }`}
         >
-          Add New Question
-        </Button>
+          <FaListOl className="text-sm" />
+          <span>Questions Editor ({questions.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveManagerTab('scores')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            activeManagerTab === 'scores'
+              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-lg shadow-amber-950/50'
+              : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+          }`}
+        >
+          <FaTrophy className="text-sm text-amber-400" />
+          <span>Live Quiz Scoring</span>
+          <span className="flex h-2 w-2 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+        </button>
       </div>
 
-      {/* Questions Grid / List */}
-      <div className="space-y-3">
-        {questions.length === 0 ? (
-          <div className="p-10 bg-[#0d1522] border border-white/10 rounded-2xl text-center space-y-3">
-            <FaGamepad className="text-3xl text-slate-500 mx-auto" />
-            <h4 className="text-white font-bold">No Questions Found</h4>
-            <p className="text-xs text-slate-400">
-              Click "Add New Question" or "Reset to 12 Official Questions" above to populate trivia questions.
-            </p>
-          </div>
-        ) : (
-          questions.map((q, idx) => (
-            <div
-              key={q.id}
-              className="p-5 bg-[#0d1522] border border-white/10 rounded-2xl space-y-3 hover:border-cyan-500/30 transition-colors shadow-lg"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <span className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-300 flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
-                    #{idx + 1}
-                  </span>
-                  <div>
-                    <h5 className="text-base font-bold text-white leading-snug">
-                      {q.questionText}
-                    </h5>
-                    <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-                      <span className="flex items-center gap-1">
-                        <FaClock className="text-slate-500 text-[10px]" /> {q.timeLimitSeconds}s Limit
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <FaStar className="text-amber-400 text-[10px]" /> {q.points} Points
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Edit & Delete Action Buttons */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon={FaPen}
-                    onClick={(e) => {
-                      e?.stopPropagation?.();
-                      handleOpenEditQuestion(q);
-                    }}
-                    title="Edit Question"
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    icon={FaTrash}
-                    onClick={() => handleDeleteQuestion(q.id)}
-                    title="Delete Question"
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-
-              {/* 4 Options Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-white/5">
-                {[
-                  { label: q.optionA, letter: 'A', shape: '▲', color: 'border-rose-500/30 text-rose-300', isCorrect: q.correctOption === 0 },
-                  { label: q.optionB, letter: 'B', shape: '◆', color: 'border-blue-500/30 text-blue-300', isCorrect: q.correctOption === 1 },
-                  { label: q.optionC, letter: 'C', shape: '●', color: 'border-amber-500/30 text-amber-300', isCorrect: q.correctOption === 2 },
-                  { label: q.optionD, letter: 'D', shape: '■', color: 'border-emerald-500/30 text-emerald-300', isCorrect: q.correctOption === 3 }
-                ].map((opt, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-center justify-between p-2.5 rounded-xl border text-xs ${
-                      opt.isCorrect 
-                        ? 'bg-emerald-950/50 border-emerald-400 text-emerald-200 font-bold ring-1 ring-emerald-400/50' 
-                        : 'bg-[#131f33]/40 border-white/5 text-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-bold text-slate-400">{opt.shape} {opt.letter}:</span>
-                      <span className="truncate">{opt.label}</span>
-                    </div>
-                    {opt.isCorrect && (
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 shrink-0">
-                        Correct Answer
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
+      {activeManagerTab === 'scores' ? (
+        <div className="space-y-4 animate-in fade-in">
+          <QuizLiveLeaderboard embedded={true} />
+        </div>
+      ) : (
+        <>
+          {/* Questions List Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                <FaListOl className="text-cyan-400 text-base" />
+                <span>Questions for this Quiz ({questions.length})</span>
+              </h4>
+              <p className="text-xs text-slate-400">
+                Contestants answer these multiple choice questions in sequence during live arena rounds.
+              </p>
             </div>
-          ))
-        )}
-      </div>
+
+            <Button
+              variant="primary"
+              size="md"
+              icon={FaPlus}
+              onClick={(e) => {
+                e?.stopPropagation?.();
+                handleOpenAddQuestion();
+              }}
+            >
+              Add New Question
+            </Button>
+          </div>
+
+          {/* Questions Grid / List */}
+          <div className="space-y-3">
+            {questions.length === 0 ? (
+              <div className="p-10 bg-[#0d1522] border border-white/10 rounded-2xl text-center space-y-3">
+                <FaGamepad className="text-3xl text-slate-500 mx-auto" />
+                <h4 className="text-white font-bold">No Questions Found</h4>
+                <p className="text-xs text-slate-400">
+                  Click "Add New Question" or "Reset to 12 Official Questions" above to populate trivia questions.
+                </p>
+              </div>
+            ) : (
+              questions.map((q, idx) => (
+                <div
+                  key={q.id}
+                  className="p-5 bg-[#0d1522] border border-white/10 rounded-2xl space-y-3 hover:border-cyan-500/30 transition-colors shadow-lg"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <span className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-300 flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
+                        #{idx + 1}
+                      </span>
+                      <div>
+                        <h5 className="text-base font-bold text-white leading-snug">
+                          {q.questionText}
+                        </h5>
+                        <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+                          <span className="flex items-center gap-1">
+                            <FaClock className="text-slate-500 text-[10px]" /> {q.timeLimitSeconds}s Limit
+                          </span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <FaStar className="text-amber-400 text-[10px]" /> {q.points} Points
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Edit & Delete Action Buttons */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        icon={FaPen}
+                        onClick={(e) => {
+                          e?.stopPropagation?.();
+                          handleOpenEditQuestion(q);
+                        }}
+                        title="Edit Question"
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        icon={FaTrash}
+                        onClick={() => handleDeleteQuestion(q.id)}
+                        title="Delete Question"
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* 4 Options Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-white/5">
+                    {[
+                      { label: q.optionA, letter: 'A', shape: '▲', color: 'border-rose-500/30 text-rose-300', isCorrect: q.correctOption === 0 },
+                      { label: q.optionB, letter: 'B', shape: '◆', color: 'border-blue-500/30 text-blue-300', isCorrect: q.correctOption === 1 },
+                      { label: q.optionC, letter: 'C', shape: '●', color: 'border-amber-500/30 text-amber-300', isCorrect: q.correctOption === 2 },
+                      { label: q.optionD, letter: 'D', shape: '■', color: 'border-emerald-500/30 text-emerald-300', isCorrect: q.correctOption === 3 }
+                    ].map((opt, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-center justify-between p-2.5 rounded-xl border text-xs ${
+                          opt.isCorrect 
+                            ? 'bg-emerald-950/50 border-emerald-400 text-emerald-200 font-bold ring-1 ring-emerald-400/50' 
+                            : 'bg-[#131f33]/40 border-white/5 text-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-bold text-slate-400">{opt.shape} {opt.letter}:</span>
+                          <span className="truncate">{opt.label}</span>
+                        </div>
+                        {opt.isCorrect && (
+                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 shrink-0">
+                            Correct Answer
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
 
       {/* Add / Edit Question Modal */}
       <Modal

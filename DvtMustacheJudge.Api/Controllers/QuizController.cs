@@ -420,6 +420,18 @@ public class QuizController : ControllerBase
 
         if (quiz == null) return NotFound(new { error = "No quiz found." });
 
+        // Enforce timer check: disable sending next question while timer is running
+        if (quiz.Status == "Question" && quiz.QuestionStartTime.HasValue && quiz.CurrentQuestionIndex < quiz.Questions.Count)
+        {
+            var curQ = quiz.Questions[quiz.CurrentQuestionIndex];
+            var elapsed = (DateTime.UtcNow - quiz.QuestionStartTime.Value).TotalSeconds;
+            if (elapsed < curQ.TimeLimitSeconds)
+            {
+                var remaining = Math.Ceiling(curQ.TimeLimitSeconds - elapsed);
+                return BadRequest(new { error = $"Current question timer is still running ({remaining}s remaining). Wait for the timer to expire before sending the next question." });
+            }
+        }
+
         int targetIndex = req?.QuestionIndex ?? (quiz.Status == "Lobby" ? 0 : quiz.CurrentQuestionIndex + 1);
 
         if (targetIndex >= quiz.Questions.Count)
