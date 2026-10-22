@@ -72,7 +72,8 @@ public class AuthController : ControllerBase
             user.QuizPaid,
             token,
             user.CleanShaveImageUrl,
-            user.CleanShaveUploadedAt
+            user.CleanShaveUploadedAt,
+            user.PaymentMethod
         ));
     }
 
@@ -143,7 +144,8 @@ public class AuthController : ControllerBase
             user.QuizPaid,
             token,
             user.CleanShaveImageUrl,
-            user.CleanShaveUploadedAt
+            user.CleanShaveUploadedAt,
+            user.PaymentMethod
         ));
     }
 
@@ -184,6 +186,9 @@ public class AuthController : ControllerBase
             user.Role,
             user.LeaderboardPaid,
             user.QuizPaid,
+            user.PaymentMethod,
+            user.AmountPaid,
+            user.PaidAt,
             user.CleanShaveImageUrl,
             user.CleanShaveUploadedAt,
             user.CreatedAt,

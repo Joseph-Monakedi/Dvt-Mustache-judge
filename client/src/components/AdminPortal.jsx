@@ -970,6 +970,12 @@ export default function AdminPortal({ onBackToApp }) {
                             {c.leaderboardPaid ? (
                               <span className="payment-status-badge badge-paid">
                                 <FaCircleCheck className="badge-icon" /> Approved (R100 Paid)
+                                {c.paymentMethod === 'PayFast' && (
+                                  <span className="payfast-source-badge" title="Auto-approved by PayFast">⚡ PayFast</span>
+                                )}
+                                {c.paymentMethod === 'ManualAdmin' && (
+                                  <span className="admin-source-badge" title="Manually approved by Admin">👤 Admin</span>
+                                )}
                               </span>
                             ) : (
                               <span className="payment-status-badge badge-pending">
@@ -981,7 +987,7 @@ export default function AdminPortal({ onBackToApp }) {
                               className={`payment-toggle-btn ${c.leaderboardPaid ? 'btn-revoke' : 'btn-approve-100'}`}
                               onClick={() => toggleLeaderboardPayment(c.id)}
                             >
-                              {c.leaderboardPaid ? 'Revoke Approval' : 'Approve R100'}
+                              {c.leaderboardPaid ? 'Revoke Approval' : 'Approve R100 (Manual)'}
                             </button>
                           </div>
                         </td>
@@ -990,6 +996,12 @@ export default function AdminPortal({ onBackToApp }) {
                             {c.quizPaid ? (
                               <span className="payment-status-badge badge-paid">
                                 <FaCircleCheck className="badge-icon" /> Pass Active (R50 Paid)
+                                {c.paymentMethod === 'PayFast' && (
+                                  <span className="payfast-source-badge" title="Auto-approved by PayFast">⚡ PayFast</span>
+                                )}
+                                {c.paymentMethod === 'ManualAdmin' && (
+                                  <span className="admin-source-badge" title="Manually approved by Admin">👤 Admin</span>
+                                )}
                               </span>
                             ) : (
                               <span className="payment-status-badge badge-pending">
@@ -1001,7 +1013,7 @@ export default function AdminPortal({ onBackToApp }) {
                               className={`payment-toggle-btn ${c.quizPaid ? 'btn-revoke' : 'btn-approve-50'}`}
                               onClick={() => toggleQuizPayment(c.id)}
                             >
-                              {c.quizPaid ? 'Revoke Pass' : 'Approve R50'}
+                              {c.quizPaid ? 'Revoke Pass' : 'Approve R50 (Manual)'}
                             </button>
                           </div>
                         </td>

@@ -806,7 +806,8 @@ public class MustacheController : ControllerBase
                 best?.ThumbnailUrl,
                 u.CreatedAt,
                 u.CleanShaveImageUrl,
-                u.CleanShaveUploadedAt
+                u.CleanShaveUploadedAt,
+                u.PaymentMethod
             );
         }).ToList();
 
@@ -842,6 +843,12 @@ public class MustacheController : ControllerBase
         }
 
         user.LeaderboardPaid = req != null ? req.Paid : !user.LeaderboardPaid;
+        if (user.LeaderboardPaid && string.IsNullOrEmpty(user.PaymentMethod))
+        {
+            user.PaymentMethod = "ManualAdmin";
+            user.PaidAt = DateTime.UtcNow;
+        }
+
         await _dbContext.SaveChangesAsync();
 
         return Ok(new
@@ -849,6 +856,7 @@ public class MustacheController : ControllerBase
             userId = user.Id,
             fullName = user.FullName,
             leaderboardPaid = user.LeaderboardPaid,
+            paymentMethod = user.PaymentMethod,
             message = user.LeaderboardPaid
                 ? $"{user.FullName}'s R100 Leaderboard fee approved! Their top mustache is now live on the public leaderboard."
                 : $"{user.FullName}'s Leaderboard status set to unpaid."
@@ -873,6 +881,12 @@ public class MustacheController : ControllerBase
         }
 
         user.QuizPaid = req != null ? req.Paid : !user.QuizPaid;
+        if (user.QuizPaid && string.IsNullOrEmpty(user.PaymentMethod))
+        {
+            user.PaymentMethod = "ManualAdmin";
+            user.PaidAt = DateTime.UtcNow;
+        }
+
         await _dbContext.SaveChangesAsync();
 
         return Ok(new
@@ -880,6 +894,7 @@ public class MustacheController : ControllerBase
             userId = user.Id,
             fullName = user.FullName,
             quizPaid = user.QuizPaid,
+            paymentMethod = user.PaymentMethod,
             message = user.QuizPaid
                 ? $"{user.FullName}'s R50 Quiz pass approved! They can now enter the Quiz Arena."
                 : $"{user.FullName}'s Quiz pass set to unpaid."

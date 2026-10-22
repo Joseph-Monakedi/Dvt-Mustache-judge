@@ -22,7 +22,8 @@ public record AuthResponse(
     bool QuizPaid,
     string Token,
     string? CleanShaveImageUrl = null,
-    DateTime? CleanShaveUploadedAt = null
+    DateTime? CleanShaveUploadedAt = null,
+    string? PaymentMethod = null
 );
 
 public record ContestantSummaryDto(
@@ -38,9 +39,30 @@ public record ContestantSummaryDto(
     string? BestThumbnailUrl,
     DateTime JoinedAt,
     string? CleanShaveImageUrl = null,
-    DateTime? CleanShaveUploadedAt = null
+    DateTime? CleanShaveUploadedAt = null,
+    string? PaymentMethod = null
 );
 
 public record TogglePaymentRequest(
     bool Paid
+);
+
+public record CreatePayFastPaymentRequest(
+    string ItemType, // "Leaderboard" | "Quiz" | "Combo"
+    string? ReturnUrl = null,
+    string? CancelUrl = null
+);
+
+public record CreatePayFastPaymentResponse(
+    string ProcessUrl,
+    Dictionary<string, string> Fields,
+    string Reference,
+    decimal Amount,
+    string ItemType
+);
+
+public record ConfirmPayFastReturnRequest(
+    string? Reference,
+    string? ItemType = null,
+    string? PfPaymentId = null
 );

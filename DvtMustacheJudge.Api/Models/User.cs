@@ -23,11 +23,22 @@ public class User
     [MaxLength(20)]
     public string Role { get; set; } = "Contestant"; // "Contestant" | "Admin"
 
-    // Entry to Leaderboard (R100 fee managed by admin)
+    // Entry to Leaderboard (R100 fee managed by admin or PayFast)
     public bool LeaderboardPaid { get; set; } = false;
 
-    // Entry to Mustache Quiz Arena (R50 fee managed by admin)
+    // Entry to Mustache Quiz Arena (R50 fee managed by admin or PayFast)
     public bool QuizPaid { get; set; } = false;
+
+    // Payment Tracking (PayFast automation & audit)
+    [MaxLength(50)]
+    public string? PaymentMethod { get; set; } // "PayFast" | "ManualAdmin"
+
+    [MaxLength(100)]
+    public string? PayfastPaymentId { get; set; }
+
+    public decimal? AmountPaid { get; set; }
+
+    public DateTime? PaidAt { get; set; }
 
     // Day 1 Clean Shave baseline picture for growth comparison
     public string? CleanShaveImageUrl { get; set; }

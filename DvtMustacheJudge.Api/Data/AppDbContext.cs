@@ -15,10 +15,19 @@ public class AppDbContext : DbContext
     public DbSet<QuizQuestion> QuizQuestions => Set<QuizQuestion>();
     public DbSet<QuizPlayer> QuizPlayers => Set<QuizPlayer>();
     public DbSet<QuizPlayerAnswer> QuizPlayerAnswers => Set<QuizPlayerAnswer>();
+    public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<PaymentTransaction>(entity =>
+        {
+            entity.HasKey(p => p.Id);
+            entity.HasIndex(p => p.UserId);
+            entity.HasIndex(p => p.PaymentReference);
+            entity.HasIndex(p => p.Status);
+        });
 
         modelBuilder.Entity<MustacheEntry>(entity =>
         {

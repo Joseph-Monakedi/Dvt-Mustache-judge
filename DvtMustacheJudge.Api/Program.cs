@@ -43,7 +43,10 @@ builder.Services.AddHttpClient<IGeminiJudgeService, GeminiJudgeService>(client =
 // 6. Token Service for authentication
 builder.Services.AddSingleton<ITokenService, TokenService>();
 
-// 7. CORS policy for React Vite dev server and mobile testing
+// 7. PayFast Payment Gateway Service
+builder.Services.AddScoped<IPayFastService, PayFastService>();
+
+// 8. CORS policy for React Vite dev server and mobile testing
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowViteClient", policy =>

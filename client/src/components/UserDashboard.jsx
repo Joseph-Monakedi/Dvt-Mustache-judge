@@ -17,6 +17,8 @@ import {
 import { GiMustache } from 'react-icons/gi';
 import { useAuth } from '../context/AuthContext';
 import { apiUrl } from '../utils/api';
+import { confirmPayFastReturn } from '../utils/payfast';
+import confetti from 'canvas-confetti';
 import Button from './common/Button';
 import DayOneCleanShaveModal from './dashboard/DayOneCleanShaveModal';
 import VaultEntryCard from './dashboard/VaultEntryCard';
@@ -29,6 +31,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
   const [error, setError] = useState('');
   const [showPaymentInfo, setShowPaymentInfo] = useState(false);
   const [showCleanShaveModal, setShowCleanShaveModal] = useState(false);
+  const [paymentBanner, setPaymentBanner] = useState(null);
 
   const fetchDashboard = async () => {
     if (!token) {
@@ -69,6 +72,48 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
       refreshUser();
     } else {
       setLoading(false);
+    }
+  }, [token]);
+
+  // Handle PayFast callback URL query params (?payment=success or ?payment=cancelled)
+  useEffect(() => {
+    if (!token) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+
+    if (paymentStatus === 'success') {
+      const ref = urlParams.get('ref') || sessionStorage.getItem('dvt_last_payfast_ref');
+      const item = urlParams.get('item') || sessionStorage.getItem('dvt_last_payfast_item');
+
+      window.history.replaceState({}, document.title, window.location.pathname);
+      sessionStorage.removeItem('dvt_last_payfast_ref');
+      sessionStorage.removeItem('dvt_last_payfast_item');
+
+      confirmPayFastReturn({ reference: ref, itemType: item, token })
+        .then(async () => {
+          await refreshUser();
+          await fetchDashboard();
+          setPaymentBanner({
+            type: 'success',
+            title: 'PayFast Payment Confirmed!',
+            message: '🎉 Your payment was verified successfully and your entry has been automatically approved!'
+          });
+          try {
+            confetti({ particleCount: 150, spread: 90, origin: { y: 0.3 } });
+          } catch {}
+        })
+        .catch(async () => {
+          await refreshUser();
+          await fetchDashboard();
+        });
+    } else if (paymentStatus === 'cancelled') {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setPaymentBanner({
+        type: 'warning',
+        title: 'PayFast Checkout Cancelled',
+        message: 'Your payment was cancelled. You can retry at any time or request manual approval from an admin.'
+      });
     }
   }, [token]);
 
@@ -118,6 +163,35 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
 
   return (
     <div className="user-dashboard-container fade-in max-w-7xl mx-auto px-4 py-8 space-y-8">
+      {/* PayFast Payment Notification Banner */}
+      {paymentBanner && (
+        <div className={`p-4 rounded-xl border flex items-center justify-between gap-4 fade-in ${
+          paymentBanner.type === 'success'
+            ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-200 shadow-lg shadow-emerald-950/40'
+            : 'bg-amber-950/40 border-amber-500/50 text-amber-200'
+        }`}>
+          <div className="flex items-center gap-3">
+            {paymentBanner.type === 'success' ? (
+              <FaCircleCheck className="text-emerald-400 text-2xl shrink-0" />
+            ) : (
+              <FaCircleInfo className="text-amber-400 text-2xl shrink-0" />
+            )}
+            <div>
+              <h4 className="font-bold text-white text-sm">{paymentBanner.title}</h4>
+              <p className="text-xs text-slate-300">{paymentBanner.message}</p>
+            </div>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => setPaymentBanner(null)} 
+            className="text-slate-400 hover:text-white p-1"
+            aria-label="Dismiss message"
+          >
+            <FaXmark />
+          </button>
+        </div>
+      )}
+
       {/* Dashboard Top Header Banner */}
       <div className="dashboard-profile-banner flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 sm:p-8 bg-[#0d1522] border border-white/10 rounded-2xl shadow-xl">
         <div className="profile-main-info flex items-center gap-5">

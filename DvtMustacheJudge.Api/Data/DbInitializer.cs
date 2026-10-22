@@ -126,6 +126,25 @@ public static class DbInitializer
                     ""PointsEarned"" integer NOT NULL DEFAULT 0,
                     ""AnsweredAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
+
+                CREATE TABLE IF NOT EXISTS ""PaymentTransactions"" (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""UserId"" uuid NOT NULL,
+                    ""ItemType"" character varying(50) NOT NULL,
+                    ""Amount"" numeric(10,2) NOT NULL DEFAULT 0,
+                    ""Status"" character varying(30) NOT NULL DEFAULT 'Pending',
+                    ""PayfastPaymentId"" character varying(100),
+                    ""PaymentReference"" character varying(100) NOT NULL,
+                    ""CustomerEmail"" character varying(120),
+                    ""CustomerName"" character varying(100),
+                    ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    ""CompletedAt"" timestamp with time zone
+                );
+
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PaymentMethod"" character varying(50);
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PayfastPaymentId"" character varying(100);
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""AmountPaid"" numeric(10,2);
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PaidAt"" timestamp with time zone;
             ";
             await context.Database.ExecuteSqlRawAsync(schemaSql);
         }
