@@ -52,6 +52,17 @@ public class QuizController : ControllerBase
             currentQuestion = quiz.Questions[quiz.CurrentQuestionIndex];
         }
 
+        // Automatic reveal answers & scoring at timeout
+        if (quiz.Status == "Question" && quiz.QuestionStartTime.HasValue && currentQuestion != null)
+        {
+            var elapsedSeconds = (DateTime.UtcNow - quiz.QuestionStartTime.Value).TotalSeconds;
+            if (elapsedSeconds >= (currentQuestion.TimeLimitSeconds - 0.25))
+            {
+                quiz.Status = "AnswerReveal";
+                await _context.SaveChangesAsync();
+            }
+        }
+
         var playerCount = quiz.Players.Count;
 
         // If status is AnswerReveal or Finished, compute answer distribution
@@ -216,6 +227,23 @@ public class QuizController : ControllerBase
             return NotFound(new { error = "Question not found." });
         }
 
+        // Verify quiz is currently in active question state and hasn't timed out
+        var quiz = await _context.QuizGames.OrderByDescending(q => q.CreatedAt).FirstOrDefaultAsync();
+        if (quiz != null && quiz.Status == "Question" && quiz.QuestionStartTime.HasValue)
+        {
+            var elapsed = (DateTime.UtcNow - quiz.QuestionStartTime.Value).TotalSeconds;
+            if (elapsed > (question.TimeLimitSeconds + 1.2))
+            {
+                quiz.Status = "AnswerReveal";
+                await _context.SaveChangesAsync();
+                return BadRequest(new { error = "Time has expired for this question." });
+            }
+        }
+        else if (quiz != null && quiz.Status != "Question")
+        {
+            return BadRequest(new { error = "Question round is not currently accepting answers." });
+        }
+
         // Check if player has already answered this question
         var alreadyAnswered = await _context.QuizPlayerAnswers.AnyAsync(a =>
             a.QuizPlayerId == request.PlayerId && a.QuizQuestionId == request.QuestionId);
@@ -284,6 +312,26 @@ public class QuizController : ControllerBase
         if (quiz == null)
         {
             return NotFound(new { error = "No active quiz game found." });
+        }
+
+        // Automatic reveal answers & scoring at timeout when scoreboard is queried
+        if (quiz.Status == "Question" && quiz.QuestionStartTime.HasValue)
+        {
+            var questions = await _context.QuizQuestions
+                .Where(qq => qq.QuizGameId == quiz.Id)
+                .OrderBy(qq => qq.QuestionOrder)
+                .ToListAsync();
+
+            if (quiz.CurrentQuestionIndex >= 0 && quiz.CurrentQuestionIndex < questions.Count)
+            {
+                var curQ = questions[quiz.CurrentQuestionIndex];
+                var elapsed = (DateTime.UtcNow - quiz.QuestionStartTime.Value).TotalSeconds;
+                if (elapsed >= (curQ.TimeLimitSeconds - 0.25))
+                {
+                    quiz.Status = "AnswerReveal";
+                    await _context.SaveChangesAsync();
+                }
+            }
         }
 
         var totalQuestions = await _context.QuizQuestions.CountAsync(qq => qq.QuizGameId == quiz.Id);

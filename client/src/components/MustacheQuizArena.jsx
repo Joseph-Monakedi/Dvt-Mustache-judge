@@ -120,7 +120,12 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
       setAnswerResult(null);
       questionStartTimeRef.current = Date.now();
 
-      const limit = gameState.currentQuestion.timeLimitSeconds || 20;
+      let limit = gameState.currentQuestion.timeLimitSeconds || 20;
+      if (gameState.questionStartTime) {
+        const startMs = new Date(gameState.questionStartTime).getTime();
+        const elapsedSec = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+        limit = Math.max(0, limit - elapsedSec);
+      }
       setTimerSeconds(limit);
 
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -142,6 +147,26 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
   }, [gameState?.currentQuestionIndex, gameState?.status]);
+
+  // Automatic Answer Reveal & Scoring when question timer reaches 0
+  useEffect(() => {
+    if (gameState?.status === 'Question' && timerSeconds === 0) {
+      fetchQuizState();
+      fetchScoreboard();
+
+      const adminToken = sessionStorage.getItem('dvt_admin_token');
+      if (adminToken) {
+        handleAdminAction('reveal-round');
+      }
+
+      const retryTimer = setTimeout(() => {
+        fetchQuizState();
+        fetchScoreboard();
+      }, 1000);
+
+      return () => clearTimeout(retryTimer);
+    }
+  }, [timerSeconds, gameState?.status]);
 
   // Join Game
   const handleJoinGame = async (e) => {
@@ -191,7 +216,7 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
 
   // Submit Answer
   const handleSelectAnswer = async (optionIndex) => {
-    if (hasAnswered || !joinedPlayer || gameState?.status !== 'Question' || !gameState?.currentQuestion) {
+    if (hasAnswered || !joinedPlayer || gameState?.status !== 'Question' || !gameState?.currentQuestion || timerSeconds <= 0) {
       return;
     }
 

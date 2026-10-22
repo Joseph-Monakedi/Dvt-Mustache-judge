@@ -200,6 +200,15 @@ export default function AdminPortal({ onBackToApp }) {
     }
   }, [isAuthenticated]);
 
+  // Poll quiz state when viewing quiz tab in admin portal to track auto-reveal & scores
+  useEffect(() => {
+    if (isAuthenticated && activeAdminTab === 'quiz') {
+      fetchQuizAdminState();
+      const interval = setInterval(fetchQuizAdminState, 2000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, activeAdminTab]);
+
   // Handle Login
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -1553,7 +1562,7 @@ export default function AdminPortal({ onBackToApp }) {
                 type="button"
                 className="quiz-host-btn btn-reveal"
                 onClick={() => handleQuizAction('reveal-round')}
-                disabled={quizLoading || quizState?.status !== 'InQuestion'}
+                disabled={quizLoading || (quizState?.status !== 'Question' && quizState?.status !== 'InQuestion')}
               >
                 <FaEye className="btn-icon" /> Reveal Answers & Scoring
               </button>
@@ -1597,28 +1606,28 @@ export default function AdminPortal({ onBackToApp }) {
               )}
 
               <div className="quiz-q-options-grid">
-                <div className={`quiz-q-option opt-red ${quizState.currentQuestion.correctOption === 1 ? 'is-correct' : ''}`}>
+                <div className={`quiz-q-option opt-red ${quizState.currentQuestion.correctOption === 0 ? 'is-correct' : ''}`}>
                   <span className="opt-shape">▲</span>
                   <span className="opt-label">{quizState.currentQuestion.optionA}</span>
                   {quizState.answerStats && (
                     <span className="opt-vote-count">{quizState.answerStats.countA || 0} votes</span>
                   )}
                 </div>
-                <div className={`quiz-q-option opt-blue ${quizState.currentQuestion.correctOption === 2 ? 'is-correct' : ''}`}>
+                <div className={`quiz-q-option opt-blue ${quizState.currentQuestion.correctOption === 1 ? 'is-correct' : ''}`}>
                   <span className="opt-shape">◆</span>
                   <span className="opt-label">{quizState.currentQuestion.optionB}</span>
                   {quizState.answerStats && (
                     <span className="opt-vote-count">{quizState.answerStats.countB || 0} votes</span>
                   )}
                 </div>
-                <div className={`quiz-q-option opt-yellow ${quizState.currentQuestion.correctOption === 3 ? 'is-correct' : ''}`}>
+                <div className={`quiz-q-option opt-yellow ${quizState.currentQuestion.correctOption === 2 ? 'is-correct' : ''}`}>
                   <span className="opt-shape">●</span>
                   <span className="opt-label">{quizState.currentQuestion.optionC}</span>
                   {quizState.answerStats && (
                     <span className="opt-vote-count">{quizState.answerStats.countC || 0} votes</span>
                   )}
                 </div>
-                <div className={`quiz-q-option opt-green ${quizState.currentQuestion.correctOption === 4 ? 'is-correct' : ''}`}>
+                <div className={`quiz-q-option opt-green ${quizState.currentQuestion.correctOption === 3 ? 'is-correct' : ''}`}>
                   <span className="opt-shape">■</span>
                   <span className="opt-label">{quizState.currentQuestion.optionD}</span>
                   {quizState.answerStats && (

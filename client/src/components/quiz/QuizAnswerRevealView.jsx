@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaCheck, FaXmark, FaArrowRight, FaTrophy } from 'react-icons/fa6';
+import { FaCheck, FaXmark, FaArrowRight, FaTrophy, FaClock } from 'react-icons/fa6';
 import Button from '../common/Button';
 
 export default function QuizAnswerRevealView({
@@ -11,6 +11,7 @@ export default function QuizAnswerRevealView({
   isAdmin,
   onAdminAction
 }) {
+  const didAnswer = Boolean(answerResult);
   const isCorrect = answerResult?.isCorrect;
   const stats = gameState?.answerStats || {};
 
@@ -29,21 +30,29 @@ export default function QuizAnswerRevealView({
       <div className={`p-6 rounded-2xl border flex items-center gap-5 shadow-xl ${
         isCorrect 
           ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-200' 
-          : 'bg-rose-950/70 border-rose-500/50 text-rose-200'
+          : didAnswer
+          ? 'bg-rose-950/70 border-rose-500/50 text-rose-200'
+          : 'bg-amber-950/70 border-amber-500/50 text-amber-200'
       }`}>
         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black shrink-0 shadow-lg ${
-          isCorrect ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+          isCorrect ? 'bg-emerald-500 text-white' : didAnswer ? 'bg-rose-500 text-white' : 'bg-amber-500 text-slate-950'
         }`}>
-          {isCorrect ? <FaCheck /> : <FaXmark />}
+          {isCorrect ? <FaCheck /> : didAnswer ? <FaXmark /> : <FaClock />}
         </div>
         <div className="space-y-1">
           <h3 className="text-xl font-black text-white">
-            {isCorrect ? 'GENIUS! That is Correct!' : 'WRONG FOLLICLE! Incorrect.'}
+            {isCorrect 
+              ? 'GENIUS! That is Correct!' 
+              : didAnswer 
+              ? 'WRONG FOLLICLE! Incorrect.' 
+              : "TIME'S UP! Round Expired."}
           </h3>
           <p className="text-sm">
             {isCorrect 
               ? `+${answerResult?.pointsEarned || 850} points earned! Total score: ${joinedPlayer?.totalScore || 0} pts` 
-              : 'Zero points this round. Shake it off for the next mustache!'}
+              : didAnswer
+              ? 'Zero points this round. Shake it off for the next mustache!'
+              : `No answer locked in before the time limit. Total score: ${joinedPlayer?.totalScore || 0} pts`}
           </p>
         </div>
       </div>
@@ -103,7 +112,7 @@ export default function QuizAnswerRevealView({
               <div 
                 key={p.id} 
                 className={`flex items-center justify-between p-3 rounded-xl border text-sm ${
-                  p.name === (joinedPlayer?.contestantName || user?.fullName)
+                  p.name === joinedPlayer?.contestantName
                     ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-200 font-bold'
                     : 'bg-[#131f33]/60 border-white/5 text-slate-200'
                 }`}

@@ -87,13 +87,22 @@ export default function QuizQuestionView({
         )}
       </div>
 
-      {/* Answer Locked-In Banner */}
-      {hasAnswered && (
+      {/* Answer Locked-In or Time Expired Banner */}
+      {hasAnswered ? (
         <div className="flex items-center justify-center gap-2 p-3 bg-cyan-950/70 border border-cyan-500/40 rounded-xl text-cyan-300 text-xs sm:text-sm font-semibold animate-in fade-in shadow-lg shadow-cyan-950/40">
           <FaCheck className="text-base text-cyan-400" />
-          <span>Answer Locked in! Waiting for round timer to expire...</span>
+          <span>
+            {timerSeconds <= 0
+              ? "Time's up! Revealing answers & scoring..."
+              : "Answer Locked in! Waiting for round timer to expire..."}
+          </span>
         </div>
-      )}
+      ) : timerSeconds <= 0 ? (
+        <div className="flex items-center justify-center gap-2 p-3 bg-rose-950/70 border border-rose-500/40 rounded-xl text-rose-300 text-xs sm:text-sm font-semibold animate-in fade-in shadow-lg shadow-rose-950/40">
+          <FaClock className="text-base text-rose-400" />
+          <span>Time's up! Revealing answers & scoring...</span>
+        </div>
+      ) : null}
 
       {/* 4 Answers Grid (Kahoot / Game Show Style) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -103,10 +112,10 @@ export default function QuizQuestionView({
             <button
               key={opt.idx}
               type="button"
-              disabled={hasAnswered}
+              disabled={hasAnswered || timerSeconds <= 0}
               onClick={() => onSelectAnswer(opt.idx)}
               className={`relative flex items-center gap-4 p-5 sm:p-6 rounded-2xl border text-left transition-all duration-200 select-none cursor-pointer shadow-lg ${opt.bgClass} ${opt.borderClass} ${opt.shadowClass} ${
-                hasAnswered && !isSelected ? 'opacity-40 grayscale-[40%]' : ''
+                (hasAnswered || timerSeconds <= 0) && !isSelected ? 'opacity-40 grayscale-[40%]' : ''
               } ${
                 isSelected 
                   ? 'ring-4 ring-white scale-[1.02] shadow-2xl brightness-110' 
