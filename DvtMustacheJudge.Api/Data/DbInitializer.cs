@@ -167,11 +167,15 @@ public static class DbInitializer
         // 4. Seed Default Movember Quiz Arena with random 6-digit PIN
         try
         {
-            var hasQuiz = await context.QuizGames.AnyAsync();
-            if (!hasQuiz)
+            var quiz = await context.QuizGames
+                .Include(q => q.Questions)
+                .OrderByDescending(q => q.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (quiz == null)
             {
                 var initialPin = Random.Shared.Next(100000, 999999).ToString();
-                var quiz = new QuizGame
+                quiz = new QuizGame
                 {
                     Id = Guid.NewGuid(),
                     Title = "Movember Grand Mustache Quiz Arena",
@@ -181,123 +185,22 @@ public static class DbInitializer
                     CreatedAt = DateTime.UtcNow
                 };
 
-                quiz.Questions = new List<QuizQuestion>
-                {
-                    new()
-                    {
-                        Id = Guid.NewGuid(),
-                        QuizGameId = quiz.Id,
-                        QuestionOrder = 1,
-                        QuestionText = "Which famous 1980s private investigator rocked the world's most iconic Chevron mustache?",
-                        OptionA = "Magnum P.I. (Tom Selleck)", // Correct
-                        OptionB = "Sherlock Holmes",
-                        OptionC = "Lt. Columbo",
-                        OptionD = "Inspector Clouseau",
-                        CorrectOption = 0,
-                        TimeLimitSeconds = 20,
-                        Points = 1000
-                    },
-                    new()
-                    {
-                        Id = Guid.NewGuid(),
-                        QuizGameId = quiz.Id,
-                        QuestionOrder = 2,
-                        QuestionText = "What is the primary global cause and health mission supported by Movember?",
-                        OptionA = "Free barber styling products",
-                        OptionB = "Men's mental health, prostate & testicular cancer awareness", // Correct
-                        OptionC = "Artisan beard oil manufacturing",
-                        OptionD = "Promoting clean-shaven faces",
-                        CorrectOption = 1,
-                        TimeLimitSeconds = 20,
-                        Points = 1000
-                    },
-                    new()
-                    {
-                        Id = Guid.NewGuid(),
-                        QuizGameId = quiz.Id,
-                        QuestionOrder = 3,
-                        QuestionText = "In the Mustache Judge rubric, what 3 dimensions determine your official score?",
-                        OptionA = "Length, Curl & Bristle Shine",
-                        OptionB = "Beard Ratio, Jawline & Smile",
-                        OptionC = "Density, Symmetry & Swagger", // Correct
-                        OptionD = "Thickness, Age & Razor Sharpness",
-                        CorrectOption = 2,
-                        TimeLimitSeconds = 20,
-                        Points = 1000
-                    },
-                    new()
-                    {
-                        Id = Guid.NewGuid(),
-                        QuizGameId = quiz.Id,
-                        QuestionOrder = 4,
-                        QuestionText = "Which iconic Queen frontman made the Chevron mustache legendary on stage at Live Aid 1985?",
-                        OptionA = "David Bowie",
-                        OptionB = "Freddie Mercury", // Correct
-                        OptionC = "Mick Jagger",
-                        OptionD = "Elton John",
-                        CorrectOption = 1,
-                        TimeLimitSeconds = 20,
-                        Points = 1000
-                    },
-                    new()
-                    {
-                        Id = Guid.NewGuid(),
-                        QuizGameId = quiz.Id,
-                        QuestionOrder = 5,
-                        QuestionText = "What is the official entry fee to feature your mustache on the live Leaderboard?",
-                        OptionA = "Free",
-                        OptionB = "R50",
-                        OptionC = "R100", // Correct
-                        OptionD = "R250",
-                        CorrectOption = 2,
-                        TimeLimitSeconds = 15,
-                        Points = 1000
-                    },
-                    new()
-                    {
-                        Id = Guid.NewGuid(),
-                        QuizGameId = quiz.Id,
-                        QuestionOrder = 6,
-                        QuestionText = "Which mustache style is distinguished by long curled tips pointing gracefully upwards toward the cheeks?",
-                        OptionA = "The Walrus",
-                        OptionB = "The Pencil",
-                        OptionC = "The Horseshoe",
-                        OptionD = "The Handlebar", // Correct
-                        CorrectOption = 3,
-                        TimeLimitSeconds = 20,
-                        Points = 1000
-                    },
-                    new()
-                    {
-                        Id = Guid.NewGuid(),
-                        QuizGameId = quiz.Id,
-                        QuestionOrder = 7,
-                        QuestionText = "If an entry is classified into the Wooden Spoon division, what did the contestant submit?",
-                        OptionA = "A drawing, doodle, cartoon or non-human filter", // Correct
-                        OptionB = "A freshly groomed 10/10 handlebar",
-                        OptionC = "An official executive photo",
-                        OptionD = "A photo with too much beard wax",
-                        CorrectOption = 0,
-                        TimeLimitSeconds = 20,
-                        Points = 1000
-                    },
-                    new()
-                    {
-                        Id = Guid.NewGuid(),
-                        QuizGameId = quiz.Id,
-                        QuestionOrder = 8,
-                        QuestionText = "What is the ultimate spirit of the Movember Mustache Challenge?",
-                        OptionA = "Personal vanity",
-                        OptionB = "Global solidarity, laughter, and men's health awareness", // Correct
-                        OptionC = "Winning a lifetime supply of razor blades",
-                        OptionD = "Skipping all video calls",
-                        CorrectOption = 1,
-                        TimeLimitSeconds = 15,
-                        Points = 1000
-                    }
-                };
-
+                quiz.Questions = OfficialQuizQuestions.CreateDefaultQuestions(quiz.Id);
                 context.QuizGames.Add(quiz);
+                await context.SaveChangesAsync();
+            }
+            else if (quiz.Questions.Count != 12)
+            {
+                // Synchronize existing quiz with official 12 questions
+                var oldAnswers = await context.QuizPlayerAnswers.ToListAsync();
+                context.QuizPlayerAnswers.RemoveRange(oldAnswers);
+                context.QuizQuestions.RemoveRange(quiz.Questions);
+                await context.SaveChangesAsync();
+
+                var newQuestions = OfficialQuizQuestions.CreateDefaultQuestions(quiz.Id);
+                context.QuizQuestions.AddRange(newQuestions);
+                quiz.CurrentQuestionIndex = 0;
+                quiz.Status = "Lobby";
                 await context.SaveChangesAsync();
             }
         }

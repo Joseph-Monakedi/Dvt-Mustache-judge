@@ -521,6 +521,253 @@ public class QuizController : ControllerBase
         return Ok(new { message = $"Game PIN updated to {newPin}", pinCode = newPin });
     }
 
+    #region Quiz & Question CRUD Operations
+
+    [HttpGet("admin/quizzes")]
+    public async Task<IActionResult> AdminGetQuizzes()
+    {
+        if (!IsAdmin()) return Unauthorized();
+
+        var quizzes = await _context.QuizGames
+            .Include(q => q.Questions)
+            .Include(q => q.Players)
+            .OrderByDescending(q => q.CreatedAt)
+            .Select(q => new
+            {
+                id = q.Id,
+                title = q.Title,
+                status = q.Status,
+                pinCode = q.PinCode,
+                currentQuestionIndex = q.CurrentQuestionIndex,
+                questionCount = q.Questions.Count,
+                playerCount = q.Players.Count,
+                createdAt = q.CreatedAt
+            })
+            .ToListAsync();
+
+        return Ok(quizzes);
+    }
+
+    [HttpPost("admin/quizzes")]
+    public async Task<IActionResult> AdminCreateQuiz([FromBody] CreateQuizRequest request)
+    {
+        if (!IsAdmin()) return Unauthorized();
+
+        var quiz = new QuizGame
+        {
+            Id = Guid.NewGuid(),
+            Title = string.IsNullOrWhiteSpace(request?.Title) ? "Movember Mustache Quiz Arena" : request.Title.Trim(),
+            Status = "Lobby",
+            PinCode = string.IsNullOrWhiteSpace(request?.PinCode) ? Random.Shared.Next(100000, 999999).ToString() : request.PinCode.Trim(),
+            CurrentQuestionIndex = 0,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        quiz.Questions = OfficialQuizQuestions.CreateDefaultQuestions(quiz.Id);
+        _context.QuizGames.Add(quiz);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Quiz created successfully with 12 official questions!", quizId = quiz.Id, pinCode = quiz.PinCode });
+    }
+
+    [HttpPut("admin/quizzes/{id:guid}")]
+    public async Task<IActionResult> AdminUpdateQuiz(Guid id, [FromBody] UpdateQuizRequest request)
+    {
+        if (!IsAdmin()) return Unauthorized();
+
+        var quiz = await _context.QuizGames.FindAsync(id);
+        if (quiz == null) return NotFound(new { error = "Quiz not found." });
+
+        if (!string.IsNullOrWhiteSpace(request.Title)) quiz.Title = request.Title.Trim();
+        if (!string.IsNullOrWhiteSpace(request.PinCode)) quiz.PinCode = request.PinCode.Trim();
+        if (!string.IsNullOrWhiteSpace(request.Status)) quiz.Status = request.Status.Trim();
+
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Quiz updated successfully." });
+    }
+
+    [HttpDelete("admin/quizzes/{id:guid}")]
+    public async Task<IActionResult> AdminDeleteQuiz(Guid id)
+    {
+        if (!IsAdmin()) return Unauthorized();
+
+        var quiz = await _context.QuizGames
+            .Include(q => q.Questions)
+            .Include(q => q.Players)
+            .FirstOrDefaultAsync(q => q.Id == id);
+
+        if (quiz == null) return NotFound(new { error = "Quiz not found." });
+
+        var playerIds = quiz.Players.Select(p => p.Id).ToList();
+        var answers = await _context.QuizPlayerAnswers.Where(a => playerIds.Contains(a.QuizPlayerId)).ToListAsync();
+
+        _context.QuizPlayerAnswers.RemoveRange(answers);
+        _context.QuizPlayers.RemoveRange(quiz.Players);
+        _context.QuizQuestions.RemoveRange(quiz.Questions);
+        _context.QuizGames.Remove(quiz);
+
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Quiz deleted successfully." });
+    }
+
+    [HttpPost("admin/quizzes/{id:guid}/activate")]
+    public async Task<IActionResult> AdminActivateQuiz(Guid id)
+    {
+        if (!IsAdmin()) return Unauthorized();
+
+        var quiz = await _context.QuizGames.FindAsync(id);
+        if (quiz == null) return NotFound(new { error = "Quiz not found." });
+
+        quiz.CreatedAt = DateTime.UtcNow;
+        quiz.Status = "Lobby";
+        quiz.CurrentQuestionIndex = 0;
+        quiz.QuestionStartTime = null;
+
+        await _context.SaveChangesAsync();
+        return Ok(new { message = $"Quiz '{quiz.Title}' is now set as the active quiz." });
+    }
+
+    [HttpGet("admin/quizzes/{quizId:guid}/questions")]
+    public async Task<IActionResult> AdminGetQuestions(Guid quizId)
+    {
+        if (!IsAdmin()) return Unauthorized();
+
+        var questions = await _context.QuizQuestions
+            .Where(q => q.QuizGameId == quizId)
+            .OrderBy(q => q.QuestionOrder)
+            .Select(q => new
+            {
+                id = q.Id,
+                quizGameId = q.QuizGameId,
+                questionOrder = q.QuestionOrder,
+                questionText = q.QuestionText,
+                imageUrl = q.ImageUrl,
+                optionA = q.OptionA,
+                optionB = q.OptionB,
+                optionC = q.OptionC,
+                optionD = q.OptionD,
+                correctOption = q.CorrectOption,
+                timeLimitSeconds = q.TimeLimitSeconds,
+                points = q.Points
+            })
+            .ToListAsync();
+
+        return Ok(questions);
+    }
+
+    [HttpPost("admin/quizzes/{quizId:guid}/questions")]
+    public async Task<IActionResult> AdminCreateQuestion(Guid quizId, [FromBody] UpsertQuestionRequest request)
+    {
+        if (!IsAdmin()) return Unauthorized();
+
+        var quiz = await _context.QuizGames.FindAsync(quizId);
+        if (quiz == null) return NotFound(new { error = "Quiz not found." });
+
+        if (string.IsNullOrWhiteSpace(request.QuestionText))
+        {
+            return BadRequest(new { error = "Question text is required." });
+        }
+
+        var maxOrder = await _context.QuizQuestions
+            .Where(q => q.QuizGameId == quizId)
+            .Select(q => (int?)q.QuestionOrder)
+            .MaxAsync() ?? 0;
+
+        var question = new QuizQuestion
+        {
+            Id = Guid.NewGuid(),
+            QuizGameId = quizId,
+            QuestionOrder = request.QuestionOrder ?? (maxOrder + 1),
+            QuestionText = request.QuestionText.Trim(),
+            OptionA = string.IsNullOrWhiteSpace(request.OptionA) ? "Option A" : request.OptionA.Trim(),
+            OptionB = string.IsNullOrWhiteSpace(request.OptionB) ? "Option B" : request.OptionB.Trim(),
+            OptionC = string.IsNullOrWhiteSpace(request.OptionC) ? "Option C" : request.OptionC.Trim(),
+            OptionD = string.IsNullOrWhiteSpace(request.OptionD) ? "Option D" : request.OptionD.Trim(),
+            CorrectOption = Math.Clamp(request.CorrectOption, 0, 3),
+            TimeLimitSeconds = request.TimeLimitSeconds ?? 20,
+            Points = request.Points ?? 1000,
+            ImageUrl = request.ImageUrl?.Trim()
+        };
+
+        _context.QuizQuestions.Add(question);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Question created successfully!", id = question.Id });
+    }
+
+    [HttpPut("admin/questions/{id:guid}")]
+    public async Task<IActionResult> AdminUpdateQuestion(Guid id, [FromBody] UpsertQuestionRequest request)
+    {
+        if (!IsAdmin()) return Unauthorized();
+
+        var question = await _context.QuizQuestions.FindAsync(id);
+        if (question == null) return NotFound(new { error = "Question not found." });
+
+        if (string.IsNullOrWhiteSpace(request.QuestionText))
+        {
+            return BadRequest(new { error = "Question text is required." });
+        }
+
+        question.QuestionText = request.QuestionText.Trim();
+        question.OptionA = string.IsNullOrWhiteSpace(request.OptionA) ? question.OptionA : request.OptionA.Trim();
+        question.OptionB = string.IsNullOrWhiteSpace(request.OptionB) ? question.OptionB : request.OptionB.Trim();
+        question.OptionC = string.IsNullOrWhiteSpace(request.OptionC) ? question.OptionC : request.OptionC.Trim();
+        question.OptionD = string.IsNullOrWhiteSpace(request.OptionD) ? question.OptionD : request.OptionD.Trim();
+        question.CorrectOption = Math.Clamp(request.CorrectOption, 0, 3);
+        if (request.TimeLimitSeconds.HasValue) question.TimeLimitSeconds = request.TimeLimitSeconds.Value;
+        if (request.Points.HasValue) question.Points = request.Points.Value;
+        if (request.QuestionOrder.HasValue) question.QuestionOrder = request.QuestionOrder.Value;
+        question.ImageUrl = request.ImageUrl?.Trim();
+
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Question updated successfully." });
+    }
+
+    [HttpDelete("admin/questions/{id:guid}")]
+    public async Task<IActionResult> AdminDeleteQuestion(Guid id)
+    {
+        if (!IsAdmin()) return Unauthorized();
+
+        var question = await _context.QuizQuestions.FindAsync(id);
+        if (question == null) return NotFound(new { error = "Question not found." });
+
+        var answers = await _context.QuizPlayerAnswers.Where(a => a.QuizQuestionId == id).ToListAsync();
+        _context.QuizPlayerAnswers.RemoveRange(answers);
+        _context.QuizQuestions.Remove(question);
+
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Question deleted successfully." });
+    }
+
+    [HttpPost("admin/quizzes/{quizId:guid}/seed-official-questions")]
+    public async Task<IActionResult> AdminSeedOfficialQuestions(Guid quizId)
+    {
+        if (!IsAdmin()) return Unauthorized();
+
+        var quiz = await _context.QuizGames.Include(q => q.Questions).FirstOrDefaultAsync(q => q.Id == quizId);
+        if (quiz == null) return NotFound(new { error = "Quiz not found." });
+
+        var questionIds = quiz.Questions.Select(q => q.Id).ToList();
+        var answers = await _context.QuizPlayerAnswers
+            .Where(a => questionIds.Contains(a.QuizQuestionId))
+            .ToListAsync();
+
+        _context.QuizPlayerAnswers.RemoveRange(answers);
+        _context.QuizQuestions.RemoveRange(quiz.Questions);
+        await _context.SaveChangesAsync();
+
+        var newQuestions = OfficialQuizQuestions.CreateDefaultQuestions(quizId);
+        _context.QuizQuestions.AddRange(newQuestions);
+        quiz.CurrentQuestionIndex = 0;
+        quiz.Status = "Lobby";
+        quiz.QuestionStartTime = null;
+
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Official 12 Movember questions loaded successfully!", count = newQuestions.Count });
+    }
+
+    #endregion
+
     private bool IsAdmin()
     {
         var adminPassword = _config["Admin:Password"] ?? "dvt-movember-admin-2026";
@@ -548,3 +795,17 @@ public record JoinQuizRequest(string Pin, string Name);
 public record SetPinRequest(string? Pin);
 public record SubmitAnswerRequest(Guid PlayerId, Guid QuestionId, int SelectedOption, int ResponseTimeMs);
 public record AdminNextQuestionRequest(int? QuestionIndex);
+public record CreateQuizRequest(string? Title, string? PinCode);
+public record UpdateQuizRequest(string? Title, string? PinCode, string? Status);
+public record UpsertQuestionRequest(
+    string QuestionText,
+    string OptionA,
+    string OptionB,
+    string OptionC,
+    string OptionD,
+    int CorrectOption,
+    int? TimeLimitSeconds,
+    int? Points,
+    string? ImageUrl,
+    int? QuestionOrder
+);

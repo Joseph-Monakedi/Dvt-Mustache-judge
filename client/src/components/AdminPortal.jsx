@@ -26,6 +26,7 @@ import {
 } from 'react-icons/fa6';
 import { MdOutlineWarningAmber } from 'react-icons/md';
 import { apiUrl } from '../utils/api';
+import QuizManager from './admin/QuizManager';
 
 export default function AdminPortal({ onBackToApp }) {
   const [adminPassword, setAdminPassword] = useState(() => sessionStorage.getItem('dvt_admin_token') || '');
@@ -46,6 +47,7 @@ export default function AdminPortal({ onBackToApp }) {
   // Quiz host state
   const [quizState, setQuizState] = useState(null);
   const [quizLoading, setQuizLoading] = useState(false);
+  const [quizSubTab, setQuizSubTab] = useState('live'); // 'live' | 'crud'
 
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -1417,11 +1419,40 @@ export default function AdminPortal({ onBackToApp }) {
       </div>
       )}
 
-      {/* TAB 3: Mustache Quiz Arena Controller */}
+      {/* TAB 3: Mustache Quiz Arena Controller & CRUD */}
       {activeAdminTab === 'quiz' && (
         <div className="admin-quiz-section fade-in">
-          {/* Quiz Host Status Overview Card */}
-          <div className="quiz-host-status-card">
+          {/* Sub Navigation: Live Host Controls vs Quiz CRUD Manager */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className={`admin-tab-btn ${quizSubTab === 'live' ? 'active' : ''}`}
+              onClick={() => setQuizSubTab('live')}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px' }}
+            >
+              <FaBolt className="btn-icon" /> Live Arena Host Controls
+            </button>
+            <button
+              type="button"
+              className={`admin-tab-btn ${quizSubTab === 'crud' ? 'active' : ''}`}
+              onClick={() => setQuizSubTab('crud')}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px' }}
+            >
+              <FaGamepad className="btn-icon" /> Manage Quizzes & Questions (CRUD)
+            </button>
+          </div>
+
+          {quizSubTab === 'crud' ? (
+            <QuizManager
+              adminPassword={adminPassword}
+              onQuizChanged={() => {
+                fetchQuizAdminState();
+              }}
+            />
+          ) : (
+            <>
+              {/* Quiz Host Status Overview Card */}
+              <div className="quiz-host-status-card">
             <div className="quiz-host-header">
               <div className="quiz-host-title-wrap">
                 <span className="quiz-host-badge">
@@ -1603,6 +1634,8 @@ export default function AdminPortal({ onBackToApp }) {
               <h3>Arena is in Lobby Mode</h3>
               <p>Players can join using PIN <strong>{quizState?.pinCode || 'Pending PIN'}</strong>. When all players have arrived, click <strong>Launch Next Question</strong> above.</p>
             </div>
+          )}
+            </>
           )}
         </div>
       )}
