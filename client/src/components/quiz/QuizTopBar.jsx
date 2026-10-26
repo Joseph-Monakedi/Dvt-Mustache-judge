@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GiMustache } from 'react-icons/gi';
 import { FaFire, FaPlay, FaArrowRight, FaTrophy } from 'react-icons/fa6';
 import Button from '../common/Button';
@@ -12,6 +12,16 @@ export default function QuizTopBar({
   onOpenLeaderboard
 }) {
   const streak = joinedPlayer?.streak || 0;
+  const [isBusy, setIsBusy] = useState(false);
+
+  const handleAction = async (endpoint, payload) => {
+    setIsBusy(true);
+    try {
+      await onAdminAction(endpoint, payload);
+    } finally {
+      setIsBusy(false);
+    }
+  };
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-[#0d1522] border border-white/10 rounded-2xl shadow-xl">
@@ -68,9 +78,10 @@ export default function QuizTopBar({
               variant="primary"
               size="sm"
               icon={FaPlay}
-              onClick={() => onAdminAction('next-question', { questionIndex: 0 })}
+              disabled={isBusy}
+              onClick={() => handleAction('next-question', { questionIndex: 0 })}
             >
-              Start Question 1
+              {isBusy ? 'Starting 3-2-1...' : 'Start Question 1'}
             </Button>
           )}
 
@@ -78,7 +89,8 @@ export default function QuizTopBar({
             <Button
               variant="accent"
               size="sm"
-              onClick={() => onAdminAction('reveal-round')}
+              disabled={isBusy}
+              onClick={() => handleAction('reveal-round')}
             >
               Reveal Answer
             </Button>
@@ -90,9 +102,10 @@ export default function QuizTopBar({
               size="sm"
               icon={FaArrowRight}
               iconPosition="right"
-              onClick={() => onAdminAction('next-question')}
+              disabled={isBusy}
+              onClick={() => handleAction('next-question')}
             >
-              Next Question
+              {isBusy ? 'Starting 3-2-1...' : 'Next Question'}
             </Button>
           )}
 

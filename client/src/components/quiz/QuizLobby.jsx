@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GiMustache } from 'react-icons/gi';
 import { FaUsers, FaPlay, FaKey } from 'react-icons/fa6';
 import Button from '../common/Button';
@@ -10,6 +10,8 @@ export default function QuizLobby({
   isAdmin,
   onAdminAction
 }) {
+  const [isLaunching, setIsLaunching] = useState(false);
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto py-6 animate-in fade-in">
       {/* Game PIN Highlight Card */}
@@ -74,10 +76,18 @@ export default function QuizLobby({
               variant="primary"
               size="lg"
               icon={FaPlay}
-              onClick={() => onAdminAction('next-question', { questionIndex: 0 })}
+              disabled={isLaunching}
+              onClick={async () => {
+                setIsLaunching(true);
+                try {
+                  await onAdminAction('next-question', { questionIndex: 0 });
+                } catch {
+                  setIsLaunching(false);
+                }
+              }}
               className="shadow-xl shadow-cyan-500/30"
             >
-              Launch Game Now ({gameState?.totalQuestions || 8} Questions)
+              {isLaunching ? 'Starting 3-2-1 Countdown...' : `Launch Game Now (${gameState?.totalQuestions || 8} Questions)`}
             </Button>
           </div>
         )}

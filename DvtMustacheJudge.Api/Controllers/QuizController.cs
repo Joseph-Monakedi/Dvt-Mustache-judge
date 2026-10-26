@@ -83,6 +83,16 @@ public class QuizController : ControllerBase
             };
         }
 
+        double countdownSeconds = 0;
+        if (quiz.Status == "Question" && quiz.QuestionStartTime.HasValue)
+        {
+            var diff = (quiz.QuestionStartTime.Value - DateTime.UtcNow).TotalSeconds;
+            if (diff > 0)
+            {
+                countdownSeconds = Math.Round(diff, 1);
+            }
+        }
+
         return Ok(new
         {
             quizId = quiz.Id,
@@ -94,6 +104,7 @@ public class QuizController : ControllerBase
             playerCount,
             players = quiz.Players.Select(p => new { id = p.Id, name = p.ContestantName }).ToList(),
             questionStartTime = quiz.QuestionStartTime,
+            countdownSeconds,
             currentQuestion = currentQuestion == null ? null : new
             {
                 id = currentQuestion.Id,
@@ -232,6 +243,10 @@ public class QuizController : ControllerBase
         if (quiz != null && quiz.Status == "Question" && quiz.QuestionStartTime.HasValue)
         {
             var elapsed = (DateTime.UtcNow - quiz.QuestionStartTime.Value).TotalSeconds;
+            if (elapsed < -0.1)
+            {
+                return BadRequest(new { error = "Question round is starting... countdown in progress!" });
+            }
             if (elapsed > (question.TimeLimitSeconds + 1.2))
             {
                 quiz.Status = "AnswerReveal";
@@ -443,7 +458,7 @@ public class QuizController : ControllerBase
 
         quiz.CurrentQuestionIndex = targetIndex;
         quiz.Status = "Question";
-        quiz.QuestionStartTime = DateTime.UtcNow;
+        quiz.QuestionStartTime = DateTime.UtcNow.AddSeconds(3.6);
 
         await _context.SaveChangesAsync();
 
@@ -453,6 +468,8 @@ public class QuizController : ControllerBase
             message = $"Question {targetIndex + 1} is now active!",
             status = quiz.Status,
             questionIndex = targetIndex,
+            questionStartTime = quiz.QuestionStartTime,
+            countdownSeconds = 3,
             question = new
             {
                 id = question.Id,

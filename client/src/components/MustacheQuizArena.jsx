@@ -20,6 +20,8 @@ import QuizAnswerRevealView from './quiz/QuizAnswerRevealView';
 import QuizPodiumView from './quiz/QuizPodiumView';
 import QuizJoinCard from './quiz/QuizJoinCard';
 import QuizLiveLeaderboard from './quiz/QuizLiveLeaderboard';
+import QuizCountdownOverlay from './quiz/QuizCountdownOverlay';
+import { playCountdownTone } from '../utils/quizAudio';
 
 export default function MustacheQuizArena({ onGoToDashboard }) {
   const { user, token, refreshUser, openAuthModal } = useAuth();
@@ -49,6 +51,11 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
   const [timerSeconds, setTimerSeconds] = useState(20);
   const [showLiveLeaderboard, setShowLiveLeaderboard] = useState(false);
 
+  // 3-2-1 Countdown state & tracking
+  const [countdownValue, setCountdownValue] = useState(null);
+  const lastCountdownQIndexRef = useRef(null);
+  const countdownTimeoutsRef = useRef([]);
+
   const questionStartTimeRef = useRef(Date.now());
   const timerIntervalRef = useRef(null);
 
@@ -76,12 +83,13 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
     }
   };
 
-  // Poll quiz state every 2.5 seconds
+  // Poll quiz state dynamically (1.2s when waiting for round in Lobby/AnswerReveal, 2s during Question)
   useEffect(() => {
     fetchQuizState();
-    const interval = setInterval(fetchQuizState, 2500);
+    const pollInterval = (gameState?.status === 'Lobby' || gameState?.status === 'AnswerReveal') ? 1200 : 2000;
+    const interval = setInterval(fetchQuizState, pollInterval);
     return () => clearInterval(interval);
-  }, []);
+  }, [gameState?.status]);
 
   // Fetch scoreboard when in AnswerReveal or Finished
   const fetchScoreboard = async (playerId = joinedPlayer?.playerId) => {
@@ -115,38 +123,113 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
     }
   }, [gameState?.status]);
 
-  // When question changes, reset answer selection and countdown
+  // When question changes, reset answer selection and trigger 3-2-1 countdown
   useEffect(() => {
     if (gameState?.status === 'Question' && gameState?.currentQuestion) {
       setSelectedOption(null);
       setHasAnswered(false);
       setAnswerResult(null);
-      questionStartTimeRef.current = Date.now();
 
-      let limit = gameState.currentQuestion.timeLimitSeconds || 20;
-      if (gameState.questionStartTime) {
-        const startMs = new Date(gameState.questionStartTime).getTime();
-        const elapsedSec = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
-        limit = Math.max(0, limit - elapsedSec);
-      }
-      setTimerSeconds(limit);
-
+      // Clear any pending countdown timeouts and interval
+      countdownTimeoutsRef.current.forEach(clearTimeout);
+      countdownTimeoutsRef.current = [];
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = setInterval(() => {
-        setTimerSeconds(prev => {
-          if (prev <= 1) {
-            clearInterval(timerIntervalRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+
+      const currentQIdx = gameState.currentQuestionIndex ?? 0;
+      const startMs = gameState.questionStartTime 
+        ? new Date(gameState.questionStartTime).getTime() 
+        : Date.now();
+      const elapsedSinceStartSec = (Date.now() - startMs) / 1000;
+
+      // Determine if we should trigger the 3-2-1 countdown:
+      // Trigger whenever entering Question status for this question index,
+      // provided the question hasn't already been actively running for more than 4 seconds
+      const isNewQuestion = lastCountdownQIndexRef.current !== currentQIdx;
+
+      if (isNewQuestion && elapsedSinceStartSec < 4) {
+        lastCountdownQIndexRef.current = currentQIdx;
+
+        // Hold question timer at full limit during countdown
+        const limit = gameState.currentQuestion.timeLimitSeconds || 20;
+        setTimerSeconds(limit);
+
+        // Start countdown at 3 and play audio tone
+        setCountdownValue(3);
+        playCountdownTone(3);
+
+        const t1 = setTimeout(() => {
+          setCountdownValue(2);
+          playCountdownTone(2);
+        }, 1000);
+
+        const t2 = setTimeout(() => {
+          setCountdownValue(1);
+          playCountdownTone(1);
+        }, 2000);
+
+        const t3 = setTimeout(() => {
+          setCountdownValue('GO!');
+          playCountdownTone('GO!');
+        }, 3000);
+
+        const t4 = setTimeout(() => {
+          setCountdownValue(null);
+          questionStartTimeRef.current = Date.now();
+
+          // Start actual question answering timer now!
+          if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = setInterval(() => {
+            setTimerSeconds(prev => {
+              if (prev <= 1) {
+                clearInterval(timerIntervalRef.current);
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+        }, 3600);
+
+        countdownTimeoutsRef.current = [t1, t2, t3, t4];
+      } else {
+        // Countdown already completed or player joined mid-question: run question timer immediately
+        lastCountdownQIndexRef.current = currentQIdx;
+        setCountdownValue(null);
+        questionStartTimeRef.current = Date.now();
+
+        let limit = gameState.currentQuestion.timeLimitSeconds || 20;
+        if (gameState.questionStartTime) {
+          const elapsedSec = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+          limit = Math.max(0, limit - elapsedSec);
+        }
+        setTimerSeconds(limit);
+
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = setInterval(() => {
+          setTimerSeconds(prev => {
+            if (prev <= 1) {
+              clearInterval(timerIntervalRef.current);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
     } else if (gameState?.status === 'AnswerReveal') {
+      countdownTimeoutsRef.current.forEach(clearTimeout);
+      countdownTimeoutsRef.current = [];
+      setCountdownValue(null);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
       fetchScoreboard();
+    } else if (gameState?.status === 'Lobby') {
+      countdownTimeoutsRef.current.forEach(clearTimeout);
+      countdownTimeoutsRef.current = [];
+      lastCountdownQIndexRef.current = null;
+      setCountdownValue(null);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
 
     return () => {
+      countdownTimeoutsRef.current.forEach(clearTimeout);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
   }, [gameState?.currentQuestionIndex, gameState?.status]);
@@ -219,7 +302,7 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
 
   // Submit Answer
   const handleSelectAnswer = async (optionIndex) => {
-    if (hasAnswered || !joinedPlayer || gameState?.status !== 'Question' || !gameState?.currentQuestion || timerSeconds <= 0) {
+    if (countdownValue !== null || hasAnswered || !joinedPlayer || gameState?.status !== 'Question' || !gameState?.currentQuestion || timerSeconds <= 0) {
       return;
     }
 
@@ -439,6 +522,16 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
 
   return (
     <div className="quiz-gameplay-container max-w-5xl mx-auto px-4 py-6 space-y-6 animate-in fade-in">
+      {/* 3-2-1 Countdown Overlay when quiz starts and when next question is about to show */}
+      {countdownValue !== null && (
+        <QuizCountdownOverlay
+          countdown={countdownValue}
+          currentQuestionIndex={gameState?.currentQuestionIndex ?? 0}
+          totalQuestions={gameState?.totalQuestions || 8}
+          quizTitle={gameState?.title}
+        />
+      )}
+
       {/* Top Header Bar (active gameplay only) */}
       {gameState?.status !== 'Finished' && (
         <QuizTopBar

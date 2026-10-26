@@ -1593,16 +1593,22 @@ export default function AdminPortal({ onBackToApp }) {
               </button>
 
               {(() => {
-                const isTimerActive = quizState?.status === 'Question' && adminTimerSeconds > 0;
+                const isCountdown = quizState?.status === 'Question' && quizState?.questionStartTime && new Date(quizState.questionStartTime).getTime() > Date.now();
+                const countdownRemaining = isCountdown ? Math.max(1, Math.ceil((new Date(quizState.questionStartTime).getTime() - Date.now()) / 1000)) : 0;
+                const isTimerActive = quizState?.status === 'Question' && (isCountdown || adminTimerSeconds > 0);
                 return (
                   <button
                     type="button"
                     className={`quiz-host-btn btn-next-question ${isTimerActive ? 'btn-timer-running' : ''}`}
                     onClick={() => handleQuizAction('next-question')}
                     disabled={quizLoading || isTimerActive}
-                    title={isTimerActive ? `Disabled: Round timer is active (${adminTimerSeconds}s left). Wait for timer to expire.` : 'Launch next question'}
+                    title={isTimerActive ? `Disabled: Round ${isCountdown ? 'countdown' : 'timer'} is active. Wait for round to complete.` : 'Launch next question'}
                   >
-                    {isTimerActive ? (
+                    {isCountdown ? (
+                      <>
+                        <FaClock className="btn-icon text-cyan-300 animate-pulse" /> Countdown ({countdownRemaining}s)
+                      </>
+                    ) : isTimerActive ? (
                       <>
                         <FaClock className="btn-icon text-amber-300 animate-pulse" /> Timer Running ({adminTimerSeconds}s)
                       </>

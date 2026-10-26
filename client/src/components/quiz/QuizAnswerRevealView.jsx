@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FaCheck, FaXmark, FaArrowRight, FaTrophy, FaClock } from 'react-icons/fa6';
 import Button from '../common/Button';
 
@@ -11,6 +11,7 @@ export default function QuizAnswerRevealView({
   isAdmin,
   onAdminAction
 }) {
+  const [advancing, setAdvancing] = useState(false);
   const didAnswer = Boolean(answerResult);
   const isCorrect = answerResult?.isCorrect;
   const stats = gameState?.answerStats || {};
@@ -140,10 +141,18 @@ export default function QuizAnswerRevealView({
             size="lg"
             icon={FaArrowRight}
             iconPosition="right"
-            onClick={() => onAdminAction('next-question')}
+            disabled={advancing}
+            onClick={async () => {
+              setAdvancing(true);
+              try {
+                await onAdminAction('next-question');
+              } catch {
+                setAdvancing(false);
+              }
+            }}
             className="shadow-xl shadow-cyan-500/30"
           >
-            Proceed to Next Question
+            {advancing ? 'Starting 3-2-1 Countdown...' : 'Proceed to Next Question'}
           </Button>
         </div>
       )}
