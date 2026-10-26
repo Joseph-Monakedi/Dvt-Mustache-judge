@@ -127,12 +127,12 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
             <GiMustache className="auth-mustache-icon" />
           </div>
           <h2 className="auth-title">
-            {mode === 'login' ? 'Contestant Sign In' : 'Join the Movember Challenge'}
+            {mode === 'login' ? 'Sign In' : 'Join the Competition'}
           </h2>
           <p className="auth-subtitle">
             {mode === 'login' 
-              ? 'Access your Mustache Vault, view your verdicts, and enter the contest & quiz arena.'
-              : 'Sign up to compete! Choose your charity entry pass for instant PayFast activation.'}
+              ? 'Sign in to access your dashboard and participate.'
+              : 'Create your contestant account to get started.'}
           </p>
         </div>
 
@@ -230,81 +230,78 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
             </div>
           </div>
 
-          {/* PayFast Tier Selection for Registration */}
+          {/* Compact Plan Selection for Registration */}
           {mode === 'register' && (
-            <div className="auth-payfast-plans-group">
-              <div className="flex items-center justify-between">
-                <label className="form-label">Choose Entry Pass</label>
-                <span className="payfast-badge-mini">⚡ Instant PayFast</span>
-              </div>
-
-              <div className="payfast-plans-grid">
+            <div className="auth-compact-plans-group">
+              <label className="form-label">Select Entry Option</label>
+              <div className="compact-plans-list">
                 {/* Combo */}
-                <div 
-                  className={`payfast-plan-card ${selectedPlan === 'Combo' ? 'selected' : ''}`}
+                <label 
+                  className={`compact-plan-item ${selectedPlan === 'Combo' ? 'selected' : ''}`}
                   onClick={() => setSelectedPlan('Combo')}
-                  role="button"
-                  tabIndex={0}
                 >
-                  <div className="plan-badge-rec">Best Value</div>
-                  <div className="plan-top">
-                    <span className="plan-title">Combo Pass</span>
-                    <span className="plan-price">R150</span>
+                  <input 
+                    type="radio" 
+                    name="entryPlan" 
+                    checked={selectedPlan === 'Combo'} 
+                    onChange={() => setSelectedPlan('Combo')} 
+                  />
+                  <div className="compact-plan-info">
+                    <span className="compact-plan-title">Combo Pass (Contest + Quiz)</span>
                   </div>
-                  <p className="plan-desc">Contest Leaderboard + Live Quiz Arena pass</p>
-                </div>
+                  <span className="compact-plan-price">R150</span>
+                </label>
 
                 {/* Leaderboard Only */}
-                <div 
-                  className={`payfast-plan-card ${selectedPlan === 'Leaderboard' ? 'selected' : ''}`}
+                <label 
+                  className={`compact-plan-item ${selectedPlan === 'Leaderboard' ? 'selected' : ''}`}
                   onClick={() => setSelectedPlan('Leaderboard')}
-                  role="button"
-                  tabIndex={0}
                 >
-                  <div className="plan-top">
-                    <span className="plan-title">Mustache Contest</span>
-                    <span className="plan-price">R100</span>
+                  <input 
+                    type="radio" 
+                    name="entryPlan" 
+                    checked={selectedPlan === 'Leaderboard'} 
+                    onChange={() => setSelectedPlan('Leaderboard')} 
+                  />
+                  <div className="compact-plan-info">
+                    <span className="compact-plan-title">Mustache Contest Entry</span>
                   </div>
-                  <p className="plan-desc">Unlimited AI entries & live public leaderboard feature</p>
-                </div>
+                  <span className="compact-plan-price">R100</span>
+                </label>
 
                 {/* Quiz Only */}
-                <div 
-                  className={`payfast-plan-card ${selectedPlan === 'Quiz' ? 'selected' : ''}`}
+                <label 
+                  className={`compact-plan-item ${selectedPlan === 'Quiz' ? 'selected' : ''}`}
                   onClick={() => setSelectedPlan('Quiz')}
-                  role="button"
-                  tabIndex={0}
                 >
-                  <div className="plan-top">
-                    <span className="plan-title">Quiz Arena Pass</span>
-                    <span className="plan-price">R50</span>
+                  <input 
+                    type="radio" 
+                    name="entryPlan" 
+                    checked={selectedPlan === 'Quiz'} 
+                    onChange={() => setSelectedPlan('Quiz')} 
+                  />
+                  <div className="compact-plan-info">
+                    <span className="compact-plan-title">Quiz Arena Pass</span>
                   </div>
-                  <p className="plan-desc">Live multiplayer trivia arena & podium rewards</p>
-                </div>
+                  <span className="compact-plan-price">R50</span>
+                </label>
 
-                {/* Free / Pay Later */}
-                <div 
-                  className={`payfast-plan-card ${selectedPlan === 'Free' ? 'selected' : ''}`}
+                {/* Pay Later */}
+                <label 
+                  className={`compact-plan-item ${selectedPlan === 'Free' ? 'selected' : ''}`}
                   onClick={() => setSelectedPlan('Free')}
-                  role="button"
-                  tabIndex={0}
                 >
-                  <div className="plan-top">
-                    <span className="plan-title">Pay Later</span>
-                    <span className="plan-price">R0</span>
+                  <input 
+                    type="radio" 
+                    name="entryPlan" 
+                    checked={selectedPlan === 'Free'} 
+                    onChange={() => setSelectedPlan('Free')} 
+                  />
+                  <div className="compact-plan-info">
+                    <span className="compact-plan-title">Pay Later on Dashboard</span>
                   </div>
-                  <p className="plan-desc">Register now; you can pay anytime on your dashboard</p>
-                </div>
-              </div>
-
-              <div className="payfast-guarantee-box">
-                <div className="payfast-guarantee-header">
-                  <FaShieldHalved className="text-cyan-400" />
-                  <span>Secure PayFast Checkout</span>
-                </div>
-                <p className="payfast-guarantee-text">
-                  Pay with Cards, Instant EFT, SnapScan, or Zapper. Your entry pass activates immediately upon payment.
-                </p>
+                  <span className="compact-plan-price text-slate-400">Free</span>
+                </label>
               </div>
             </div>
           )}
@@ -320,15 +317,15 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
               </span>
             ) : mode === 'login' ? (
               <>
-                <FaRightToBracket className="btn-icon" /> Sign In to Vault
+                <FaRightToBracket className="btn-icon" /> Sign In
               </>
             ) : selectedPlan === 'Free' ? (
               <>
-                <FaUserPlus className="btn-icon" /> Register (Pay Later)
+                <FaUserPlus className="btn-icon" /> Register & Continue
               </>
             ) : (
               <>
-                <FaBolt className="btn-icon text-amber-300" /> Pay R{selectedPlan === 'Combo' ? '150' : selectedPlan === 'Quiz' ? '50' : '100'} via PayFast & Join
+                <FaBolt className="btn-icon text-amber-300" /> Pay R{selectedPlan === 'Combo' ? '150' : selectedPlan === 'Quiz' ? '50' : '100'} & Register
               </>
             )}
           </button>

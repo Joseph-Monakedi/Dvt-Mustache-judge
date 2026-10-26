@@ -3,7 +3,6 @@ import { GiMustache } from 'react-icons/gi';
 import { 
   FaCamera, 
   FaRotate, 
-  FaUpload, 
   FaScaleBalanced, 
   FaArrowRight, 
   FaArrowDown, 
@@ -29,15 +28,12 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
   const [cameraError, setCameraError] = useState(null);
   const [isCameraInitializing, setIsCameraInitializing] = useState(true);
   const [facingMode, setFacingMode] = useState('user');
-  const [useUploadFallback, setUseUploadFallback] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [savingCleanShave, setSavingCleanShave] = useState(false);
   const [cleanShaveSuccess, setCleanShaveSuccess] = useState('');
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const nativeCameraInputRef = useRef(null);
   const detailsCardRef = useRef(null);
 
   const scrollToDetails = () => {
@@ -96,12 +92,10 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
         }
       }
       setCameraActive(true);
-      setUseUploadFallback(false);
     } catch (err) {
       console.warn('Camera access issue:', err);
-      setCameraError(err.message || 'Unable to access camera. Please allow camera permissions or upload a photo.');
+      setCameraError('Camera access is required. Please allow camera permissions in your browser to take your photo.');
       setCameraActive(false);
-      setUseUploadFallback(true);
     } finally {
       setIsCameraInitializing(false);
     }
@@ -169,27 +163,6 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     );
   };
 
-  const handleFileChange = e => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setValidationError('Please select an image file (JPEG, PNG, WebP).');
-      return;
-    }
-
-    if (file.size > 8 * 1024 * 1024) {
-      setValidationError('File size exceeds the 8MB limit.');
-      return;
-    }
-
-    setCapturedBlob(file);
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    setValidationError('');
-    scrollToDetails();
-  };
-
   const handleRetake = () => {
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -197,7 +170,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     setCapturedBlob(null);
     setPreviewUrl(null);
     setValidationError('');
-    if (!useUploadFallback && !cameraActive) {
+    if (!cameraActive) {
       startCamera();
     }
   };
@@ -257,7 +230,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
       return;
     }
     if (!capturedBlob) {
-      setValidationError('Please snap a photo or upload an image of your mustache.');
+      setValidationError('Please snap a photo of your mustache.');
       return;
     }
 
@@ -274,10 +247,10 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
       <div className="booth-container fade-in">
         <div className="booth-header">
           <h1 className="booth-title">
-            Enter the Movember Court <GiMustache className="title-stache-icon" />
+            Enter the Movember Contest <GiMustache className="title-stache-icon" />
           </h1>
           <p className="booth-subtitle">
-            Open to all contestants worldwide! Sign in or register to join the competition.
+            Sign in or register to join the competition and submit your mustache photos.
           </p>
         </div>
 
@@ -286,10 +259,10 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
             <div className="paywall-icon-wrap">
               <FaLock className="paywall-lock-icon" />
             </div>
-            <span className="paywall-pill">Contestant Registration</span>
+            <span className="paywall-pill">Contestant Access</span>
             <h2>Sign In Required to Enter</h2>
             <p>
-              To enter the DVT Movember mustache competition, record your Day 1 clean shave baseline photo, and submit entries for AI judging, please sign in or register with your email.
+              To enter the competition, record your Day 1 clean shave baseline photo, and submit entries for judging, please sign in or register with your email.
             </p>
 
             <div className="paywall-actions" style={{ marginTop: '24px' }}>
@@ -326,7 +299,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
               <FaHandHoldingDollar className="paywall-lock-icon text-gold" />
             </div>
             <span className="paywall-pill">Movember Charity Entry Fee</span>
-            <h2>Contest Pass Pending Approval</h2>
+            <h2>Contest Pass Required</h2>
             <p>
               Entry to the Mustache Contest and live leaderboard requires the <strong>R100</strong> charity donation. 
               All proceeds support men's mental health, suicide prevention, and prostate/testicular cancer initiatives.
@@ -380,18 +353,18 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
           {!hasCleanShave ? (
             <>Step 1: Capture Day 1 Clean Shave Baseline <GiMustache className="title-stache-icon" /></>
           ) : (
-            <>Enter the Movember Court <GiMustache className="title-stache-icon" /></>
+            <>Enter the Movember Contest <GiMustache className="title-stache-icon" /></>
           )}
         </h1>
         <p className="booth-subtitle">
           {!hasCleanShave
-            ? 'Before entering the contest, snap a fresh clean-shaven photo. This baseline is saved to your profile and used by the AI Judge to evaluate your growth over time.'
-            : 'Submit as many photos as you want! The AI Judge evaluates growth alongside your clean-shave baseline, and only your single highest score is featured on the leaderboard.'}
+            ? 'Before entering the contest, snap a fresh clean-shaven photo. This baseline is saved to your profile and used to evaluate your growth over time.'
+            : 'Submit as many photos as you want! Growth is evaluated alongside your clean-shave baseline, and only your single highest score is featured on the leaderboard.'}
         </p>
       </div>
 
       <div className="booth-layout">
-        {/* Left: Camera / Optical HUD Viewport */}
+        {/* Left: Camera Viewport */}
         <div className="viewport-card">
           <div className="viewport-screen">
             {previewUrl ? (
@@ -418,55 +391,20 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                   </button>
                 </div>
               </div>
-            ) : useUploadFallback ? (
-              <div className="upload-dropzone">
-                <div className="dropzone-icon">
-                  <FaUpload />
+            ) : cameraError ? (
+              <div className="camera-error-overlay fade-in p-6 text-center flex flex-col items-center justify-center min-h-[320px] bg-slate-950/90 rounded-2xl">
+                <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 text-2xl">
+                  <FaCamera />
                 </div>
-                <h3>
-                  {!hasCleanShave ? 'Upload Day 1 Clean Shave Photo' : 'Upload Your Mustache Photo'}
-                </h3>
-                <p>Drag & drop or choose an option below (JPEG, PNG, WebP up to 8MB)</p>
-                {cameraError && (
-                  <div className="camera-notice">
-                    Note: Camera unavailable or permission denied. Direct file upload active.
-                  </div>
-                )}
-                
-                <div className="upload-buttons-group">
-                  <button 
-                    type="button" 
-                    className="browse-button native-cam-btn"
-                    onClick={() => nativeCameraInputRef.current?.click()}
-                  >
-                    <FaCamera className="btn-icon" /> Take Photo
-                  </button>
-                  <button 
-                    type="button" 
-                    className="browse-button photo-lib-btn"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <FaUpload className="btn-icon" /> Choose from Gallery
-                  </button>
-                </div>
-
-                {/* Direct native camera capture for mobile browsers */}
-                <input 
-                  type="file" 
-                  ref={nativeCameraInputRef} 
-                  accept="image/*" 
-                  capture="user"
-                  style={{ display: 'none' }}
-                  onChange={handleFileChange}
-                />
-                {/* Standard file picker */}
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  accept="image/jpeg,image/png,image/webp" 
-                  style={{ display: 'none' }}
-                  onChange={handleFileChange}
-                />
+                <h3 className="text-white font-bold text-base mb-1">Camera Permission Required</h3>
+                <p className="text-slate-300 text-xs max-w-sm mb-4 leading-relaxed">{cameraError}</p>
+                <button 
+                  type="button" 
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-cyan-500 hover:brightness-110 text-white text-xs font-bold transition-all flex items-center gap-2 shadow-lg shadow-cyan-600/30"
+                  onClick={startCamera}
+                >
+                  <FaRotate /> Try Camera Again
+                </button>
               </div>
             ) : (
               <div className="camera-feed-wrapper">
@@ -477,9 +415,9 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                       <div className="camera-radar-pulse"></div>
                       <FaCamera className="camera-radar-icon" />
                     </div>
-                    <div className="camera-init-title">Calibrating Optical Sensor</div>
+                    <div className="camera-init-title">Starting Camera...</div>
                     <p className="camera-init-desc">
-                      Initializing camera lens stream for supreme Movember inspection...
+                      Please hold on while your camera initializes...
                     </p>
                   </div>
                 )}
@@ -492,7 +430,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                   className={`camera-video ${facingMode === 'user' ? 'mirrored' : ''}`}
                 />
 
-                {/* Optical HUD Overlay */}
+                {/* Face Guide HUD Overlay */}
                 <div className="optical-hud-overlay">
                   <svg className="hud-svg" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
                     <ellipse 
@@ -509,7 +447,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
 
                   <div className="hud-guidance-banner">
                     <span className="guidance-pulse"></span>
-                    <span>Center your face within the dotted outline</span>
+                    <span>Center your face within the outline</span>
                   </div>
 
                   <div className="hud-camera-controls">
@@ -522,22 +460,13 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                     >
                       <FaRotate className="btn-icon" /> Flip
                     </button>
-                    <button 
-                      type="button" 
-                      className="hud-control-btn"
-                      onClick={() => setUseUploadFallback(true)}
-                      title="Switch to File Upload"
-                      aria-label="Upload Photo"
-                    >
-                      <FaUpload className="btn-icon" /> Upload
-                    </button>
                   </div>
                 </div>
               </div>
             )}
           </div>
 
-          {!previewUrl && !useUploadFallback && (
+          {!previewUrl && !cameraError && (
             <div className="shutter-bar">
               <button 
                 type="button" 
@@ -563,29 +492,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 >
                   <FaRotate className="btn-icon" /> Flip Camera
                 </button>
-                <button 
-                  type="button" 
-                  className="mobile-secondary-control"
-                  onClick={() => setUseUploadFallback(true)}
-                >
-                  <FaUpload className="btn-icon" /> Upload File
-                </button>
               </div>
-            </div>
-          )}
-
-          {useUploadFallback && !previewUrl && (
-            <div className="shutter-bar">
-              <button 
-                type="button" 
-                className="secondary-btn try-cam-btn"
-                onClick={() => {
-                  setUseUploadFallback(false);
-                  startCamera();
-                }}
-              >
-                <FaCamera className="btn-icon" /> Try Live Camera Again
-              </button>
             </div>
           )}
         </div>
@@ -593,7 +500,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
         {/* Right: Submission Form */}
         <div className="details-card" ref={detailsCardRef}>
           <h2 className="form-card-title">
-            {!hasCleanShave ? 'Clean Shave Baseline' : 'Contestant Dossier'}
+            {!hasCleanShave ? 'Clean Shave Baseline' : 'Contestant Details'}
           </h2>
           <p className="form-card-desc">
             {!hasCleanShave
@@ -621,11 +528,11 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
 
             <div className="rules-box">
               <div className="rules-title">
-                <FaScaleBalanced className="rules-icon" /> Judicial Invariants
+                <FaScaleBalanced className="rules-icon" /> Competition Rules
               </div>
               <ul className="rules-list">
-                <li>Facial hair only: Zero body or skin remarks (Kindness Invariant).</li>
-                <li>Growth evaluated against your Day 1 Clean Shave baseline photo.</li>
+                <li>Facial hair only: Judging focuses strictly on mustache growth and styling.</li>
+                <li>Growth evaluated against your Day 1 clean shave photo.</li>
                 <li>Submit unlimited attempts — only your top score features on the leaderboard.</li>
               </ul>
             </div>
@@ -668,7 +575,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
               ) : isSubmitting ? (
                 <span className="btn-loading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <span className="btn-spinner"></span>
-                  <span>Summoning AI Judge...</span>
+                  <span>Submitting for Judging...</span>
                 </span>
               ) : !hasCleanShave ? (
                 <>
@@ -677,7 +584,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 </>
               ) : (
                 <>
-                  <span>DELIBERATE & JUDGE</span>
+                  <span>SUBMIT FOR JUDGING</span>
                   <FaArrowRight className="btn-arrow" />
                 </>
               )}

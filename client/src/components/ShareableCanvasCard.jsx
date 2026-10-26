@@ -176,7 +176,7 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
         // Footer
         ctx.fillStyle = '#64748b';
         ctx.font = '500 15px Poppins';
-        ctx.fillText('Certified by DVT Movember AI Judge • Zero Auth • Kindness Invariant Verified', 60, height - 35);
+        ctx.fillText('Certified by DVT Movember Mustache Judge 2026', 60, height - 35);
 
         resolve(canvas);
       };

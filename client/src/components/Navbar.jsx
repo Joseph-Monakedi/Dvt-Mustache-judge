@@ -37,7 +37,7 @@ export default function Navbar({ totalEntries = 0 }) {
               <div className="brand-title">
                 <span className="brand-dvt">DVT</span> Mustache Judge
               </div>
-              <div className="brand-tagline">Movember 2026 AI Facial Hair Court</div>
+              <div className="brand-tagline">Movember 2026 Mustache Contest</div>
             </div>
           </Link>
 
@@ -78,10 +78,10 @@ export default function Navbar({ totalEntries = 0 }) {
                 <NavLink 
                   to="/dashboard"
                   className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
-                  aria-label="My Mustache Vault"
+                  aria-label="Dashboard"
                 >
                   <FaAward className="nav-icon text-gold" />
-                  <span className="nav-label">My Vault</span>
+                  <span className="nav-label">Dashboard</span>
                 </NavLink>
               </>
             )}
@@ -102,7 +102,7 @@ export default function Navbar({ totalEntries = 0 }) {
               <NavLink 
                 to="/admin"
                 className={({ isActive }) => `nav-btn admin-nav-btn ${isActive ? 'active' : ''}`}
-                title="Judicial Admin & Moderation Portal"
+                title="Admin Portal"
                 aria-label="Admin Portal"
               >
                 <FaLock className="nav-icon" />
@@ -119,21 +119,13 @@ export default function Navbar({ totalEntries = 0 }) {
                   type="button" 
                   className="user-profile-btn"
                   onClick={() => navigate('/dashboard')}
-                  title="View your personal Mustache Vault"
+                  title="View your Dashboard"
                 >
                   <div className="user-nav-avatar">
                     {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
                   </div>
                   <div className="user-nav-info">
                     <span className="user-nav-name">{user?.fullName || 'Contestant'}</span>
-                    <span className="user-nav-badges">
-                      <span className={`fee-pill-mini ${user?.leaderboardPaid ? 'paid' : 'pending'}`} title="R100 Contest Entry Status">
-                        {user?.leaderboardPaid ? 'Contest ✓' : 'Contest ⏳'}
-                      </span>
-                      <span className={`fee-pill-mini ${user?.quizPaid ? 'paid' : 'pending'}`} title="R50 Quiz Arena Status">
-                        {user?.quizPaid ? 'Quiz ✓' : 'Quiz ⏳'}
-                      </span>
-                    </span>
                   </div>
                 </button>
                 <button 
@@ -226,12 +218,12 @@ export default function Navbar({ totalEntries = 0 }) {
             <NavLink
               to="/dashboard"
               className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}
-              aria-label="My Vault"
+              aria-label="Dashboard"
             >
               <div className="mobile-nav-icon-wrap">
                 <FaAward className="mobile-nav-icon text-gold" />
               </div>
-              <span className="mobile-nav-text">My Vault</span>
+              <span className="mobile-nav-text">Dashboard</span>
             </NavLink>
 
             {user?.role === 'Admin' && (

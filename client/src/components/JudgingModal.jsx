@@ -3,19 +3,19 @@ import { GiMustache } from 'react-icons/gi';
 import { FaScaleBalanced, FaCheck, FaHourglassHalf, FaBolt } from 'react-icons/fa6';
 
 const STAGES = [
-  { label: 'Specimen Intake & Integrity Verification', minSec: 0 },
-  { label: 'Multimodal Neural Vision Philtrum Scan', minSec: 1.2 },
-  { label: 'Symmetry, Density & Swagger Calculation', minSec: 2.8 },
-  { label: 'Judicial Chamber Rate Limit Clearance', minSec: 4.2 },
-  { label: 'Synthesizing Official Declaration & Roast', minSec: 6.5 }
+  { label: 'Verifying Photo Quality', minSec: 0 },
+  { label: 'Scanning Facial Hair', minSec: 1.2 },
+  { label: 'Calculating Symmetry & Density', minSec: 2.8 },
+  { label: 'Evaluating Growth Progression', minSec: 4.2 },
+  { label: 'Generating Score & Review', minSec: 6.5 }
 ];
 
 const COURT_TIPS = [
-  'Rule #1: Zero remarks on non-mustache features. Kindness Invariant strictly enforced.',
-  'Tip: Chevron and Handlebar styles receive maximum swagger weighting in championship standings.',
-  'Notice: Marker pen drawings and pet whiskers will be exiled to the Wooden Spoon Division!',
-  'Fact: Tom Selleck was consulted in spirit during the training of this neural court.',
-  'Notice: High server traffic is managed via a FIFO rate-limit queue to ensure fair judging for all squads.'
+  'Tip: Judging evaluates facial hair growth, density, and styling.',
+  'Tip: Chevron and Handlebar styles earn top marks for classic charm.',
+  'Notice: Pet whiskers or drawings are awarded the Wooden Spoon!',
+  'Fact: Tom Selleck is the unofficial spirit guide of Movember.',
+  'Tip: Submit as many attempts as you want — your best score counts!'
 ];
 
 export default function JudgingModal({ isOpen }) {
@@ -74,14 +74,14 @@ export default function JudgingModal({ isOpen }) {
           <div className="scanner-sweep-line"></div>
         </div>
 
-        <h2 className="judging-headline">The Supreme Court is Deliberating</h2>
+        <h2 className="judging-headline">Evaluating Your Mustache</h2>
 
         {/* Dynamic Queue Notification Banner if rate limited/queued */}
         {isQueuedDelay && (
           <div className="queue-waiting-banner fade-in">
             <div className="queue-beacon-dot"></div>
             <div className="queue-banner-text">
-              <strong>High Court Volume Detected:</strong> Your photo is queued in the rate-limiter chamber. Evaluating automatically as soon as the window opens!
+              <strong>High Volume:</strong> Evaluating your photo, please hold on a moment...
             </div>
           </div>
         )}
@@ -119,14 +119,14 @@ export default function JudgingModal({ isOpen }) {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '11px', color: 'var(--text-dim)', marginBottom: '8px' }}>
-          <span>Deliberation Progress: {progressPercent}%</span>
+          <span>Evaluating: {progressPercent}%</span>
           <span>Elapsed: {elapsedSeconds.toFixed(1)}s</span>
         </div>
 
         {/* Cycling Court Tip */}
         <div className="court-tip-box">
           <div className="court-tip-label">
-            <FaScaleBalanced style={{ marginRight: '4px' }} /> Movember Court Directive
+            <FaScaleBalanced style={{ marginRight: '4px' }} /> Movember Tip
           </div>
           <div className="court-tip-text">
             {COURT_TIPS[tipIndex]}
@@ -134,7 +134,7 @@ export default function JudgingModal({ isOpen }) {
         </div>
 
         <p className="judging-footnote" style={{ marginTop: '16px' }}>
-          Powered by Google Gemini 3.5 Flash-Lite Multimodal Vision • Zero Data Loss Guaranteed
+          Powered by Google Gemini Vision
         </p>
       </div>
     </div>

@@ -400,7 +400,7 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
               className="flex-1"
               onClick={onGoToDashboard}
             >
-              View My Vault
+              View Dashboard
             </Button>
           </div>
         </div>

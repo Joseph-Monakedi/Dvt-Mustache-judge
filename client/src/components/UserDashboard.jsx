@@ -55,13 +55,13 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
           openAuthModal('login');
           return;
         }
-        throw new Error(`Failed to load vault data (${res.status})`);
+        throw new Error(`Failed to load dashboard data (${res.status})`);
       }
 
       const data = await res.json();
       setDashboardData(data);
     } catch (err) {
-      setError(err.message || 'Unable to load your mustache vault.');
+      setError(err.message || 'Unable to load your dashboard.');
     } finally {
       setLoading(false);
     }
@@ -132,9 +132,9 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
           <div className="gate-icon-wrap w-20 h-20 mx-auto mb-5 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-4xl shadow-lg shadow-cyan-950/50">
             <GiMustache className="gate-icon" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Sign In to View Your Mustache Vault</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">Sign In to View Your Dashboard</h2>
           <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-            Track your personal best score, review past AI judging roasts, manage your entry status, and resubmit new facial hair attempts at any time!
+            Track your best score, view past judging results, manage your entry status, and submit new photos at any time!
           </p>
           <div className="gate-actions flex flex-col sm:flex-row gap-3 justify-center">
             <Button 
@@ -143,7 +143,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
               icon={FaArrowRightToBracket}
               onClick={() => openAuthModal('login')}
             >
-              Sign In to Your Vault
+              Sign In
             </Button>
             <Button 
               variant="secondary"
@@ -285,7 +285,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
 
           {!user.leaderboardPaid && (
             <p className="text-[11px] text-slate-400 italic">
-              * Pay R100 to unlock your single highest score on the public office leaderboard!
+              * Pay R100 to unlock your score on the leaderboard.
             </p>
           )}
         </div>
@@ -319,24 +319,24 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
             <div className="cleanshave-header-row flex flex-wrap items-center gap-2.5">
               <h3 className="text-lg sm:text-xl font-bold text-white">
                 {hasBaseline 
-                  ? 'Day 1 Clean Shave Baseline (Active)' 
-                  : 'Day 1 Clean Shave Baseline Required'}
+                  ? 'Day 1 Clean Shave Baseline' 
+                  : 'Day 1 Clean Shave Required'}
               </h3>
               {hasBaseline ? (
                 <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                  <FaCircleCheck className="text-[10px]" /> Registered & Active
+                  <FaCircleCheck className="text-[10px]" /> Baseline Active
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                  <FaClock className="text-[10px]" /> Needed for Growth Scoring
+                  <FaClock className="text-[10px]" /> Required
                 </span>
               )}
             </div>
 
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
               {hasBaseline
-                ? 'Your baseline is locked in! All subsequent mustache entries are evaluated alongside this clean-shave photo to track follicle density evolution and calculate your Growth Score.'
-                : 'Upload or snap your clean-shaven face from Day 1 of Movember. All future submissions will be judged alongside this picture to calculate your follicle growth transformation!'}
+                ? 'Your baseline is recorded. Future mustache entries are evaluated against this photo to measure growth.'
+                : 'Snap a photo of your clean-shaven face. Future entries are evaluated alongside this photo to track your growth.'}
             </p>
 
             {baselineDate && (
@@ -419,13 +419,13 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
       <div className="dashboard-action-bar flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10">
         <div className="action-bar-left space-y-1">
           <h2 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-3">
-            <span>My Mustache Vault</span>
+            <span>My Submissions</span>
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">
               {dashboardData?.entries?.length ?? 0} attempts
             </span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-400">
-            Submit as many entries as you like. Only your highest-scoring mustache is submitted to the leaderboard!
+            Submit as many entries as you like. Only your highest-scoring mustache is featured on the leaderboard!
           </p>
         </div>
 
@@ -450,7 +450,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
             variant="ghost"
             icon={FaRotate}
             onClick={fetchDashboard}
-            title="Refresh Vault"
+            title="Refresh Submissions"
             className={loading ? 'animate-spin' : ''}
           />
         </div>
@@ -460,7 +460,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
       {loading ? (
         <div className="dashboard-loading py-20 text-center space-y-4">
           <div className="w-12 h-12 mx-auto border-3 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-medium text-slate-400">Loading your mustache portfolio...</p>
+          <p className="text-sm font-medium text-slate-400">Loading your submissions...</p>
         </div>
       ) : error ? (
         <div className="dashboard-error bg-rose-950/40 border border-rose-500/30 rounded-2xl p-8 text-center space-y-4 max-w-md mx-auto">
@@ -475,9 +475,9 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
             <GiMustache className="empty-icon" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-xl font-bold text-white">Your Vault is Empty</h3>
+            <h3 className="text-xl font-bold text-white">No Submissions Yet</h3>
             <p className="text-sm text-slate-400 leading-relaxed">
-              You haven't stepped before the AI facial hair judge yet! Take a photo with the webcam booth now to start building your record.
+              You haven't submitted a mustache photo yet! Snap a photo in the booth now to see your score.
             </p>
           </div>
           <Button 
@@ -487,7 +487,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
             onClick={onGoToBooth}
             className="shadow-xl shadow-cyan-500/25"
           >
-            Step into the Booth
+            Enter the Booth
           </Button>
         </div>
       ) : (

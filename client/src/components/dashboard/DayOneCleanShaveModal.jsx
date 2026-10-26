@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import { 
   FaCamera, 
-  FaUpload, 
   FaRotate, 
   FaCheck, 
   FaXmark, 
@@ -22,7 +21,6 @@ export default function DayOneCleanShaveModal({
   onSuccess
 }) {
   const { token, refreshUser } = useAuth();
-  const [activeTab, setActiveTab] = useState('camera'); // 'camera' | 'upload'
   const [capturedBlob, setCapturedBlob] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [facingMode, setFacingMode] = useState('user');
@@ -35,7 +33,6 @@ export default function DayOneCleanShaveModal({
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
-  const fileInputRef = useRef(null);
 
   // Stop camera tracks helper
   const stopCamera = useCallback(() => {
@@ -78,14 +75,14 @@ export default function DayOneCleanShaveModal({
       setCameraActive(true);
     } catch (err) {
       console.warn('Camera start error:', err);
-      setCameraError(err.message || 'Unable to access camera. Please allow camera permissions or switch to File Upload.');
+      setCameraError('Camera access is required. Please allow camera permissions in your browser to take your photo.');
       setCameraActive(false);
     }
   }, [facingMode, stopCamera]);
 
-  // Manage camera on modal open / tab switch
+  // Manage camera on modal open
   useEffect(() => {
-    if (isOpen && activeTab === 'camera' && !previewUrl) {
+    if (isOpen && !previewUrl) {
       startCamera();
     } else {
       stopCamera();
@@ -94,7 +91,7 @@ export default function DayOneCleanShaveModal({
     return () => {
       stopCamera();
     };
-  }, [isOpen, activeTab, previewUrl, startCamera, stopCamera]);
+  }, [isOpen, previewUrl, startCamera, stopCamera]);
 
   // Handle countdown & capture
   const handleStartCaptureCountdown = () => {
@@ -144,27 +141,6 @@ export default function DayOneCleanShaveModal({
     );
   };
 
-  // Handle File Selection
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setErrorMessage('Please select an image file (JPEG, PNG, WebP).');
-      return;
-    }
-
-    if (file.size > 8 * 1024 * 1024) {
-      setErrorMessage('File size exceeds the 8MB limit.');
-      return;
-    }
-
-    setErrorMessage('');
-    setCapturedBlob(file);
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-  };
-
   const handleRetake = () => {
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -172,12 +148,7 @@ export default function DayOneCleanShaveModal({
     setPreviewUrl(null);
     setCapturedBlob(null);
     setErrorMessage('');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-    if (activeTab === 'camera') {
-      startCamera();
-    }
+    startCamera();
   };
 
   const handleConfirmBaseline = async () => {
@@ -251,7 +222,7 @@ export default function DayOneCleanShaveModal({
       isOpen={isOpen}
       onClose={handleModalClose}
       title="Day 1 Clean Shave Baseline"
-      subtitle="Required before contest entries to calculate your Follicle Growth Score"
+      subtitle="Snap a photo of your clean-shaven face to start tracking your growth."
       maxWidth="max-w-2xl"
     >
       <div className="space-y-5">
@@ -270,45 +241,7 @@ export default function DayOneCleanShaveModal({
           </div>
         )}
 
-        {/* Tab Selector (Camera vs Upload) */}
-        {!previewUrl && (
-          <div className="grid grid-cols-2 p-1.5 bg-[#070c14] border border-white/10 rounded-xl gap-1">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('camera');
-                setErrorMessage('');
-              }}
-              className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
-                activeTab === 'camera'
-                  ? 'bg-gradient-to-r from-[#007FBA] to-[#00b4d8] text-white shadow-md shadow-cyan-500/25'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <FaCamera className="text-base" />
-              <span>Capture via Webcam</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('upload');
-                stopCamera();
-                setErrorMessage('');
-              }}
-              className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
-                activeTab === 'upload'
-                  ? 'bg-gradient-to-r from-[#007FBA] to-[#00b4d8] text-white shadow-md shadow-cyan-500/25'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <FaUpload className="text-base" />
-              <span>Upload Photo File</span>
-            </button>
-          </div>
-        )}
-
-        {/* Main View Area */}
+        {/* Main Camera / Snapshot Area */}
         <div className="relative rounded-2xl overflow-hidden bg-slate-950 border border-white/10 min-h-[340px] flex items-center justify-center">
           {/* 1. PREVIEW MODE */}
           {previewUrl ? (
@@ -322,7 +255,7 @@ export default function DayOneCleanShaveModal({
                 <FaCircleCheck className="text-sm" /> Baseline Ready
               </div>
             </div>
-          ) : activeTab === 'camera' ? (
+          ) : (
             /* 2. LIVE CAMERA VIEW */
             <div className="relative w-full h-[360px] flex items-center justify-center bg-black">
               {cameraError ? (
@@ -330,15 +263,15 @@ export default function DayOneCleanShaveModal({
                   <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 text-xl">
                     <FaCamera />
                   </div>
-                  <h4 className="text-white font-bold mb-1">Camera Unavailable</h4>
+                  <h4 className="text-white font-bold mb-1">Camera Permission Required</h4>
                   <p className="text-slate-400 text-xs mb-4">{cameraError}</p>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setActiveTab('upload')}
-                    icon={FaUpload}
+                    onClick={startCamera}
+                    icon={FaRotate}
                   >
-                    Switch to Photo Upload
+                    Try Camera Again
                   </Button>
                 </div>
               ) : (
@@ -379,38 +312,6 @@ export default function DayOneCleanShaveModal({
                 </>
               )}
             </div>
-          ) : (
-            /* 3. FILE UPLOAD VIEW */
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full h-[360px] flex flex-col items-center justify-center p-8 text-center border-2 border-dashed border-cyan-500/30 hover:border-cyan-400/60 bg-gradient-to-b from-[#0d1522]/50 to-[#070c14] cursor-pointer transition-colors group"
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-
-              <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 group-hover:scale-110 group-hover:border-cyan-400 flex items-center justify-center text-cyan-400 text-2xl mb-4 transition-all shadow-lg shadow-cyan-950/50">
-                <FaUpload />
-              </div>
-
-              <h4 className="text-base font-bold text-white mb-1">
-                Choose Day 1 Clean Shave Photo
-              </h4>
-              <p className="text-xs text-slate-400 max-w-sm mb-4">
-                Click to browse or drag & drop. High-resolution portrait showing full face with clean-shaven chin and upper lip.
-              </p>
-
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5">JPEG</span>
-                <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5">PNG</span>
-                <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5">WebP</span>
-                <span>• Max 8MB</span>
-              </div>
-            </div>
           )}
         </div>
 
@@ -418,7 +319,7 @@ export default function DayOneCleanShaveModal({
         <div className="flex items-start gap-3 p-3.5 bg-[#131f33]/70 border border-white/5 rounded-xl text-xs text-slate-300">
           <FaCircleInfo className="text-cyan-400 text-base shrink-0 mt-0.5" />
           <p>
-            <strong className="text-white font-semibold">Growth Scoring Rule:</strong> All your subsequent mustache entries throughout Movember will be compared against this baseline to track follicle density evolution and determine your transformation score.
+            <strong className="text-white font-semibold">Baseline Rule:</strong> Future mustache entries will be compared against this photo to measure your growth.
           </p>
         </div>
 
@@ -432,7 +333,7 @@ export default function DayOneCleanShaveModal({
                 icon={FaArrowRotateLeft}
                 disabled={isSubmitting}
               >
-                Retake / Change
+                Retake
               </Button>
               <Button
                 variant="primary"
@@ -440,10 +341,10 @@ export default function DayOneCleanShaveModal({
                 icon={FaCheck}
                 loading={isSubmitting}
               >
-                Confirm & Lock In Baseline
+                Save Baseline
               </Button>
             </>
-          ) : activeTab === 'camera' && cameraActive ? (
+          ) : cameraActive ? (
             <>
               <Button
                 variant="secondary"

@@ -69,7 +69,7 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
             <div className="verdict-tag">
               {verdict.isWoodenSpoon 
                 ? ` Wooden Spoon Verdict • ${verdict.woodenSpoonReason || 'Creative Submission'}` 
-                : 'Supreme Movember Court Verdict'}
+                : 'Official Judging Verdict'}
             </div>
             <h2 className="contestant-display-name">{verdict.contestantName}</h2>
             <div className="contestant-cohort-tag">

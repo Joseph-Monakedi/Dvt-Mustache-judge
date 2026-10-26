@@ -249,7 +249,7 @@ export default function QuizPodiumView({
           onClick={onGoToDashboard}
           className="shadow-2xl shadow-cyan-500/30 w-full sm:w-auto"
         >
-          Back to My Mustache Vault
+          Back to Dashboard
         </Button>
 
         {isAdmin && (

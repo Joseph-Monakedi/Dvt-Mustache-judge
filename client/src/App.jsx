@@ -246,7 +246,7 @@ export default function App() {
       <footer className="app-footer">
         <div className="footer-content">
           <div className="footer-text">
-            <span>DVT Movember 2026</span> • Zero Friction AI Facial Hair Court • Kindness Invariant Verified
+            <span>DVT Movember 2026</span> • Celebrating facial hair for a great cause
           </div>
           <div className="footer-links">
             {!isMobile ? (
@@ -259,7 +259,7 @@ export default function App() {
               </button>
             ) : (
               <span className="footer-mobile-tag">
-                <FaMobileScreen className="btn-icon" /> Mobile Court Active
+                <FaMobileScreen className="btn-icon" /> Mobile Active
               </span>
             )}
           </div>

@@ -3189,27 +3189,25 @@
 
   .mobile-shutter-secondary {
     display: flex !important;
-    gap: 10px;
     width: 100%;
-    max-width: 320px;
     justify-content: center;
   }
 
   .mobile-secondary-control {
-    flex: 1;
     min-height: 40px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 20px;
+    padding: 8px 22px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 9999px;
     color: var(--text-main);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: all 0.15s ease;
   }
 
   .mobile-secondary-control:active {
@@ -7251,9 +7249,9 @@
 }
 
 /* ==========================================================================
-   PAYFAST PAYMENT GATEWAY INTEGRATION STYLES
+   COMPACT REGISTRATION ENTRY PLAN STYLES
    ========================================================================== */
-.auth-payfast-plans-group {
+.auth-compact-plans-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -7261,104 +7259,68 @@
   margin-top: 4px;
 }
 
-.payfast-badge-mini {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.3));
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  color: #6ee7b7;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  letter-spacing: 0.5px;
-}
-
-.payfast-plans-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-@media (max-width: 480px) {
-  .payfast-plans-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.payfast-plan-card {
-  position: relative;
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  padding: 10px 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.compact-plans-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
-.payfast-plan-card:hover {
-  background: rgba(30, 41, 59, 0.8);
-  border-color: rgba(0, 180, 216, 0.4);
-  transform: translateY(-1px);
-}
-
-.payfast-plan-card.selected {
-  background: linear-gradient(135deg, rgba(0, 180, 216, 0.15), rgba(0, 119, 182, 0.25));
-  border-color: #00b4d8;
-  box-shadow: 0 0 16px rgba(0, 180, 216, 0.25);
-}
-
-.plan-badge-rec {
-  position: absolute;
-  top: -8px;
-  right: 10px;
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: #0f172a;
-  font-size: 9px;
-  font-weight: 800;
-  text-transform: uppercase;
-  padding: 1px 6px;
-  border-radius: 6px;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.4);
-}
-
-.plan-top {
+.compact-plan-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
 }
 
-.plan-title {
-  font-size: 12px;
-  font-weight: 700;
+.compact-plan-item:hover {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(0, 180, 216, 0.35);
+}
+
+.compact-plan-item.selected {
+  background: linear-gradient(135deg, rgba(0, 180, 216, 0.12), rgba(0, 119, 182, 0.2));
+  border-color: #00b4d8;
+  box-shadow: 0 0 12px rgba(0, 180, 216, 0.2);
+}
+
+.compact-plan-item input[type="radio"] {
+  accent-color: #00b4d8;
+  width: 16px;
+  height: 16px;
+  margin: 0 10px 0 0;
+  cursor: pointer;
+}
+
+.compact-plan-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.compact-plan-title {
+  font-size: 13px;
+  font-weight: 600;
   color: #f1f5f9;
 }
 
-.plan-price {
+.compact-plan-price {
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   color: #38bdf8;
+  margin-left: 8px;
 }
 
-.plan-desc {
-  font-size: 11px;
-  color: #94a3b8;
-  margin: 0;
-  line-height: 1.35;
-}
-
-.payfast-guarantee-box {
-  background: rgba(14, 165, 233, 0.08);
-  border: 1px solid rgba(14, 165, 233, 0.25);
-  border-radius: 10px;
-  padding: 10px 12px;
+.auth-payfast-plans-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  text-align: left;
   margin-top: 4px;
 }
 
