@@ -13,6 +13,16 @@ public record LoginRequest(
     [Required] string Password
 );
 
+public record ForgotPasswordRequest(
+    [Required, EmailAddress] string Email
+);
+
+public record ResetPasswordRequest(
+    [Required] string Token,
+    [Required, EmailAddress] string Email,
+    [Required, MinLength(6)] string NewPassword
+);
+
 public record AuthResponse(
     Guid Id,
     string Email,

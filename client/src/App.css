@@ -7558,6 +7558,278 @@
   }
 }
 
+/* ==========================================================================
+   PASSWORD RESET & SPAM FOLDER NOTICES
+   ========================================================================== */
+.form-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.auth-forgot-link {
+  background: transparent;
+  border: none;
+  color: var(--accent-cyan, #00b4d8);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  padding: 0;
+}
+
+.auth-forgot-link:hover {
+  color: #38bdf8;
+  text-decoration: underline;
+}
+
+.auth-forgot-nav {
+  display: flex;
+  margin-bottom: 18px;
+}
+
+.auth-back-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auth-back-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.auth-spam-notice-box {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  border-left: 4px solid #f59e0b;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  color: #fef3c7;
+  margin: 6px 0;
+}
+
+.spam-notice-icon {
+  font-size: 18px;
+  color: #fbbf24;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.spam-notice-text strong {
+  display: block;
+  font-size: 13px;
+  color: #fbbf24;
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.spam-notice-text p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #e2e8f0;
+}
+
+.auth-success-alert {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: #d1fae5;
+}
+
+.success-alert-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #34d399;
+}
+
+.success-alert-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #f1f5f9;
+}
+
+.spam-folder-reminder {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px dashed rgba(245, 158, 11, 0.4);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #fef3c7;
+}
+
+.reminder-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 14px;
+}
+
+.reset-pwd-wrapper {
+  min-height: 75vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+}
+
+.reset-pwd-card {
+  background: #0b1320;
+  border: 1px solid rgba(0, 180, 216, 0.3);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  padding: 36px 32px;
+  position: relative;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 40px rgba(0, 180, 216, 0.12);
+  animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 640px) {
+  .reset-pwd-card {
+    padding: 28px 20px;
+  }
+}
+
+.reset-pwd-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.reset-logo-badge {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(0, 180, 216, 0.2), rgba(0, 119, 182, 0.35));
+  border: 1px solid rgba(0, 180, 216, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  box-shadow: 0 0 24px rgba(0, 180, 216, 0.3);
+}
+
+.reset-logo-badge.success-badge {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.35));
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.3);
+}
+
+.reset-logo-badge.error-badge {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.35));
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.3);
+}
+
+.reset-icon {
+  font-size: 32px;
+}
+
+.reset-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.01em;
+}
+
+.reset-subtitle {
+  font-size: 14px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.pwd-toggle-btn {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.pwd-toggle-btn:hover {
+  color: #cbd5e1;
+}
+
+.spam-warning-callout {
+  background: rgba(245, 158, 11, 0.1);
+  border-left: 3px solid #f59e0b;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  color: #fef3c7;
+  margin: 10px 0 16px 0;
+}
+
+.spam-warning-callout .callout-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.spam-warning-callout .callout-text strong {
+  display: block;
+  font-size: 13px;
+  color: #fbbf24;
+  margin-bottom: 2px;
+}
+
+.spam-warning-callout .callout-text p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #e2e8f0;
+}
+
+.reset-success-box,
+.reset-invalid-box {
+  text-align: center;
+  margin-bottom: 24px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
 
 
 

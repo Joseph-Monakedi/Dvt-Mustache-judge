@@ -50,6 +50,7 @@ public class AppDbContext : DbContext
             entity.HasIndex(u => u.Email).IsUnique();
             entity.HasIndex(u => u.LeaderboardPaid);
             entity.HasIndex(u => u.QuizPaid);
+            entity.HasIndex(u => u.PasswordResetToken);
         });
 
         modelBuilder.Entity<QuizGame>(entity =>

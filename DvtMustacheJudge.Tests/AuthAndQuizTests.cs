@@ -410,4 +410,122 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
         Assert.Equal("Question", currentDoc.RootElement.GetProperty("status").GetString());
         Assert.Equal(1, currentDoc.RootElement.GetProperty("currentQuestionIndex").GetInt32());
     }
+
+    [Fact]
+    public async Task ForgotPassword_WhenUserExists_ShouldGenerateTokenAndReturnSpamNotice()
+    {
+        // 1. Register a test contestant
+        var email = $"forgot.{Guid.NewGuid():N}@dvt.co.za";
+        var regRes = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(
+            Email: email,
+            FullName: "Forgot Tester",
+            Password: "InitialPassword123!"
+        ));
+        Assert.Equal(HttpStatusCode.OK, regRes.StatusCode);
+
+        // 2. Request password reset
+        var forgotRes = await _client.PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest(Email: email));
+        Assert.Equal(HttpStatusCode.OK, forgotRes.StatusCode);
+
+        var forgotJson = await forgotRes.Content.ReadAsStringAsync();
+        using var forgotDoc = JsonDocument.Parse(forgotJson);
+        var msg = forgotDoc.RootElement.GetProperty("message").GetString();
+        Assert.NotNull(msg);
+        Assert.Contains("spam or junk folder", msg, StringComparison.OrdinalIgnoreCase);
+
+        // 3. Verify user in DB has generated reset token and valid expiration
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = db.Users.FirstOrDefault(u => u.Email == email.ToLower());
+        Assert.NotNull(user);
+        Assert.NotNull(user.PasswordResetToken);
+        Assert.NotEmpty(user.PasswordResetToken);
+        Assert.NotNull(user.PasswordResetTokenExpiresAt);
+        Assert.True(user.PasswordResetTokenExpiresAt > DateTime.UtcNow);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_WhenUserDoesNotExist_ShouldReturnOkWithoutRevealingUserMissing()
+    {
+        var nonExistentEmail = $"ghost.{Guid.NewGuid():N}@dvt.co.za";
+        var forgotRes = await _client.PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest(Email: nonExistentEmail));
+        Assert.Equal(HttpStatusCode.OK, forgotRes.StatusCode);
+
+        var forgotJson = await forgotRes.Content.ReadAsStringAsync();
+        using var forgotDoc = JsonDocument.Parse(forgotJson);
+        var msg = forgotDoc.RootElement.GetProperty("message").GetString();
+        Assert.NotNull(msg);
+        Assert.Contains("spam or junk folder", msg, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ResetPassword_WithInvalidToken_ShouldReturnBadRequest()
+    {
+        var res = await _client.PostAsJsonAsync("/api/auth/reset-password", new ResetPasswordRequest(
+            Token: "completely-bogus-token-12345",
+            Email: "someone@dvt.co.za",
+            NewPassword: "BrandNewSecurePassword123!"
+        ));
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task ResetPassword_WithValidToken_ShouldChangePasswordAndPermitNewLogin()
+    {
+        // 1. Register a test user
+        var email = $"resettable.{Guid.NewGuid():N}@dvt.co.za";
+        var originalPassword = "OriginalSecretPassword1!";
+        var newPassword = "UpdatedSecurePassword2!";
+
+        var regRes = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(
+            Email: email,
+            FullName: "Reset Champion",
+            Password: originalPassword
+        ));
+        Assert.Equal(HttpStatusCode.OK, regRes.StatusCode);
+
+        // 2. Request forgot-password to trigger token generation
+        var forgotRes = await _client.PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest(Email: email));
+        Assert.Equal(HttpStatusCode.OK, forgotRes.StatusCode);
+
+        // 3. Retrieve token from database
+        string resetToken;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var dbUser = db.Users.First(u => u.Email == email.ToLower());
+            resetToken = dbUser.PasswordResetToken!;
+        }
+        Assert.NotNull(resetToken);
+
+        // 4. Perform password reset
+        var resetRes = await _client.PostAsJsonAsync("/api/auth/reset-password", new ResetPasswordRequest(
+            Token: resetToken,
+            Email: email,
+            NewPassword: newPassword
+        ));
+        Assert.Equal(HttpStatusCode.OK, resetRes.StatusCode);
+
+        // 5. In DB, token should now be cleared
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var dbUser = db.Users.First(u => u.Email == email.ToLower());
+            Assert.Null(dbUser.PasswordResetToken);
+            Assert.Null(dbUser.PasswordResetTokenExpiresAt);
+        }
+
+        // 6. Old password fails
+        var failedLogin = await _client.PostAsJsonAsync("/api/auth/login", new LoginRequest(Email: email, Password: originalPassword));
+        Assert.Equal(HttpStatusCode.Unauthorized, failedLogin.StatusCode);
+
+        // 7. New password succeeds
+        var successLogin = await _client.PostAsJsonAsync("/api/auth/login", new LoginRequest(Email: email, Password: newPassword));
+        Assert.Equal(HttpStatusCode.OK, successLogin.StatusCode);
+
+        var loginJson = await successLogin.Content.ReadAsStringAsync();
+        using var loginDoc = JsonDocument.Parse(loginJson);
+        Assert.True(loginDoc.RootElement.TryGetProperty("token", out var tokenProp));
+        Assert.NotEmpty(tokenProp.GetString()!);
+    }
 }

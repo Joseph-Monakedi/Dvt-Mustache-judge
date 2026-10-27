@@ -145,6 +145,8 @@ public static class DbInitializer
                 ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PayfastPaymentId"" character varying(100);
                 ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""AmountPaid"" numeric(10,2);
                 ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PaidAt"" timestamp with time zone;
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PasswordResetToken"" text;
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PasswordResetTokenExpiresAt"" timestamp with time zone;
             ";
             await context.Database.ExecuteSqlRawAsync(schemaSql);
         }

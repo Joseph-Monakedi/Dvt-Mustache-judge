@@ -46,7 +46,13 @@ builder.Services.AddSingleton<ITokenService, TokenService>();
 // 7. PayFast Payment Gateway Service
 builder.Services.AddScoped<IPayFastService, PayFastService>();
 
-// 8. CORS policy for React Vite dev server and mobile testing
+// 8. Email Service (Mailjet with IEmailService abstraction)
+builder.Services.AddHttpClient<IEmailService, MailjetEmailService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+
+// 9. CORS policy for React Vite dev server and mobile testing
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowViteClient", policy =>

@@ -44,6 +44,11 @@ public class User
     public string? CleanShaveImageUrl { get; set; }
     public DateTime? CleanShaveUploadedAt { get; set; }
 
+    // Password reset fields
+    [MaxLength(100)]
+    public string? PasswordResetToken { get; set; }
+    public DateTime? PasswordResetTokenExpiresAt { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation property

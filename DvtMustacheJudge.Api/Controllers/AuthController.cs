@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using DvtMustacheJudge.Api.Data;
 using DvtMustacheJudge.Api.Models;
 using DvtMustacheJudge.Api.Services;
@@ -12,17 +13,20 @@ public class AuthController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly ITokenService _tokenService;
+    private readonly IEmailService _emailService;
     private readonly IConfiguration _config;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         AppDbContext context,
         ITokenService tokenService,
+        IEmailService emailService,
         IConfiguration config,
         ILogger<AuthController> logger)
     {
         _context = context;
         _tokenService = tokenService;
+        _emailService = emailService;
         _config = config;
         _logger = logger;
     }
@@ -203,5 +207,115 @@ public class AuthController : ControllerBase
     public IActionResult GetOffices()
     {
         return Ok(Array.Empty<string>());
+    }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+
+        if (user != null)
+        {
+            // Generate secure random 32-byte hex token
+            var tokenBytes = RandomNumberGenerator.GetBytes(32);
+            var token = Convert.ToHexString(tokenBytes).ToLowerInvariant();
+
+            user.PasswordResetToken = token;
+            user.PasswordResetTokenExpiresAt = DateTime.UtcNow.AddHours(2);
+            await _context.SaveChangesAsync();
+
+            // Determine client base URL
+            var origin = Request.Headers.Origin.ToString();
+            if (string.IsNullOrWhiteSpace(origin))
+            {
+                var referer = Request.Headers.Referer.ToString();
+                if (!string.IsNullOrWhiteSpace(referer) && Uri.TryCreate(referer, UriKind.Absolute, out var refererUri))
+                {
+                    origin = $"{refererUri.Scheme}://{refererUri.Authority}";
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(origin))
+            {
+                var scheme = Request.Scheme;
+                var proto = Request.Headers["X-Forwarded-Proto"].ToString();
+                if (!string.IsNullOrWhiteSpace(proto))
+                {
+                    scheme = proto;
+                }
+                origin = $"{scheme}://{Request.Host.Value}";
+            }
+
+            // In production/Render, if host is non-localhost force https
+            if (!origin.Contains("localhost") && !origin.Contains("127.0.0.1") && origin.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            {
+                origin = "https://" + origin.Substring("http://".Length);
+            }
+
+            var resetUrl = $"{origin.TrimEnd('/')}/reset-password?token={Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(user.Email)}";
+
+            _logger.LogInformation("Password reset requested for {Email}. Sending reset email...", user.Email);
+            await _emailService.SendPasswordResetEmailAsync(user.Email, user.FullName, resetUrl);
+        }
+        else
+        {
+            _logger.LogInformation("Password reset requested for non-existent email: {Email}", normalizedEmail);
+        }
+
+        // Return same response to prevent user email enumeration
+        return Ok(new
+        {
+            message = "If an account exists with this email address, a password reset link has been sent. Please make sure to check your spam or junk folder."
+        });
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+
+        if (user == null || 
+            string.IsNullOrWhiteSpace(user.PasswordResetToken) || 
+            !string.Equals(user.PasswordResetToken, request.Token, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { error = "Invalid or expired password reset link. Please request a new one." });
+        }
+
+        if (user.PasswordResetTokenExpiresAt == null || user.PasswordResetTokenExpiresAt < DateTime.UtcNow)
+        {
+            return BadRequest(new { error = "This password reset link has expired (links are valid for 2 hours). Please request a new reset link." });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 6)
+        {
+            return BadRequest(new { error = "Password must be at least 6 characters long." });
+        }
+
+        var (hash, salt) = PasswordHasher.HashPassword(request.NewPassword);
+        user.PasswordHash = hash;
+        user.Salt = salt;
+        user.PasswordResetToken = null;
+        user.PasswordResetTokenExpiresAt = null;
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Password successfully reset for user: {Email}", user.Email);
+
+        return Ok(new
+        {
+            message = "Your password has been successfully reset. You can now log in with your new password."
+        });
     }
 }

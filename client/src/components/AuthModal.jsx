@@ -10,15 +10,20 @@ import {
   FaHeart,
   FaBolt,
   FaShieldHalved,
-  FaCreditCard
+  FaCreditCard,
+  FaTriangleExclamation,
+  FaPaperPlane,
+  FaCircleCheck,
+  FaArrowLeft
 } from 'react-icons/fa6';
 import { GiMustache } from 'react-icons/gi';
 import { useAuth } from '../context/AuthContext';
 import { initiatePayFastCheckout } from '../utils/payfast';
+import { apiUrl } from '../utils/api';
 
 export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLoginSuccess }) {
   const { login, register } = useAuth();
-  const [mode, setMode] = useState(initialMode); // 'login' | 'register'
+  const [mode, setMode] = useState(initialMode); // 'login' | 'register' | 'forgot'
 
   // Form states
   const [email, setEmail] = useState('');
@@ -29,10 +34,12 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
   const [loading, setLoading] = useState(false);
   const [isRedirectingPayFast, setIsRedirectingPayFast] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     setMode(initialMode);
     setErrorMessage('');
+    setSuccessMessage('');
     setIsRedirectingPayFast(false);
   }, [initialMode, isOpen]);
 
@@ -52,10 +59,28 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+    setSuccessMessage('');
     setLoading(true);
 
     try {
-      if (mode === 'login') {
+      if (mode === 'forgot') {
+        if (!email.trim()) {
+          throw new Error('Please enter your email address.');
+        }
+
+        const res = await fetch(apiUrl('/api/auth/forgot-password'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim() })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to send password reset email.');
+        }
+
+        setSuccessMessage(data.message || 'If an account exists with this email address, a password reset link has been sent. Please make sure to check your spam or junk folder.');
+      } else if (mode === 'login') {
         if (!email.trim() || !password) {
           throw new Error('Please enter both email and password.');
         }
@@ -127,48 +152,92 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
             <GiMustache className="auth-mustache-icon" />
           </div>
           <h2 className="auth-title">
-            {mode === 'login' ? 'Sign In' : 'Join the Competition'}
+            {mode === 'forgot'
+              ? 'Reset Password'
+              : mode === 'login' 
+                ? 'Sign In' 
+                : 'Join the Competition'}
           </h2>
           <p className="auth-subtitle">
-            {mode === 'login' 
-              ? 'Sign in to access your dashboard and participate.'
-              : 'Create your contestant account to get started.'}
+            {mode === 'forgot'
+              ? 'Enter your account email to receive a password reset link.'
+              : mode === 'login' 
+                ? 'Sign in to access your dashboard and participate.'
+                : 'Create your contestant account to get started.'}
           </p>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="auth-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'login'}
-            className={`auth-tab-btn ${mode === 'login' ? 'active' : ''}`}
-            onClick={() => {
-              setMode('login');
-              setErrorMessage('');
-            }}
-          >
-            <FaRightToBracket className="tab-icon" /> Sign In
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'register'}
-            className={`auth-tab-btn ${mode === 'register' ? 'active' : ''}`}
-            onClick={() => {
-              setMode('register');
-              setErrorMessage('');
-            }}
-          >
-            <FaUserPlus className="tab-icon" /> Register
-          </button>
-        </div>
+        {/* Tab Switcher / Back Navigation */}
+        {mode === 'forgot' ? (
+          <div className="auth-forgot-nav">
+            <button
+              type="button"
+              className="auth-back-btn"
+              onClick={() => {
+                setMode('login');
+                setErrorMessage('');
+                setSuccessMessage('');
+              }}
+            >
+              <FaArrowLeft className="btn-icon" /> Back to Sign In
+            </button>
+          </div>
+        ) : (
+          <div className="auth-tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'login'}
+              className={`auth-tab-btn ${mode === 'login' ? 'active' : ''}`}
+              onClick={() => {
+                setMode('login');
+                setErrorMessage('');
+                setSuccessMessage('');
+              }}
+            >
+              <FaRightToBracket className="tab-icon" /> Sign In
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'register'}
+              className={`auth-tab-btn ${mode === 'register' ? 'active' : ''}`}
+              onClick={() => {
+                setMode('register');
+                setErrorMessage('');
+                setSuccessMessage('');
+              }}
+            >
+              <FaUserPlus className="tab-icon" /> Register
+            </button>
+          </div>
+        )}
 
         {/* Error Alert */}
         {errorMessage && (
           <div className="auth-error-alert fade-in">
             <FaCircleExclamation className="alert-icon" />
             <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {/* Success Alert */}
+        {successMessage && (
+          <div className="auth-success-alert fade-in">
+            <div className="success-alert-header">
+              <FaCircleCheck className="alert-icon text-emerald-400" />
+              <strong>Reset Link Dispatched</strong>
+            </div>
+            <p className="success-alert-text">{successMessage}</p>
+            
+            {/* SPAM REMINDER */}
+            <div className="spam-folder-reminder">
+              <FaTriangleExclamation className="reminder-icon text-amber-400" />
+              <span>
+                <strong>Important:</strong> Automated emails may land in your <strong>Spam / Junk</strong> folder. 
+                Please check there and mark as &ldquo;Not Spam&rdquo;!
+              </span>
+            </div>
           </div>
         )}
 
@@ -212,23 +281,53 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="auth-password" className="form-label">Password</label>
-            <div className="input-with-icon">
-              <FaLock className="input-icon" />
-              <input
-                id="auth-password"
-                type="password"
-                className="auth-input"
-                placeholder={mode === 'register' ? 'Min 6 characters' : 'Enter your password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-                autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
-              />
+          {mode !== 'forgot' && (
+            <div className="form-group">
+              <div className="form-label-row">
+                <label htmlFor="auth-password" className="form-label">Password</label>
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    className="auth-forgot-link"
+                    onClick={() => {
+                      setMode('forgot');
+                      setErrorMessage('');
+                      setSuccessMessage('');
+                    }}
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
+              <div className="input-with-icon">
+                <FaLock className="input-icon" />
+                <input
+                  id="auth-password"
+                  type="password"
+                  className="auth-input"
+                  placeholder={mode === 'register' ? 'Min 6 characters' : 'Enter your password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                />
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Explicit Spam Warning Notice in Forgot Password View before submitting */}
+          {mode === 'forgot' && !successMessage && (
+            <div className="auth-spam-notice-box fade-in">
+              <FaTriangleExclamation className="spam-notice-icon" />
+              <div className="spam-notice-text">
+                <strong>Check Your Spam / Junk Folder:</strong>
+                <p>
+                  Security links are often filtered by mail servers. If the email doesn't appear in your inbox within a few minutes, please check your spam or junk folder.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Compact Plan Selection for Registration */}
           {mode === 'register' && (
@@ -306,33 +405,67 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
             </div>
           )}
 
-          <button
-            type="submit"
-            className="auth-submit-btn"
-            disabled={loading}
-          >
-            {loading ? (
-              <span className="spinner-wrap">
-                <span className="loading-spinner"></span> {isRedirectingPayFast ? 'Connecting to PayFast...' : 'Processing...'}
-              </span>
-            ) : mode === 'login' ? (
-              <>
-                <FaRightToBracket className="btn-icon" /> Sign In
-              </>
-            ) : selectedPlan === 'Free' ? (
-              <>
-                <FaUserPlus className="btn-icon" /> Register & Continue
-              </>
-            ) : (
-              <>
-                <FaBolt className="btn-icon text-amber-300" /> Pay R{selectedPlan === 'Combo' ? '150' : selectedPlan === 'Quiz' ? '50' : '100'} & Register
-              </>
-            )}
-          </button>
+          {/* Submit Button */}
+          {mode === 'forgot' ? (
+            <button
+              type="submit"
+              className="auth-submit-btn"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="spinner-wrap">
+                  <span className="loading-spinner"></span> Sending Reset Link...
+                </span>
+              ) : (
+                <>
+                  <FaPaperPlane className="btn-icon" /> Send Reset Link
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              type="submit"
+              className="auth-submit-btn"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="spinner-wrap">
+                  <span className="loading-spinner"></span> {isRedirectingPayFast ? 'Connecting to PayFast...' : 'Processing...'}
+                </span>
+              ) : mode === 'login' ? (
+                <>
+                  <FaRightToBracket className="btn-icon" /> Sign In
+                </>
+              ) : selectedPlan === 'Free' ? (
+                <>
+                  <FaUserPlus className="btn-icon" /> Register & Continue
+                </>
+              ) : (
+                <>
+                  <FaBolt className="btn-icon text-amber-300" /> Pay R{selectedPlan === 'Combo' ? '150' : selectedPlan === 'Quiz' ? '50' : '100'} & Register
+                </>
+              )}
+            </button>
+          )}
         </form>
 
         <div className="auth-footer-note">
-          {mode === 'login' ? (
+          {mode === 'forgot' ? (
+            <p>
+              Remember your password?{' '}
+              <button 
+                type="button" 
+                className="auth-link-btn" 
+                onClick={() => {
+                  setMode('login');
+                  setErrorMessage('');
+                  setSuccessMessage('');
+                }}
+              >
+                Sign in here
+              </button>
+            </p>
+          ) : mode === 'login' ? (
             <p>
               Don't have an account yet?{' '}
               <button 

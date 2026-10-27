@@ -11,6 +11,7 @@ import AdminPortal from './components/AdminPortal';
 import UserDashboard from './components/UserDashboard';
 import MustacheQuizArena from './components/MustacheQuizArena';
 import QuizLiveLeaderboard from './components/quiz/QuizLiveLeaderboard';
+import ResetPasswordPage from './components/ResetPasswordPage';
 import AuthModal from './components/AuthModal';
 import { useAuth } from './context/AuthContext';
 import { FaTv, FaMobileScreen } from 'react-icons/fa6';
@@ -275,6 +276,11 @@ export default function App() {
                 onBackToApp={() => navigate('/leaderboard')}
               />
             } 
+          />
+
+          <Route 
+            path="/reset-password" 
+            element={<ResetPasswordPage />} 
           />
 
           <Route path="*" element={<Navigate to="/leaderboard" replace />} />
