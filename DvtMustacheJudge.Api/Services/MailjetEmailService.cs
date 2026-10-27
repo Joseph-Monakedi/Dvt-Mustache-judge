@@ -84,6 +84,8 @@ The DVT Movember 2026 Team";
 
         try
         {
+            // CRITICAL: TrackClicks and TrackOpens MUST be "disabled" so Mailjet does not rewrite
+            // URLs into mailjet.com/lnk/* tracking redirects, which Brave Shields and ad-blockers block!
             var payload = new
             {
                 Messages = new[]
@@ -105,7 +107,9 @@ The DVT Movember 2026 Team";
                         },
                         Subject = subject,
                         TextPart = textContent,
-                        HTMLPart = htmlContent
+                        HTMLPart = htmlContent,
+                        TrackClicks = "disabled",
+                        TrackOpens = "disabled"
                     }
                 }
             };
@@ -144,20 +148,30 @@ The DVT Movember 2026 Team";
         var safeName = HtmlEncoder.Default.Encode(displayName);
         var safeUrl = HtmlEncoder.Default.Encode(resetUrl);
 
-        return $@"<!DOCTYPE html>
-<html lang=""en"">
+        return $@"<!DOCTYPE html PUBLIC ""-//W3C//DTD XHTML 1.0 Transitional//EN"" ""http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"">
+<html xmlns=""http://www.w3.org/1999/xhtml"" lang=""en"">
 <head>
-  <meta charset=""UTF-8"">
-  <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+  <meta http-equiv=""Content-Type"" content=""text/html; charset=UTF-8"" />
+  <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+  <meta name=""x-apple-disable-message-reformatting"" />
+  <meta name=""format-detection"" content=""telephone=no, address=no, email=no, date=no, url=no"" />
+  <meta name=""color-scheme"" content=""dark"" />
+  <meta name=""supported-color-schemes"" content=""dark"" />
   <title>Reset Your Password - DVT Movember 2026</title>
-  <style>
-    body, table, td, p, a, li, blockquote {{
-      -webkit-text-size-adjust: 100%;
-      -ms-text-size-adjust: 100%;
+  <style type=""text/css"">
+    html, body {{
+      margin: 0 !important;
+      padding: 0 !important;
+      height: auto !important;
+      width: 100% !important;
+      -webkit-text-size-adjust: 100% !important;
+      -ms-text-size-adjust: 100% !important;
+      background-color: #070c14 !important;
     }}
     table, td {{
       mso-table-lspace: 0pt;
       mso-table-rspace: 0pt;
+      border-collapse: collapse;
     }}
     img {{
       -ms-interpolation-mode: bicubic;
@@ -167,25 +181,37 @@ The DVT Movember 2026 Team";
       outline: none;
       text-decoration: none;
     }}
+    a {{
+      text-decoration: none;
+    }}
+    a[x-apple-data-detectors] {{
+      color: inherit !important;
+      text-decoration: none !important;
+      font-size: inherit !important;
+      font-family: inherit !important;
+      font-weight: inherit !important;
+      line-height: inherit !important;
+    }}
   </style>
 </head>
-<body style=""margin: 0; padding: 0; background-color: #070c14; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f8fafc;"">
-  <table role=""presentation"" border=""0"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""background-color: #070c14; min-height: 100vh; padding: 40px 16px;"">
+<body style=""margin: 0; padding: 0; width: 100% !important; background-color: #070c14; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f8fafc;"">
+  <!-- Outer Table (No min-height: 100vh to avoid iOS Mail infinite scroll rubber-banding) -->
+  <table role=""presentation"" border=""0"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""background-color: #070c14; width: 100% !important; margin: 0; padding: 0; border-collapse: collapse;"">
     <tr>
-      <td align=""center"">
+      <td align=""center"" style=""padding: 24px 12px; background-color: #070c14;"">
         <!-- Main Container Card -->
-        <table role=""presentation"" border=""0"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""max-width: 580px; background-color: #0d1522; border-radius: 18px; border: 1px solid rgba(0, 180, 216, 0.35); box-shadow: 0 20px 45px rgba(0,0,0,0.7), 0 0 35px rgba(0,180,216,0.12); overflow: hidden;"">
+        <table role=""presentation"" border=""0"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""max-width: 580px; width: 100%; margin: 0 auto; background-color: #0d1522; border-radius: 14px; border: 1px solid #00b4d8; border-collapse: separate;"">
           
           <!-- Header Banner -->
           <tr>
-            <td style=""background: linear-gradient(135deg, #091321 0%, #0d1e34 100%); padding: 36px 32px 24px 32px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.08);"">
-              <div style=""display: inline-block; width: 64px; height: 64px; line-height: 64px; border-radius: 50%; background: linear-gradient(135deg, rgba(0,180,216,0.25), rgba(0,119,182,0.4)); border: 1px solid #00b4d8; margin-bottom: 16px;"">
-                <span style=""font-size: 32px;"">🧔</span>
+            <td align=""center"" style=""background-color: #091321; padding: 32px 24px 22px 24px; text-align: center; border-top-left-radius: 14px; border-top-right-radius: 14px; border-bottom: 1px solid #1e293b;"">
+              <div style=""display: inline-block; width: 60px; height: 60px; line-height: 60px; border-radius: 50%; background-color: #0f2438; border: 1px solid #00b4d8; margin-bottom: 12px; text-align: center;"">
+                <span style=""font-size: 28px; line-height: 60px;"">🧔</span>
               </div>
-              <h1 style=""margin: 0; font-size: 24px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;"">
+              <h1 style=""margin: 0; font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;"">
                 DVT MOVEMBER <span style=""color: #00b4d8;"">2026</span>
               </h1>
-              <p style=""margin: 6px 0 0 0; font-size: 13px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px;"">
+              <p style=""margin: 6px 0 0 0; font-size: 12px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px;"">
                 Official Mustache Judge & Quiz Arena
               </p>
             </td>
@@ -193,8 +219,8 @@ The DVT Movember 2026 Team";
 
           <!-- Content Body -->
           <tr>
-            <td style=""padding: 36px 32px 28px 32px;"">
-              <h2 style=""margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #ffffff;"">
+            <td style=""padding: 32px 28px 24px 28px; background-color: #0d1522;"">
+              <h2 style=""margin: 0 0 16px 0; font-size: 19px; font-weight: 700; color: #ffffff;"">
                 Password Reset Request
               </h2>
               
@@ -206,11 +232,11 @@ The DVT Movember 2026 Team";
                 We received a request to reset the password for your DVT Movember account. Click the button below to securely choose a new password:
               </p>
 
-              <!-- CTA Button -->
-              <table role=""presentation"" border=""0"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""margin: 28px 0;"">
+              <!-- Bulletproof CTA Button (Works across PC Brave, Gmail, Outlook, Apple Mail) -->
+              <table role=""presentation"" border=""0"" cellpadding=""0"" cellspacing=""0"" align=""center"" style=""margin: 28px auto; border-collapse: separate;"">
                 <tr>
-                  <td align=""center"">
-                    <a href=""{safeUrl}"" target=""_blank"" style=""display: inline-block; padding: 15px 36px; background: linear-gradient(135deg, #00b4d8 0%, #0077b6 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 700; border-radius: 10px; box-shadow: 0 6px 20px rgba(0, 180, 216, 0.4); text-transform: uppercase; letter-spacing: 0.5px;"">
+                  <td align=""center"" bgcolor=""#00b4d8"" style=""border-radius: 8px; background-color: #00b4d8; text-align: center;"">
+                    <a href=""{safeUrl}"" target=""_blank"" rel=""noopener noreferrer"" style=""display: inline-block; padding: 16px 36px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: #ffffff !important; text-decoration: none !important; border-radius: 8px; background-color: #00b4d8; border: 1px solid #00b4d8; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; line-height: 1.2;"">
                       Reset My Password
                     </a>
                   </td>
@@ -218,27 +244,27 @@ The DVT Movember 2026 Team";
               </table>
 
               <!-- Fallback Direct URL -->
-              <div style=""background-color: #080d16; border-radius: 10px; padding: 16px; border: 1px solid rgba(255,255,255,0.06); margin: 24px 0;"">
-                <p style=""margin: 0 0 8px 0; font-size: 12px; color: #64748b; font-weight: 600;"">
-                  If the button doesn't work, copy and paste this URL into your browser:
+              <div style=""background-color: #080d16; border-radius: 10px; padding: 14px 16px; border: 1px solid #1e293b; margin: 24px 0;"">
+                <p style=""margin: 0 0 8px 0; font-size: 12px; color: #94a3b8; font-weight: 600;"">
+                  If the button above does not work in your email client, click or copy this direct link:
                 </p>
-                <p style=""margin: 0; font-size: 13px; color: #38bdf8; word-break: break-all; line-height: 1.4;"">
-                  <a href=""{safeUrl}"" style=""color: #38bdf8; text-decoration: underline;"">{safeUrl}</a>
+                <p style=""margin: 0; font-size: 13px; line-height: 1.5; word-break: break-all;"">
+                  <a href=""{safeUrl}"" target=""_blank"" rel=""noopener noreferrer"" style=""color: #00b4d8; text-decoration: underline; word-break: break-all;"">{safeUrl}</a>
                 </p>
               </div>
 
               <!-- SPAM FOLDER CALLOUT BOX -->
-              <div style=""background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b; border-radius: 8px; padding: 16px 18px; margin: 28px 0;"">
+              <div style=""background-color: #1a160d; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 14px 16px; margin: 24px 0;"">
                 <table role=""presentation"" border=""0"" cellpadding=""0"" cellspacing=""0"" width=""100%"">
                   <tr>
-                    <td valign=""top"" style=""width: 28px; font-size: 20px; line-height: 1;"">
+                    <td valign=""top"" style=""width: 24px; font-size: 18px; line-height: 1;"">
                       ⚠️
                     </td>
                     <td style=""padding-left: 8px;"">
-                      <strong style=""display: block; font-size: 14px; color: #fbbf24; margin-bottom: 4px;"">
+                      <strong style=""display: block; font-size: 13px; color: #fbbf24; margin-bottom: 4px;"">
                         Important: Please Check Your Spam / Junk Folder!
                       </strong>
-                      <p style=""margin: 0; font-size: 13px; line-height: 1.5; color: #fef3c7;"">
+                      <p style=""margin: 0; font-size: 12px; line-height: 1.5; color: #fef3c7;"">
                         Automated security emails can sometimes be filtered by email providers into Spam or Junk folders. If this message landed in your spam folder, please mark it as <strong>&ldquo;Report Not Spam&rdquo;</strong> or move it to your <strong>Primary Inbox</strong> to ensure you receive future competition updates, AI judging verdicts, and live quiz notifications without delay.
                       </p>
                     </td>
@@ -255,7 +281,7 @@ The DVT Movember 2026 Team";
 
           <!-- Footer -->
           <tr>
-            <td style=""background-color: #080d16; padding: 24px 32px; text-align: center; border-top: 1px solid rgba(255,255,255,0.06);"">
+            <td align=""center"" style=""background-color: #080d16; padding: 20px 24px; text-align: center; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; border-top: 1px solid #1e293b;"">
               <p style=""margin: 0 0 6px 0; font-size: 12px; color: #94a3b8; font-weight: 600;"">
                 DVT Movember 2026 • Celebrating facial hair for a great cause
               </p>

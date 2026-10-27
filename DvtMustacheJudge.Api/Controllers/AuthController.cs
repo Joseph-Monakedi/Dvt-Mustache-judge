@@ -231,7 +231,18 @@ public class AuthController : ControllerBase
             await _context.SaveChangesAsync();
 
             // Determine client base URL
-            var origin = Request.Headers.Origin.ToString();
+            var configuredUrl = _config["ClientUrl"] 
+                                ?? _config["AppUrl"] 
+                                ?? Environment.GetEnvironmentVariable("CLIENT_URL") 
+                                ?? Environment.GetEnvironmentVariable("APP_URL");
+
+            string origin = configuredUrl?.Trim() ?? "";
+
+            if (string.IsNullOrWhiteSpace(origin))
+            {
+                origin = Request.Headers.Origin.ToString();
+            }
+
             if (string.IsNullOrWhiteSpace(origin))
             {
                 var referer = Request.Headers.Referer.ToString();
