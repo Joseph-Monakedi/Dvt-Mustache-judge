@@ -90,7 +90,10 @@ export default function QuizTopBar({
               variant="accent"
               size="sm"
               disabled={isBusy}
-              onClick={() => handleAction('reveal-round')}
+              onClick={() => handleAction('reveal-round', {
+                questionIndex: gameState?.currentQuestionIndex,
+                questionId: gameState?.currentQuestion?.id
+              })}
             >
               Reveal Answer
             </Button>

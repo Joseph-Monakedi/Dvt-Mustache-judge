@@ -214,6 +214,13 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
         using var joinDoc = JsonDocument.Parse(joinBody);
         var playerId = joinDoc.RootElement.GetProperty("playerId").GetGuid();
 
+        // 4.5 Admin starts Question 1 (index 0)
+        var startReq = new HttpRequestMessage(HttpMethod.Post, "/api/quiz/admin/next-question");
+        startReq.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        startReq.Content = JsonContent.Create(new AdminNextQuestionRequest(0));
+        var startRes = await _client.SendAsync(startReq);
+        Assert.Equal(HttpStatusCode.OK, startRes.StatusCode);
+
         // 5. Get current quiz question
         var currentRes = await _client.GetAsync("/api/quiz/current");
         Assert.Equal(HttpStatusCode.OK, currentRes.StatusCode);
@@ -352,5 +359,55 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
         using var detailDoc = JsonDocument.Parse(detailJson);
         Assert.Equal(cleanShaveUrl, detailDoc.RootElement.GetProperty("cleanShaveImageUrl").GetString());
         Assert.False(string.IsNullOrWhiteSpace(detailDoc.RootElement.GetProperty("imageUrl").GetString()));
+    }
+
+    [Fact]
+    public async Task Quiz_HostCanLaunchNextQuestionBeforeTimerRunsOut_AndStaleTimerOrRevealDoesNotCloseCurrentQuestion()
+    {
+        // 1. Reset to lobby
+        var lobbyReq = new HttpRequestMessage(HttpMethod.Post, "/api/quiz/admin/start-lobby");
+        lobbyReq.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        var lobbyRes = await _client.SendAsync(lobbyReq);
+        Assert.Equal(HttpStatusCode.OK, lobbyRes.StatusCode);
+
+        // 2. Launch Question 1 (index 0)
+        var q1Req = new HttpRequestMessage(HttpMethod.Post, "/api/quiz/admin/next-question");
+        q1Req.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        var q1Res = await _client.SendAsync(q1Req);
+        Assert.Equal(HttpStatusCode.OK, q1Res.StatusCode);
+
+        var q1Json = await q1Res.Content.ReadAsStringAsync();
+        using var q1Doc = JsonDocument.Parse(q1Json);
+        var q1Id = q1Doc.RootElement.GetProperty("question").GetProperty("id").GetGuid();
+        Assert.Equal(0, q1Doc.RootElement.GetProperty("questionIndex").GetInt32());
+        Assert.Equal("Question", q1Doc.RootElement.GetProperty("status").GetString());
+
+        // 3. Launch Question 2 (index 1) immediately BEFORE question 1's timer runs out
+        var q2Req = new HttpRequestMessage(HttpMethod.Post, "/api/quiz/admin/next-question");
+        q2Req.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        var q2Res = await _client.SendAsync(q2Req);
+        Assert.Equal(HttpStatusCode.OK, q2Res.StatusCode);
+
+        var q2Json = await q2Res.Content.ReadAsStringAsync();
+        using var q2Doc = JsonDocument.Parse(q2Json);
+        Assert.Equal(1, q2Doc.RootElement.GetProperty("questionIndex").GetInt32());
+        Assert.Equal("Question", q2Doc.RootElement.GetProperty("status").GetString());
+        Assert.True(q2Doc.RootElement.GetProperty("remainingSeconds").GetDouble() > 0);
+
+        // 4. Simulate a stale client sending reveal-round for Question 1 (index 0 / q1Id)
+        var staleRevealReq = new HttpRequestMessage(HttpMethod.Post, "/api/quiz/admin/reveal-round");
+        staleRevealReq.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        staleRevealReq.Content = JsonContent.Create(new AdminRevealRoundRequest(QuestionIndex: 0, QuestionId: q1Id));
+        var staleRevealRes = await _client.SendAsync(staleRevealReq);
+        Assert.Equal(HttpStatusCode.OK, staleRevealRes.StatusCode);
+
+        // 5. Verify the active quiz state is STILL "Question" on Question 2 (NOT closed!)
+        var currentRes = await _client.GetAsync("/api/quiz/current");
+        Assert.Equal(HttpStatusCode.OK, currentRes.StatusCode);
+        var currentJson = await currentRes.Content.ReadAsStringAsync();
+        using var currentDoc = JsonDocument.Parse(currentJson);
+
+        Assert.Equal("Question", currentDoc.RootElement.GetProperty("status").GetString());
+        Assert.Equal(1, currentDoc.RootElement.GetProperty("currentQuestionIndex").GetInt32());
     }
 }

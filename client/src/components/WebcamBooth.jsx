@@ -326,8 +326,8 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                     await initiatePayFastCheckout({
                       itemType: 'Leaderboard',
                       token,
-                      returnPath: '/?payment=success',
-                      cancelPath: '/?payment=cancelled'
+                      returnPath: '/booth?payment=success',
+                      cancelPath: '/booth?payment=cancelled'
                     });
                   } catch (e) {
                     setIsPaying(false);

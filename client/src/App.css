@@ -5196,6 +5196,36 @@
   color: #fff;
 }
 
+.mobile-user-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-nav-logout-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.mobile-nav-logout-btn:hover,
+.mobile-nav-logout-btn:active {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.6);
+  transform: scale(0.95);
+}
+
 .mobile-avatar-pill {
   display: flex;
   align-items: center;

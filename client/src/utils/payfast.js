@@ -54,8 +54,11 @@ export async function initiatePayFastCheckout({
   try {
     sessionStorage.setItem('dvt_last_payfast_ref', reference);
     sessionStorage.setItem('dvt_last_payfast_item', itemType);
+    localStorage.setItem('dvt_last_payfast_ref', reference);
+    localStorage.setItem('dvt_last_payfast_item', itemType);
+    localStorage.setItem('dvt_last_payfast_time', Date.now().toString());
   } catch (e) {
-    // ignore sessionStorage errors
+    // ignore storage errors
   }
 
   // 2. Build and submit standard PayFast HTML Form

@@ -52,14 +52,41 @@ public class QuizController : ControllerBase
             currentQuestion = quiz.Questions[quiz.CurrentQuestionIndex];
         }
 
-        // Automatic reveal answers & scoring at timeout
-        if (quiz.Status == "Question" && quiz.QuestionStartTime.HasValue && currentQuestion != null)
+        var serverTime = DateTime.UtcNow;
+        var questionStartTime = quiz.QuestionStartTime;
+        DateTime? questionEndTime = null;
+        double remainingSeconds = 0;
+        double countdownSeconds = 0;
+        bool isCountdown = false;
+
+        // Automatic reveal answers & scoring at timeout strictly on backend
+        if (quiz.Status == "Question" && questionStartTime.HasValue && currentQuestion != null)
         {
-            var elapsedSeconds = (DateTime.UtcNow - quiz.QuestionStartTime.Value).TotalSeconds;
-            if (elapsedSeconds >= (currentQuestion.TimeLimitSeconds - 0.25))
+            questionEndTime = questionStartTime.Value.AddSeconds(currentQuestion.TimeLimitSeconds);
+
+            if (serverTime < questionStartTime.Value)
             {
+                // Countdown phase (3, 2, 1)
+                isCountdown = true;
+                countdownSeconds = Math.Max(1, Math.Ceiling((questionStartTime.Value - serverTime).TotalSeconds));
+                remainingSeconds = currentQuestion.TimeLimitSeconds;
+            }
+            else if (serverTime >= questionEndTime.Value)
+            {
+                // Question round has timed out: backend transitions status to AnswerReveal
                 quiz.Status = "AnswerReveal";
                 await _context.SaveChangesAsync();
+                remainingSeconds = 0;
+                countdownSeconds = 0;
+                isCountdown = false;
+            }
+            else
+            {
+                // Actively accepting answers
+                isCountdown = false;
+                countdownSeconds = 0;
+                var diff = (questionEndTime.Value - serverTime).TotalSeconds;
+                remainingSeconds = Math.Max(0, Math.Ceiling(diff));
             }
         }
 
@@ -83,16 +110,6 @@ public class QuizController : ControllerBase
             };
         }
 
-        double countdownSeconds = 0;
-        if (quiz.Status == "Question" && quiz.QuestionStartTime.HasValue)
-        {
-            var diff = (quiz.QuestionStartTime.Value - DateTime.UtcNow).TotalSeconds;
-            if (diff > 0)
-            {
-                countdownSeconds = Math.Round(diff, 1);
-            }
-        }
-
         return Ok(new
         {
             quizId = quiz.Id,
@@ -103,8 +120,12 @@ public class QuizController : ControllerBase
             totalQuestions,
             playerCount,
             players = quiz.Players.Select(p => new { id = p.Id, name = p.ContestantName }).ToList(),
-            questionStartTime = quiz.QuestionStartTime,
+            serverTime,
+            questionStartTime,
+            questionEndTime,
+            remainingSeconds,
             countdownSeconds,
+            isCountdown,
             currentQuestion = currentQuestion == null ? null : new
             {
                 id = currentQuestion.Id,
@@ -240,23 +261,22 @@ public class QuizController : ControllerBase
 
         // Verify quiz is currently in active question state and hasn't timed out
         var quiz = await _context.QuizGames.OrderByDescending(q => q.CreatedAt).FirstOrDefaultAsync();
-        if (quiz != null && quiz.Status == "Question" && quiz.QuestionStartTime.HasValue)
+        if (quiz == null || quiz.Status != "Question")
         {
-            var elapsed = (DateTime.UtcNow - quiz.QuestionStartTime.Value).TotalSeconds;
-            if (elapsed < -0.1)
-            {
-                return BadRequest(new { error = "Question round is starting... countdown in progress!" });
-            }
-            if (elapsed > (question.TimeLimitSeconds + 1.2))
+            return BadRequest(new { error = "Question round is not currently accepting answers." });
+        }
+
+        var now = DateTime.UtcNow;
+        if (quiz.QuestionStartTime.HasValue)
+        {
+            var questionEndTime = quiz.QuestionStartTime.Value.AddSeconds(question.TimeLimitSeconds);
+            // Allow 1.5s grace period for in-flight requests submitted right before expiration
+            if (now > questionEndTime.AddSeconds(1.5))
             {
                 quiz.Status = "AnswerReveal";
                 await _context.SaveChangesAsync();
                 return BadRequest(new { error = "Time has expired for this question." });
             }
-        }
-        else if (quiz != null && quiz.Status != "Question")
-        {
-            return BadRequest(new { error = "Question round is not currently accepting answers." });
         }
 
         // Check if player has already answered this question
@@ -271,10 +291,21 @@ public class QuizController : ControllerBase
         bool isCorrect = request.SelectedOption == question.CorrectOption;
         int pointsEarned = 0;
 
+        // Calculate response time strictly on backend from server timestamps
+        int responseMs = 0;
+        if (quiz.QuestionStartTime.HasValue)
+        {
+            var elapsedMs = (int)(now - quiz.QuestionStartTime.Value).TotalMilliseconds;
+            responseMs = Math.Clamp(elapsedMs, 0, question.TimeLimitSeconds * 1000);
+        }
+        else if (request.ResponseTimeMs.HasValue)
+        {
+            responseMs = Math.Clamp(request.ResponseTimeMs.Value, 0, question.TimeLimitSeconds * 1000);
+        }
+
         if (isCorrect)
         {
             // Rapid response speed-decay scoring: max 1000 points, min 500 points for correct answers
-            var responseMs = Math.Max(0, request.ResponseTimeMs);
             var maxTimeMs = question.TimeLimitSeconds * 1000.0;
             var timeRatio = Math.Clamp(responseMs / maxTimeMs, 0.0, 1.0);
             pointsEarned = Math.Max(500, (int)Math.Round((1.0 - (timeRatio / 2.0)) * question.Points));
@@ -294,7 +325,7 @@ public class QuizController : ControllerBase
             QuizQuestionId = question.Id,
             SelectedOption = request.SelectedOption,
             IsCorrect = isCorrect,
-            ResponseTimeMs = request.ResponseTimeMs,
+            ResponseTimeMs = responseMs,
             PointsEarned = pointsEarned,
             AnsweredAt = DateTime.UtcNow
         };
@@ -340,8 +371,8 @@ public class QuizController : ControllerBase
             if (quiz.CurrentQuestionIndex >= 0 && quiz.CurrentQuestionIndex < questions.Count)
             {
                 var curQ = questions[quiz.CurrentQuestionIndex];
-                var elapsed = (DateTime.UtcNow - quiz.QuestionStartTime.Value).TotalSeconds;
-                if (elapsed >= (curQ.TimeLimitSeconds - 0.25))
+                var questionEndTime = quiz.QuestionStartTime.Value.AddSeconds(curQ.TimeLimitSeconds);
+                if (DateTime.UtcNow >= questionEndTime)
                 {
                     quiz.Status = "AnswerReveal";
                     await _context.SaveChangesAsync();
@@ -435,41 +466,39 @@ public class QuizController : ControllerBase
 
         if (quiz == null) return NotFound(new { error = "No quiz found." });
 
-        // Enforce timer check: disable sending next question while timer is running
-        if (quiz.Status == "Question" && quiz.QuestionStartTime.HasValue && quiz.CurrentQuestionIndex < quiz.Questions.Count)
-        {
-            var curQ = quiz.Questions[quiz.CurrentQuestionIndex];
-            var elapsed = (DateTime.UtcNow - quiz.QuestionStartTime.Value).TotalSeconds;
-            if (elapsed < curQ.TimeLimitSeconds)
-            {
-                var remaining = Math.Ceiling(curQ.TimeLimitSeconds - elapsed);
-                return BadRequest(new { error = $"Current question timer is still running ({remaining}s remaining). Wait for the timer to expire before sending the next question." });
-            }
-        }
-
         int targetIndex = req?.QuestionIndex ?? (quiz.Status == "Lobby" ? 0 : quiz.CurrentQuestionIndex + 1);
 
         if (targetIndex >= quiz.Questions.Count)
         {
             quiz.Status = "Finished";
+            quiz.QuestionStartTime = null;
             await _context.SaveChangesAsync();
             return Ok(new { message = "Quiz completed!", status = quiz.Status });
         }
 
+        var question = quiz.Questions[targetIndex];
+        var now = DateTime.UtcNow;
+        var countdownSeconds = 3.0;
+
         quiz.CurrentQuestionIndex = targetIndex;
         quiz.Status = "Question";
-        quiz.QuestionStartTime = DateTime.UtcNow.AddSeconds(3.6);
+        quiz.QuestionStartTime = now.AddSeconds(countdownSeconds);
 
         await _context.SaveChangesAsync();
 
-        var question = quiz.Questions[targetIndex];
+        var questionEndTime = quiz.QuestionStartTime.Value.AddSeconds(question.TimeLimitSeconds);
+
         return Ok(new
         {
             message = $"Question {targetIndex + 1} is now active!",
             status = quiz.Status,
             questionIndex = targetIndex,
+            serverTime = now,
             questionStartTime = quiz.QuestionStartTime,
+            questionEndTime,
             countdownSeconds = 3,
+            remainingSeconds = question.TimeLimitSeconds,
+            isCountdown = true,
             question = new
             {
                 id = question.Id,
@@ -485,7 +514,7 @@ public class QuizController : ControllerBase
     }
 
     [HttpPost("admin/reveal-round")]
-    public async Task<IActionResult> AdminRevealRound()
+    public async Task<IActionResult> AdminRevealRound([FromBody] AdminRevealRoundRequest? req = null)
     {
         if (!IsAdmin()) return Unauthorized();
 
@@ -495,6 +524,31 @@ public class QuizController : ControllerBase
             .FirstOrDefaultAsync();
 
         if (quiz == null) return NotFound(new { error = "No quiz found." });
+
+        // Guard against stale requests for previous questions
+        if (req != null && req.QuestionIndex.HasValue && req.QuestionIndex.Value != quiz.CurrentQuestionIndex)
+        {
+            return Ok(new
+            {
+                message = "Ignored: Round has already advanced beyond the requested question.",
+                status = quiz.Status,
+                currentQuestionIndex = quiz.CurrentQuestionIndex
+            });
+        }
+
+        if (req != null && req.QuestionId.HasValue && quiz.CurrentQuestionIndex >= 0 && quiz.CurrentQuestionIndex < quiz.Questions.Count)
+        {
+            var curQ = quiz.Questions[quiz.CurrentQuestionIndex];
+            if (req.QuestionId.Value != curQ.Id)
+            {
+                return Ok(new
+                {
+                    message = "Ignored: Round has already advanced beyond the requested question.",
+                    status = quiz.Status,
+                    currentQuestionIndex = quiz.CurrentQuestionIndex
+                });
+            }
+        }
 
         quiz.Status = "AnswerReveal";
         await _context.SaveChangesAsync();
@@ -882,8 +936,9 @@ public class QuizController : ControllerBase
 
 public record JoinQuizRequest(string Pin, string Name);
 public record SetPinRequest(string? Pin);
-public record SubmitAnswerRequest(Guid PlayerId, Guid QuestionId, int SelectedOption, int ResponseTimeMs);
+public record SubmitAnswerRequest(Guid PlayerId, Guid QuestionId, int SelectedOption, int? ResponseTimeMs = null);
 public record AdminNextQuestionRequest(int? QuestionIndex);
+public record AdminRevealRoundRequest(int? QuestionIndex = null, Guid? QuestionId = null);
 public record CreateQuizRequest(string? Title, string? PinCode);
 public record UpdateQuizRequest(string? Title, string? PinCode, string? Status);
 public record UpsertQuestionRequest(

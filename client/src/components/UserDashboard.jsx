@@ -13,9 +13,11 @@ import {
   FaUpload,
   FaUserPlus,
   FaArrowRightToBracket,
-  FaBolt
+  FaBolt,
+  FaRightFromBracket
 } from 'react-icons/fa6';
 import { GiMustache } from 'react-icons/gi';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiUrl } from '../utils/api';
 import { confirmPayFastReturn } from '../utils/payfast';
@@ -26,7 +28,13 @@ import VaultEntryCard from './dashboard/VaultEntryCard';
 import CharityPaymentModal from './dashboard/CharityPaymentModal';
 
 export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQuiz, onSelectEntry }) {
-  const { user, token, refreshUser, openAuthModal } = useAuth();
+  const navigate = useNavigate();
+  const { user, token, refreshUser, openAuthModal, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/leaderboard');
+  };
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -216,6 +224,16 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
             <p className="profile-email text-sm text-slate-400 font-mono">
               {user.email}
             </p>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 active:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                title="Sign out of your account"
+              >
+                <FaRightFromBracket className="text-xs" /> Sign Out
+              </button>
+            </div>
           </div>
         </div>
 

@@ -214,31 +214,21 @@ export default function AdminPortal({ onBackToApp }) {
   const [adminTimerSeconds, setAdminTimerSeconds] = useState(0);
 
   useEffect(() => {
-    if (quizState?.status === 'Question' && quizState?.currentQuestion) {
-      const limit = quizState.currentQuestion.timeLimitSeconds || 20;
-      let remaining = limit;
-      if (quizState.questionStartTime) {
-        const startMs = new Date(quizState.questionStartTime).getTime();
-        const elapsedSec = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
-        remaining = Math.max(0, limit - elapsedSec);
-      }
+    if (quizState?.status === 'Question') {
+      const remaining = typeof quizState.remainingSeconds === 'number'
+        ? quizState.remainingSeconds
+        : (quizState.currentQuestion?.timeLimitSeconds || 20);
       setAdminTimerSeconds(remaining);
 
       const interval = setInterval(() => {
-        setAdminTimerSeconds(prev => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            return 0;
-          }
-          return prev - 1;
-        });
+        setAdminTimerSeconds(prev => Math.max(0, prev - 1));
       }, 1000);
 
       return () => clearInterval(interval);
     } else {
       setAdminTimerSeconds(0);
     }
-  }, [quizState?.status, quizState?.currentQuestionIndex, quizState?.questionStartTime]);
+  }, [quizState?.status, quizState?.currentQuestionIndex, quizState?.remainingSeconds]);
 
   // Handle Login
   const handleLogin = async (e) => {
@@ -1579,6 +1569,14 @@ export default function AdminPortal({ onBackToApp }) {
                     : `0 / ${quizState?.totalQuestions || 8} (In Lobby)`}
                 </span>
               </div>
+              {quizState?.status === 'Question' && (
+                <div className="quiz-meta-item">
+                  <span className="quiz-meta-label">Round Timer</span>
+                  <span className="quiz-meta-value text-amber-400 font-mono">
+                    <FaClock className="inline-icon" /> {adminTimerSeconds}s left
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Host Action Buttons */}
@@ -1592,43 +1590,47 @@ export default function AdminPortal({ onBackToApp }) {
                 <FaRotate className="btn-icon" /> Open / Reset Lobby
               </button>
 
-              {(() => {
-                const isCountdown = quizState?.status === 'Question' && quizState?.questionStartTime && new Date(quizState.questionStartTime).getTime() > Date.now();
-                const countdownRemaining = isCountdown ? Math.max(1, Math.ceil((new Date(quizState.questionStartTime).getTime() - Date.now()) / 1000)) : 0;
-                const isTimerActive = quizState?.status === 'Question' && (isCountdown || adminTimerSeconds > 0);
-                return (
-                  <button
-                    type="button"
-                    className={`quiz-host-btn btn-next-question ${isTimerActive ? 'btn-timer-running' : ''}`}
-                    onClick={() => handleQuizAction('next-question')}
-                    disabled={quizLoading || isTimerActive}
-                    title={isTimerActive ? `Disabled: Round ${isCountdown ? 'countdown' : 'timer'} is active. Wait for round to complete.` : 'Launch next question'}
-                  >
-                    {isCountdown ? (
-                      <>
-                        <FaClock className="btn-icon text-cyan-300 animate-pulse" /> Countdown ({countdownRemaining}s)
-                      </>
-                    ) : isTimerActive ? (
-                      <>
-                        <FaClock className="btn-icon text-amber-300 animate-pulse" /> Timer Running ({adminTimerSeconds}s)
-                      </>
-                    ) : (
-                      <>
-                        <FaPlay className="btn-icon" /> Send Next Question
-                      </>
-                    )}
-                  </button>
-                );
-              })()}
+              {/* In Lobby: Start Question 1 */}
+              {(quizState?.status === 'Lobby' || !quizState?.currentQuestion) && (
+                <button
+                  type="button"
+                  className="quiz-host-btn btn-next-question"
+                  onClick={() => handleQuizAction('next-question', { questionIndex: 0 })}
+                  disabled={quizLoading}
+                  title="Launch Question 1 for all contestants"
+                >
+                  <FaPlay className="btn-icon" /> Start Question 1
+                </button>
+              )}
 
-              <button
-                type="button"
-                className="quiz-host-btn btn-reveal"
-                onClick={() => handleQuizAction('reveal-round')}
-                disabled={quizLoading || (quizState?.status !== 'Question' && quizState?.status !== 'InQuestion')}
-              >
-                <FaEye className="btn-icon" /> Reveal Answers & Scoring
-              </button>
+              {/* In Question: Host reveals answers. Send Next Question is held until answers are revealed. */}
+              {(quizState?.status === 'Question' || quizState?.status === 'InQuestion') && (
+                <button
+                  type="button"
+                  className="quiz-host-btn btn-reveal"
+                  onClick={() => handleQuizAction('reveal-round', {
+                    questionIndex: quizState?.currentQuestionIndex,
+                    questionId: quizState?.currentQuestion?.id
+                  })}
+                  disabled={quizLoading}
+                  title="Reveal answer distributions and correct answer to all players"
+                >
+                  <FaEye className="btn-icon" /> Reveal Answers & Scoring {adminTimerSeconds > 0 ? `(${adminTimerSeconds}s left)` : ''}
+                </button>
+              )}
+
+              {/* In AnswerReveal: Send Next Question activates and shows */}
+              {quizState?.status === 'AnswerReveal' && (
+                <button
+                  type="button"
+                  className="quiz-host-btn btn-next-question animate-pulse"
+                  onClick={() => handleQuizAction('next-question')}
+                  disabled={quizLoading}
+                  title="Proceed to launch next question"
+                >
+                  <FaArrowRight className="btn-icon" /> Send Next Question
+                </button>
+              )}
 
               <button
                 type="button"

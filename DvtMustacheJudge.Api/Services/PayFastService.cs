@@ -92,7 +92,11 @@ public class PayFastService : IPayFastService
         };
 
         if (!string.IsNullOrWhiteSpace(customReturnUrl))
-            fields["return_url"] = customReturnUrl.Trim();
+        {
+            var trimmedReturn = customReturnUrl.Trim();
+            var separator = trimmedReturn.Contains('?') ? "&" : "?";
+            fields["return_url"] = $"{trimmedReturn}{separator}ref={Uri.EscapeDataString(reference)}&item={Uri.EscapeDataString(normalizedType)}";
+        }
 
         if (!string.IsNullOrWhiteSpace(customCancelUrl))
             fields["cancel_url"] = customCancelUrl.Trim();

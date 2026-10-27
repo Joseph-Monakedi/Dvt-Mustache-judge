@@ -16,6 +16,8 @@ import { useAuth } from './context/AuthContext';
 import { FaTv, FaMobileScreen } from 'react-icons/fa6';
 import { apiUrl } from './utils/api';
 import { useIsMobile } from './utils/useIsMobile';
+import { confirmPayFastReturn } from './utils/payfast';
+import confetti from 'canvas-confetti';
 import './App.css';
 
 export default function App() {
@@ -58,6 +60,43 @@ export default function App() {
     window.addEventListener('dvt-payment-approved', handlePaymentApproved);
     return () => window.removeEventListener('dvt-payment-approved', handlePaymentApproved);
   }, []);
+
+  // Global PayFast Return Handler: catches payment return on ANY page (booth, quiz, dashboard, leaderboard)
+  useEffect(() => {
+    if (!token) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+
+    if (paymentStatus === 'success') {
+      const ref = urlParams.get('ref') || localStorage.getItem('dvt_last_payfast_ref') || sessionStorage.getItem('dvt_last_payfast_ref');
+      const item = urlParams.get('item') || localStorage.getItem('dvt_last_payfast_item') || sessionStorage.getItem('dvt_last_payfast_item') || 'Leaderboard';
+
+      // Clean URL params to avoid re-triggering
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+
+      localStorage.removeItem('dvt_last_payfast_ref');
+      localStorage.removeItem('dvt_last_payfast_item');
+      sessionStorage.removeItem('dvt_last_payfast_ref');
+      sessionStorage.removeItem('dvt_last_payfast_item');
+
+      confirmPayFastReturn({ reference: ref, itemType: item, token })
+        .then(async () => {
+          await refreshUser();
+          showToast(`🎉 Payment Confirmed! Your ${item} Pass has been activated.`);
+          try {
+            confetti({ particleCount: 150, spread: 90, origin: { y: 0.3 } });
+          } catch {}
+        })
+        .catch(async () => {
+          await refreshUser();
+        });
+    } else if (paymentStatus === 'cancelled') {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      showToast('PayFast checkout was cancelled. You can retry at any time.');
+    }
+  }, [token, location.search]);
 
   // If a mobile user navigates to /kiosk, auto-redirect to /leaderboard
   useEffect(() => {

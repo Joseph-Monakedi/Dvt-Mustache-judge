@@ -63,7 +63,17 @@ builder.Services.AddCors(options =>
     });
 });
 
+// 9. Configure Forwarded Headers for reverse proxies (Render, Cloudflare, Azure)
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
+
+app.UseForwardedHeaders();
 
 // Auto-seed Supabase database and ensure schema created
 using (var scope = app.Services.CreateScope())

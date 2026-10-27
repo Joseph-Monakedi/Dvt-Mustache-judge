@@ -152,16 +152,29 @@ export default function Navbar({ totalEntries = 0 }) {
           {/* Mobile Header Right Badge & Quick Action */}
           <div className="mobile-header-right mobile-only">
             {isAuthenticated ? (
-              <button 
-                type="button" 
-                className="mobile-avatar-pill" 
-                onClick={() => navigate('/dashboard')}
-              >
-                <span className="mobile-avatar-circle">
-                  {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
-                </span>
-                <span className="mobile-avatar-name">{user?.fullName?.split(' ')[0] || 'Me'}</span>
-              </button>
+              <div className="mobile-user-nav-group">
+                <button 
+                  type="button" 
+                  className="mobile-avatar-pill" 
+                  onClick={() => navigate('/dashboard')}
+                  title="View your Dashboard"
+                  aria-label="View Dashboard"
+                >
+                  <span className="mobile-avatar-circle">
+                    {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
+                  </span>
+                  <span className="mobile-avatar-name">{user?.fullName?.split(' ')[0] || 'Me'}</span>
+                </button>
+                <button 
+                  type="button" 
+                  className="mobile-nav-logout-btn" 
+                  onClick={handleLogout}
+                  title="Sign Out"
+                  aria-label="Sign Out"
+                >
+                  <FaRightFromBracket />
+                </button>
+              </div>
             ) : (
               <button 
                 type="button" 

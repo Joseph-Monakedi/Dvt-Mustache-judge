@@ -51,12 +51,12 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
   const [timerSeconds, setTimerSeconds] = useState(20);
   const [showLiveLeaderboard, setShowLiveLeaderboard] = useState(false);
 
-  // 3-2-1 Countdown state & tracking
+  // 3-2-1 Countdown & display tracking strictly from backend timestamps
   const [countdownValue, setCountdownValue] = useState(null);
   const lastCountdownQIndexRef = useRef(null);
-  const countdownTimeoutsRef = useRef([]);
-
-  const questionStartTimeRef = useRef(Date.now());
+  const wasCountdownRef = useRef(false);
+  const lastToneRef = useRef(null);
+  const goTimeoutRef = useRef(null);
   const timerIntervalRef = useRef(null);
 
   // Synchronize nickname with user
@@ -83,10 +83,10 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
     }
   };
 
-  // Poll quiz state dynamically (1.2s when waiting for round in Lobby/AnswerReveal, 2s during Question)
+  // Poll quiz state dynamically (1s during active Question, 1.2s in Lobby/AnswerReveal)
   useEffect(() => {
     fetchQuizState();
-    const pollInterval = (gameState?.status === 'Lobby' || gameState?.status === 'AnswerReveal') ? 1200 : 2000;
+    const pollInterval = gameState?.status === 'Question' ? 1000 : 1200;
     const interval = setInterval(fetchQuizState, pollInterval);
     return () => clearInterval(interval);
   }, [gameState?.status]);
@@ -123,136 +123,78 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
     }
   }, [gameState?.status]);
 
-  // When question changes, reset answer selection and trigger 3-2-1 countdown
+  // Synchronize question timer & countdown strictly from backend authoritative state
   useEffect(() => {
     if (gameState?.status === 'Question' && gameState?.currentQuestion) {
-      setSelectedOption(null);
-      setHasAnswered(false);
-      setAnswerResult(null);
-
-      // Clear any pending countdown timeouts and interval
-      countdownTimeoutsRef.current.forEach(clearTimeout);
-      countdownTimeoutsRef.current = [];
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-
       const currentQIdx = gameState.currentQuestionIndex ?? 0;
-      const startMs = gameState.questionStartTime 
-        ? new Date(gameState.questionStartTime).getTime() 
-        : Date.now();
-      const elapsedSinceStartSec = (Date.now() - startMs) / 1000;
-
-      // Determine if we should trigger the 3-2-1 countdown:
-      // Trigger whenever entering Question status for this question index,
-      // provided the question hasn't already been actively running for more than 4 seconds
       const isNewQuestion = lastCountdownQIndexRef.current !== currentQIdx;
 
-      if (isNewQuestion && elapsedSinceStartSec < 4) {
+      if (isNewQuestion) {
         lastCountdownQIndexRef.current = currentQIdx;
+        setSelectedOption(null);
+        setHasAnswered(false);
+        setAnswerResult(null);
+        lastToneRef.current = null;
+      }
 
-        // Hold question timer at full limit during countdown
-        const limit = gameState.currentQuestion.timeLimitSeconds || 20;
-        setTimerSeconds(limit);
-
-        // Start countdown at 3 and play audio tone
-        setCountdownValue(3);
-        playCountdownTone(3);
-
-        const t1 = setTimeout(() => {
-          setCountdownValue(2);
-          playCountdownTone(2);
-        }, 1000);
-
-        const t2 = setTimeout(() => {
-          setCountdownValue(1);
-          playCountdownTone(1);
-        }, 2000);
-
-        const t3 = setTimeout(() => {
+      if (gameState.isCountdown) {
+        wasCountdownRef.current = true;
+        const count = gameState.countdownSeconds || 3;
+        setCountdownValue(count);
+        if (lastToneRef.current !== count) {
+          lastToneRef.current = count;
+          playCountdownTone(count);
+        }
+        setTimerSeconds(gameState.remainingSeconds ?? gameState.currentQuestion.timeLimitSeconds ?? 20);
+      } else {
+        // Countdown finished or round already live
+        if (wasCountdownRef.current) {
+          wasCountdownRef.current = false;
           setCountdownValue('GO!');
           playCountdownTone('GO!');
-        }, 3000);
-
-        const t4 = setTimeout(() => {
+          clearTimeout(goTimeoutRef.current);
+          goTimeoutRef.current = setTimeout(() => {
+            setCountdownValue(null);
+          }, 450);
+        } else {
           setCountdownValue(null);
-          questionStartTimeRef.current = Date.now();
-
-          // Start actual question answering timer now!
-          if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-          timerIntervalRef.current = setInterval(() => {
-            setTimerSeconds(prev => {
-              if (prev <= 1) {
-                clearInterval(timerIntervalRef.current);
-                return 0;
-              }
-              return prev - 1;
-            });
-          }, 1000);
-        }, 3600);
-
-        countdownTimeoutsRef.current = [t1, t2, t3, t4];
-      } else {
-        // Countdown already completed or player joined mid-question: run question timer immediately
-        lastCountdownQIndexRef.current = currentQIdx;
-        setCountdownValue(null);
-        questionStartTimeRef.current = Date.now();
-
-        let limit = gameState.currentQuestion.timeLimitSeconds || 20;
-        if (gameState.questionStartTime) {
-          const elapsedSec = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
-          limit = Math.max(0, limit - elapsedSec);
         }
-        setTimerSeconds(limit);
 
-        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = setInterval(() => {
-          setTimerSeconds(prev => {
-            if (prev <= 1) {
-              clearInterval(timerIntervalRef.current);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
+        const rem = typeof gameState.remainingSeconds === 'number'
+          ? gameState.remainingSeconds
+          : (gameState.currentQuestion.timeLimitSeconds || 20);
+        setTimerSeconds(rem);
       }
-    } else if (gameState?.status === 'AnswerReveal') {
-      countdownTimeoutsRef.current.forEach(clearTimeout);
-      countdownTimeoutsRef.current = [];
-      setCountdownValue(null);
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      fetchScoreboard();
-    } else if (gameState?.status === 'Lobby') {
-      countdownTimeoutsRef.current.forEach(clearTimeout);
-      countdownTimeoutsRef.current = [];
+    } else {
+      wasCountdownRef.current = false;
       lastCountdownQIndexRef.current = null;
       setCountdownValue(null);
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      clearTimeout(goTimeoutRef.current);
+      if (gameState?.status === 'AnswerReveal') {
+        fetchScoreboard();
+      }
     }
 
     return () => {
-      countdownTimeoutsRef.current.forEach(clearTimeout);
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      clearTimeout(goTimeoutRef.current);
     };
-  }, [gameState?.currentQuestionIndex, gameState?.status]);
+  }, [gameState?.currentQuestionIndex, gameState?.status, gameState?.isCountdown, gameState?.countdownSeconds, gameState?.remainingSeconds]);
 
-  // Automatic Answer Reveal & Scoring when question timer reaches 0
+  // Smooth local tick-down between backend polls (for UI display only - never executes game actions!)
   useEffect(() => {
-    if (gameState?.status === 'Question' && timerSeconds === 0) {
-      fetchQuizState();
-      fetchScoreboard();
-
-      const adminToken = sessionStorage.getItem('dvt_admin_token');
-      if (adminToken) {
-        handleAdminAction('reveal-round');
-      }
-
-      const retryTimer = setTimeout(() => {
-        fetchQuizState();
-        fetchScoreboard();
+    if (gameState?.status === 'Question' && !gameState?.isCountdown) {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = setInterval(() => {
+        setTimerSeconds(prev => Math.max(0, prev - 1));
       }, 1000);
 
-      return () => clearTimeout(retryTimer);
+      return () => {
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      };
+    } else {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
-  }, [timerSeconds, gameState?.status]);
+  }, [gameState?.status, gameState?.isCountdown, gameState?.currentQuestionIndex]);
 
   // Join Game
   const handleJoinGame = async (e) => {
@@ -302,24 +244,24 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
 
   // Submit Answer
   const handleSelectAnswer = async (optionIndex) => {
-    if (countdownValue !== null || hasAnswered || !joinedPlayer || gameState?.status !== 'Question' || !gameState?.currentQuestion || timerSeconds <= 0) {
+    if (gameState?.isCountdown || countdownValue !== null || hasAnswered || !joinedPlayer || gameState?.status !== 'Question' || !gameState?.currentQuestion || timerSeconds <= 0) {
       return;
     }
 
     setSelectedOption(optionIndex);
     setHasAnswered(true);
 
-    const responseTimeMs = Date.now() - questionStartTimeRef.current;
-
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const res = await fetch(apiUrl('/api/quiz/answer'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           playerId: joinedPlayer.playerId,
           questionId: gameState.currentQuestion.id,
-          selectedOption: optionIndex,
-          responseTimeMs
+          selectedOption: optionIndex
         })
       });
 
@@ -360,10 +302,14 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
       };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
+      const payload = endpoint === 'reveal-round' && !body.questionId
+        ? { questionIndex: gameState?.currentQuestionIndex, questionId: gameState?.currentQuestion?.id, ...body }
+        : body;
+
       await fetch(apiUrl(`/api/quiz/admin/${endpoint}`), {
         method: 'POST',
         headers,
-        body: JSON.stringify(body)
+        body: JSON.stringify(payload)
       });
 
       fetchQuizState();
@@ -466,8 +412,8 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
                   await initiatePayFastCheckout({
                     itemType: 'Quiz',
                     token,
-                    returnPath: '/?quiz=1&payment=success',
-                    cancelPath: '/?quiz=1&payment=cancelled'
+                    returnPath: '/quiz?payment=success',
+                    cancelPath: '/quiz?payment=cancelled'
                   });
                 } catch (e) {
                   setIsPaying(false);

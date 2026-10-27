@@ -75,7 +75,21 @@ public class PayFastController : ControllerBase
         }
 
         // Determine base URLs if not explicitly provided
-        var baseUrl = $"{Request.Scheme}://{Request.Host}";
+        var isLocal = Request.Host.Host.Contains("localhost", StringComparison.OrdinalIgnoreCase) ||
+                      Request.Host.Host.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase);
+
+        var scheme = isLocal ? Request.Scheme : "https";
+        if (Request.Headers.TryGetValue("X-Forwarded-Proto", out var proto) && !string.IsNullOrWhiteSpace(proto))
+        {
+            scheme = proto.ToString();
+        }
+        if (!isLocal)
+        {
+            scheme = "https"; // Hard-guarantee HTTPS for any cloud/deployed environment (Render, Cloudflare, etc.)
+        }
+
+        var baseUrl = $"{scheme}://{Request.Host}";
+
         var returnUrl = !string.IsNullOrWhiteSpace(request.ReturnUrl) 
             ? request.ReturnUrl 
             : $"{baseUrl}/dashboard?payment=success";
@@ -84,11 +98,22 @@ public class PayFastController : ControllerBase
             ? request.CancelUrl 
             : $"{baseUrl}/dashboard?payment=cancelled";
 
+        if (!isLocal)
+        {
+            if (returnUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            {
+                returnUrl = "https://" + returnUrl.Substring("http://".Length);
+            }
+            if (cancelUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            {
+                cancelUrl = "https://" + cancelUrl.Substring("http://".Length);
+            }
+        }
+
         string? notifyUrl = _config["PayFast:NotifyUrl"] ?? Environment.GetEnvironmentVariable("PAYFAST_NOTIFY_URL");
         if (string.IsNullOrWhiteSpace(notifyUrl))
         {
-            if (!baseUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase) && 
-                !baseUrl.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase))
+            if (!isLocal)
             {
                 notifyUrl = $"{baseUrl}/api/payfast/notify";
             }
@@ -96,6 +121,10 @@ public class PayFastController : ControllerBase
             {
                 notifyUrl = null;
             }
+        }
+        else if (!isLocal && notifyUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+        {
+            notifyUrl = "https://" + notifyUrl.Substring("http://".Length);
         }
 
         var paymentResponse = _payFastService.CreatePayment(
@@ -123,8 +152,8 @@ public class PayFastController : ControllerBase
         _context.PaymentTransactions.Add(transaction);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Created PayFast payment intent {Reference} for user {UserId} ({Email}) for {ItemType} (R{Amount})",
-            paymentResponse.Reference, user.Id, user.Email, paymentResponse.ItemType, paymentResponse.Amount);
+        _logger.LogInformation("Created PayFast payment intent {Reference} for user {UserId} ({Email}) for {ItemType} (R{Amount}), NotifyUrl={NotifyUrl}",
+            paymentResponse.Reference, user.Id, user.Email, paymentResponse.ItemType, paymentResponse.Amount, notifyUrl);
 
         return Ok(paymentResponse);
     }
@@ -134,7 +163,6 @@ public class PayFastController : ControllerBase
     /// Called directly by PayFast servers when a transaction updates.
     /// </summary>
     [HttpPost("notify")]
-    [Consumes("application/x-www-form-urlencoded")]
     public async Task<IActionResult> Notify([FromForm] IFormCollection form)
     {
         try
