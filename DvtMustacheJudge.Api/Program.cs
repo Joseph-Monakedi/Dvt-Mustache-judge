@@ -67,7 +67,9 @@ builder.Services.AddCors(options =>
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
-    options.KnownIPNetworks.Clear();
+#pragma warning disable ASPDEPR005
+    options.KnownNetworks.Clear();
+#pragma warning restore ASPDEPR005
     options.KnownProxies.Clear();
 });
 
