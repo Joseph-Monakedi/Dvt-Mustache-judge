@@ -52,33 +52,48 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
       ctx.strokeRect(20, 20, width - 40, height - 40);
 
       // 2. Header
-      ctx.fillStyle = '#007FBA';
-      ctx.font = 'bold 34px Poppins, system-ui, sans-serif';
-      ctx.fillText('DVT', 60, 80);
+      const isCreative = verdict.competitionType === 'CreativeMustache' || verdict.competitionType === 'CrazyHair' || verdict.isWoodenSpoon;
+      const headerTitle = isCreative ? 'CREATIVE MUSTACHE CHALLENGE VERDICT' : 'MOVEMBER 2026 OFFICIAL VERDICT';
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '600 30px Poppins, system-ui, sans-serif';
-      ctx.fillText('MUSTACHE JUDGE', 150, 80);
-
-      ctx.fillStyle = '#00b4d8';
-      ctx.font = '500 20px Poppins, system-ui, sans-serif';
-      const headerTitle = verdict.competitionType === 'CrazyHair' ? 'THE MANE EVENT: CRAZY HAIR VERDICT' : 'MOVEMBER 2026 OFFICIAL VERDICT';
-      ctx.fillText(headerTitle, width - 480, 80);
-
-      // Divider line
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(60, 110);
-      ctx.lineTo(width - 60, 110);
-      ctx.stroke();
-
-      // 3. Load Contestant Photo
+      // 3. Load Images
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.src = verdict.imageUrl || verdict.thumbnailUrl;
 
+      const logoImg = new Image();
+      logoImg.crossOrigin = 'anonymous';
+      logoImg.src = '/dvt-logo.png';
+
       const drawRemainingContent = () => {
+        // Draw Header
+        if (logoImg.complete && logoImg.naturalWidth > 0) {
+          ctx.drawImage(logoImg, 60, 42, 50, 50);
+          ctx.fillStyle = '#007FBA';
+          ctx.font = 'bold 34px Poppins, system-ui, sans-serif';
+          ctx.fillText('DVT', 122, 79);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '600 30px Poppins, system-ui, sans-serif';
+          ctx.fillText('MUSTACHE JUDGE', 205, 79);
+        } else {
+          ctx.fillStyle = '#007FBA';
+          ctx.font = 'bold 34px Poppins, system-ui, sans-serif';
+          ctx.fillText('DVT', 60, 80);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '600 30px Poppins, system-ui, sans-serif';
+          ctx.fillText('MUSTACHE JUDGE', 150, 80);
+        }
+
+        ctx.fillStyle = '#00b4d8';
+        ctx.font = '500 20px Poppins, system-ui, sans-serif';
+        ctx.fillText(headerTitle, width - 480, 80);
+
+        // Divider line
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(60, 110);
+        ctx.lineTo(width - 60, 110);
+        ctx.stroke();
         const photoX = 60;
         const photoY = 145;
         const photoSize = 420;
@@ -110,7 +125,7 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
 
         ctx.fillStyle = '#94a3b8';
         ctx.font = '500 22px Poppins, system-ui, sans-serif';
-        const cohortText = verdict.competitionType === 'CrazyHair' ? 'The Mane Event Contestant' : 'Movember 2026 Contestant';
+        const cohortText = isCreative ? 'Creative Mustache Contestant' : 'Movember 2026 Contestant';
         ctx.fillText(cohortText, contentX, 225);
 
         ctx.fillStyle = '#00b4d8';
@@ -132,8 +147,8 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
         const scoreY = 375;
         ctx.fillStyle = '#94a3b8';
         ctx.font = '500 18px Poppins';
-        const subscoresText = verdict.competitionType === 'CrazyHair'
-          ? `Volume: ${verdict.densityScore || 0}/10   •   Styling: ${verdict.symmetryScore || 0}/10   •   Charisma: ${verdict.swaggerScore || 0}/10`
+        const subscoresText = isCreative
+          ? `Craft: ${verdict.densityScore || 0}/10   •   Innovation: ${verdict.symmetryScore || 0}/10   •   Humor: ${verdict.swaggerScore || 0}/10`
           : `Density: ${verdict.densityScore}/10   •   Symmetry: ${verdict.symmetryScore}/10   •   Swagger: ${verdict.swaggerScore}/10`;
         ctx.fillText(subscoresText, contentX, scoreY);
 
@@ -178,8 +193,8 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
         // Footer
         ctx.fillStyle = '#64748b';
         ctx.font = '500 15px Poppins';
-        const footerText = verdict.competitionType === 'CrazyHair'
-          ? 'Certified by DVT The Mane Event 2026'
+        const footerText = isCreative
+          ? 'Certified by DVT Creative Mustache Challenge 2026'
           : 'Certified by DVT Movember Mustache Judge 2026';
         ctx.fillText(footerText, 60, height - 35);
 

@@ -22,7 +22,7 @@ public class MustacheEntry
     public int SymmetryScore { get; set; }
     public int SwaggerScore { get; set; }
 
-    // Competition division: "Mustache" (Movember Mustache Challenge) or "CrazyHair" (The Mane Event: Crazy Hair Challenge)
+    // Competition division: "Mustache" (Movember Mustache Challenge) or "CreativeMustache" (Creative Mustache Challenge)
     [MaxLength(50)]
     public string CompetitionType { get; set; } = "Mustache";
 

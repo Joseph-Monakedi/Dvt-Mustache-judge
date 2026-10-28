@@ -313,7 +313,7 @@ export default function AdminPortal({ onBackToApp }) {
           e.id === id ? { 
             ...e, 
             isWoodenSpoon: result.isWoodenSpoon, 
-            competitionType: result.isWoodenSpoon ? 'CrazyHair' : 'Mustache'
+            competitionType: result.isWoodenSpoon ? 'CreativeMustache' : 'Mustache'
           } : e
         );
         return {
@@ -325,7 +325,7 @@ export default function AdminPortal({ onBackToApp }) {
       });
 
       setActionMessage(result.isWoodenSpoon 
-        ? 'Moved entry to The Mane Event: Crazy Hair Challenge.' 
+        ? 'Moved entry to Creative Mustache Challenge.' 
         : 'Moved entry to Mustache Challenge.');
       setTimeout(() => setActionMessage(''), 3000);
     } catch (err) {
@@ -585,9 +585,9 @@ export default function AdminPortal({ onBackToApp }) {
 
   // Filter entries
   const filteredEntries = (overview?.entries || []).filter(e => {
-    const isCrazy = e.isWoodenSpoon || e.competitionType === 'CrazyHair';
-    if (filterMode === 'mustache' && isCrazy) return false;
-    if (filterMode === 'crazyhair' && !isCrazy) return false;
+    const isCreative = e.isWoodenSpoon || e.competitionType === 'CreativeMustache' || e.competitionType === 'CrazyHair';
+    if (filterMode === 'mustache' && isCreative) return false;
+    if ((filterMode === 'creative' || filterMode === 'crazyhair') && !isCreative) return false;
     if (filterMode === 'visible' && e.isHidden) return false;
     if (filterMode === 'hidden' && !e.isHidden) return false;
     if (searchQuery.trim()) {
@@ -608,11 +608,12 @@ export default function AdminPortal({ onBackToApp }) {
     if (c.email && (c.email.toLowerCase() === 'admin@dvt.co.za' || c.email.toLowerCase() === 'testparticipant@gmail.com')) return false;
 
     const isEligible = c.isEligibleToWin || c.leaderboardPaid || (c.amountPaid >= 100);
+    const isContestantCreative = c.preferredCompetition === 'CreativeMustache' || c.preferredCompetition === 'CrazyHair';
 
     if (contestantFilter === 'eligible' && !isEligible) return false;
     if (contestantFilter === 'community' && isEligible) return false;
-    if (contestantFilter === 'mustache' && c.preferredCompetition === 'CrazyHair') return false;
-    if (contestantFilter === 'crazyhair' && c.preferredCompetition !== 'CrazyHair') return false;
+    if (contestantFilter === 'mustache' && isContestantCreative) return false;
+    if ((contestantFilter === 'creative' || contestantFilter === 'crazyhair') && !isContestantCreative) return false;
 
     if (contestantSearch.trim()) {
       const q = contestantSearch.toLowerCase();
@@ -631,8 +632,8 @@ export default function AdminPortal({ onBackToApp }) {
     return (
       <div className="admin-login-backdrop fade-in">
         <div className="admin-login-card">
-          <div className="admin-lock-icon-wrap">
-            <FaLock className="admin-lock-icon" />
+          <div className="admin-lock-icon-wrap overflow-hidden p-1">
+            <img src="/dvt-logo.png" alt="DVT" className="w-12 h-12 object-contain" />
           </div>
           <h2 className="admin-login-title">DVT Judicial Admin Portal</h2>
           <p className="admin-login-desc">
@@ -686,14 +687,17 @@ export default function AdminPortal({ onBackToApp }) {
 
       {/* Admin Top Header */}
       <div className="admin-header">
-        <div>
-          <div className="admin-badge">
-            <FaUnlock className="btn-icon" /> SECURE ADMINISTRATIVE SESSION
+        <div className="flex items-center gap-4">
+          <img src="/dvt-logo.png" alt="DVT" className="w-14 h-14 object-contain shrink-0 drop-shadow-[0_0_12px_rgba(0,180,216,0.5)]" />
+          <div>
+            <div className="admin-badge">
+              <FaUnlock className="btn-icon" /> SECURE ADMINISTRATIVE SESSION
+            </div>
+            <h1 className="admin-title">DVT Movember Moderation Portal</h1>
+            <p className="admin-subtitle">
+              Manage contestants, mark R100+ donations for Grand Prize eligibility, permanently delete accounts, or re-analyse entries with Gemini AI.
+            </p>
           </div>
-          <h1 className="admin-title">DVT Movember Moderation Portal</h1>
-          <p className="admin-subtitle">
-            Manage contestants, mark R100+ donations for Grand Prize eligibility, permanently delete accounts, or re-analyse entries with Gemini AI.
-          </p>
         </div>
 
         <div className="admin-header-actions">
@@ -799,10 +803,10 @@ export default function AdminPortal({ onBackToApp }) {
             </div>
             <div className="admin-stat-card">
               <div className="stat-label">
-                <HiSparkles className="inline-icon text-purple-400" /> Crazy Hair Contestants
+                <HiSparkles className="inline-icon text-purple-400" /> Creative Mustache Contestants
               </div>
               <div className="stat-val text-purple-400">
-                {contestantData?.crazyHairContestantsCount || 0}
+                {contestantData?.creativeMustacheContestantsCount ?? contestantData?.crazyHairContestantsCount ?? 0}
               </div>
             </div>
             <div className="admin-stat-card">
@@ -848,10 +852,10 @@ export default function AdminPortal({ onBackToApp }) {
               </button>
               <button
                 type="button"
-                className={`chip-btn ${contestantFilter === 'crazyhair' ? 'active' : ''}`}
-                onClick={() => setContestantFilter('crazyhair')}
+                className={`chip-btn ${contestantFilter === 'creative' || contestantFilter === 'crazyhair' ? 'active' : ''}`}
+                onClick={() => setContestantFilter('creative')}
               >
-                <HiSparkles className="inline-icon text-purple-400" /> Crazy Hair ({contestantData?.crazyHairContestantsCount || 0})
+                <HiSparkles className="inline-icon text-purple-400" /> Creative Mustache ({contestantData?.creativeMustacheContestantsCount ?? contestantData?.crazyHairContestantsCount ?? 0})
               </button>
             </div>
 
@@ -897,12 +901,12 @@ export default function AdminPortal({ onBackToApp }) {
                   <tbody>
                     {filteredContestants.map(c => {
                       const isEligible = c.isEligibleToWin || c.leaderboardPaid || (c.amountPaid >= 100);
-                      const isCrazy = c.preferredCompetition === 'CrazyHair';
+                      const isCreative = c.preferredCompetition === 'CreativeMustache' || c.preferredCompetition === 'CrazyHair';
                       return (
                         <tr key={c.id}>
                           <td>
                             <div className="contestant-cell">
-                              <div className={`contestant-avatar-fallback ${isCrazy ? 'bg-purple-600' : 'bg-[#007FBA]'}`}>
+                              <div className={`contestant-avatar-fallback ${isCreative ? 'bg-purple-600' : 'bg-[#007FBA]'}`}>
                                 {c.fullName ? c.fullName.charAt(0).toUpperCase() : 'U'}
                               </div>
                               <div className="contestant-meta-info">
@@ -915,12 +919,12 @@ export default function AdminPortal({ onBackToApp }) {
                           </td>
                           <td>
                             <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border ${
-                              isCrazy 
+                              isCreative 
                                 ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' 
                                 : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
                             }`}>
-                              {isCrazy ? <HiSparkles /> : <GiMustache />}
-                              {isCrazy ? 'Crazy Hair' : 'Mustache'}
+                              {isCreative ? <HiSparkles /> : <GiMustache />}
+                              {isCreative ? 'Creative Mustache' : 'Mustache'}
                             </span>
                           </td>
                           <td>
@@ -998,8 +1002,8 @@ export default function AdminPortal({ onBackToApp }) {
                 <div className="stat-val text-cyan">{overview.mustacheEntriesCount ?? overview.championshipCount ?? overview.entries.filter(e => !e.isWoodenSpoon).length}</div>
               </div>
               <div className="admin-stat-card">
-                <div className="stat-label"><HiSparkles className="inline-icon text-purple-400" /> The Mane Event: Crazy Hair</div>
-                <div className="stat-val text-purple-400">{overview.crazyHairEntriesCount ?? overview.woodenSpoonCount ?? overview.entries.filter(e => e.isWoodenSpoon).length}</div>
+                <div className="stat-label"><HiSparkles className="inline-icon text-purple-400" /> Creative Mustache Entries</div>
+                <div className="stat-val text-purple-400">{overview.creativeMustacheEntriesCount ?? overview.crazyHairEntriesCount ?? overview.woodenSpoonCount ?? overview.entries.filter(e => e.isWoodenSpoon || e.competitionType === 'CreativeMustache').length}</div>
               </div>
               <div className="admin-stat-card">
                 <div className="stat-label">Public / Visible</div>
@@ -1040,10 +1044,10 @@ export default function AdminPortal({ onBackToApp }) {
               </button>
               <button 
                 type="button" 
-                className={`chip-btn ${filterMode === 'crazyhair' ? 'active' : ''}`}
-                onClick={() => setFilterMode('crazyhair')}
+                className={`chip-btn ${filterMode === 'creative' || filterMode === 'crazyhair' ? 'active' : ''}`}
+                onClick={() => setFilterMode('creative')}
               >
-                <HiSparkles className="inline-icon text-purple-400" /> The Mane Event: Crazy Hair
+                <HiSparkles className="inline-icon text-purple-400" /> Creative Mustache
               </button>
               <button 
                 type="button" 
@@ -1182,7 +1186,7 @@ export default function AdminPortal({ onBackToApp }) {
                     {filteredEntries.map(entry => {
                       const isSelected = selectedIds.has(entry.id);
                       const isRowReanalysing = reanalysingId === entry.id;
-                      const isCrazy = entry.isWoodenSpoon || entry.competitionType === 'CrazyHair';
+                      const isCreative = entry.isWoodenSpoon || entry.competitionType === 'CreativeMustache' || entry.competitionType === 'CrazyHair';
                       return (
                         <tr 
                           key={entry.id} 
@@ -1212,12 +1216,12 @@ export default function AdminPortal({ onBackToApp }) {
                           </td>
                           <td className="cohort-col">
                             <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border ${
-                              isCrazy 
+                              isCreative 
                                 ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' 
                                 : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
                             }`}>
-                              {isCrazy ? <HiSparkles /> : <GiMustache />}
-                              {isCrazy ? 'Crazy Hair' : 'Mustache'}
+                              {isCreative ? <HiSparkles /> : <GiMustache />}
+                              {isCreative ? 'Creative Mustache' : 'Mustache'}
                             </span>
                           </td>
                           <td className="category-col">
@@ -1273,15 +1277,15 @@ export default function AdminPortal({ onBackToApp }) {
                                 type="button"
                                 className="admin-btn-action btn-make-genuine"
                                 onClick={() => handleToggleTrack(entry.id)}
-                                title="Switch entry between Mustache and Crazy Hair track"
+                                title="Switch entry between Real Mustache and Creative Mustache track"
                               >
-                                {isCrazy ? (
+                                {isCreative ? (
                                   <>
                                     <GiMustache className="btn-icon" /> To Stache
                                   </>
                                 ) : (
                                   <>
-                                    <HiSparkles className="btn-icon" /> To Hair
+                                    <HiSparkles className="btn-icon" /> To Creative
                                   </>
                                 )}
                               </button>

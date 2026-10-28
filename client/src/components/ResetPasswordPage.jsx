@@ -173,7 +173,7 @@ export default function ResetPasswordPage() {
       <div className="reset-pwd-card scale-in">
         <div className="reset-pwd-header">
           <div className="reset-logo-badge">
-            <GiMustache className="reset-icon text-cyan-400" />
+            <img src="/dvt-logo.png" alt="DVT" className="auth-logo-img" />
           </div>
           <h1 className="reset-title">Choose New Password</h1>
           <p className="reset-subtitle">

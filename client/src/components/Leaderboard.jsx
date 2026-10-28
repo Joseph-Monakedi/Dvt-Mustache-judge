@@ -17,17 +17,18 @@ const MUSTACHE_CATEGORIES = [
   'Peach Fuzz'
 ];
 
-const CRAZY_HAIR_CATEGORIES = [
+const CREATIVE_MUSTACHE_CATEGORIES = [
   'All',
-  'Wild Afro',
-  'Neon Punk',
-  'Beehive Extravaganza',
-  'Spiked Mohawk',
-  'Galactic Braids',
-  'Funky Mullet',
-  'Glitter Cascade',
-  'Bedhead Chic',
-  'Creative Chaos'
+  'Paper & Origami',
+  'Cotton Wool Cloud',
+  'Wig & Faux Hair',
+  'Cardboard Sculpt',
+  'Drawn-on Classic',
+  'Yarn & Knitted',
+  'Pipe Cleaner Wizard',
+  '3D Craft Prop',
+  'Household Avant-Garde',
+  'Other'
 ];
 
 function PodiumSkeleton() {
@@ -117,16 +118,16 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
   const [entries, setEntries] = useState([]);
   const [totalEntries, setTotalEntries] = useState(0);
   const [mustacheCount, setMustacheCount] = useState(0);
-  const [crazyHairCount, setCrazyHairCount] = useState(0);
-  const [division, setDivision] = useState(() => searchParams.get('division') === 'crazyhair' ? 'crazyhair' : 'mustache');
+  const [creativeCount, setCreativeCount] = useState(0);
+  const [division, setDivision] = useState(() => (searchParams.get('division') === 'creative' || searchParams.get('division') === 'creativemustache' || searchParams.get('division') === 'crazyhair') ? 'creative' : 'mustache');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [lastUpdated, setLastUpdated] = useState(() => new Date());
 
-  const isCrazyHair = division === 'crazyhair';
-  const categories = isCrazyHair ? CRAZY_HAIR_CATEGORIES : MUSTACHE_CATEGORIES;
+  const isCreative = division === 'creative' || division === 'creativemustache' || division === 'crazyhair';
+  const categories = isCreative ? CREATIVE_MUSTACHE_CATEGORIES : MUSTACHE_CATEGORIES;
 
   const fetchLeaderboard = async () => {
     try {
@@ -142,7 +143,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       setEntries(data.entries || []);
       setTotalEntries(data.totalEntries || 0);
       setMustacheCount(data.mustacheEntriesCount ?? data.championshipEntriesCount ?? 0);
-      setCrazyHairCount(data.crazyHairEntriesCount ?? data.woodenSpoonEntriesCount ?? 0);
+      setCreativeCount(data.creativeMustacheEntriesCount ?? data.crazyHairEntriesCount ?? data.woodenSpoonEntriesCount ?? 0);
       setLastUpdated(new Date());
       setError(null);
     } catch (err) {
@@ -186,29 +187,32 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       {/* Grand Prize & Prostate Cancer Awareness Donation Banner */}
       <div className="mb-8 p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#007FBA]/20 via-[#0b1320] to-purple-950/30 border border-cyan-500/40 shadow-2xl backdrop-blur-md">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-sm">
-                🏆 GRAND PRIZES: R1,000 Takealot Vouchers
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/40">
-                🎗️ Prostate Cancer Awareness & Research
-              </span>
+          <div className="flex items-start gap-4">
+            <img src="/dvt-logo.png" alt="DVT" className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0 mt-1 drop-shadow-[0_0_12px_rgba(0,180,216,0.5)]" />
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-sm">
+                  🏆 GRAND PRIZES: R1,000 Takealot Vouchers
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/40">
+                  🎗️ Prostate Cancer Awareness & Research
+                </span>
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+                Two Challenges. Free Registration. R1,000 Grand Prizes!
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300 max-w-3xl leading-relaxed">
+                Anyone can enter and climb the leaderboard for free! The competition is split into two tracks: the <strong>Movember Mustache Challenge</strong> (for natural mustache growers) and <strong>The Creative Mustache Challenge</strong> (for women and creative non-growers crafting DIY staches from wigs, paper, cotton, drawings, props, etc.). 
+                Both tracks offer a grand prize of a <strong>R1,000 Takealot Voucher</strong> to eligible participants who have donated a minimum of <strong>R100</strong>.
+              </p>
             </div>
-            <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-              Two Challenges. Free Registration. R1,000 Grand Prizes!
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 max-w-3xl leading-relaxed">
-              Anyone can enter and climb the leaderboard for free! The competition is split into two tracks: the <strong>Movember Mustache Challenge</strong> (for mustache growers) and <strong>The Mane Event: Crazy Hair Challenge</strong> (for women and non-growers). 
-              Both tracks offer a grand prize of a <strong>R1,000 Takealot Voucher</strong> to eligible participants who have donated a minimum of <strong>R100</strong>.
-            </p>
           </div>
           <div className="shrink-0 p-4 bg-[#070c14]/90 border border-cyan-400/30 rounded-xl text-xs space-y-1.5 text-slate-300 shadow-lg">
             <div className="font-bold text-cyan-300 flex items-center gap-1.5 text-sm">
               💬 How to Donate:
             </div>
-            <div>Contact <strong>Rose Allen</strong> via <strong>MS Teams</strong></div>
-            <div>Or Email: <a href="mailto:RAllen@dvtsoftware.com" className="text-cyan-400 hover:underline font-mono font-bold">RAllen@dvtsoftware.com</a></div>
+            <div>Contact <strong>DVT Marketing</strong> via email</div>
+            <div>Email: <a href="mailto:marketing@dvtsoftware.com" className="text-cyan-400 hover:underline font-mono font-bold">marketing@dvtsoftware.com</a></div>
             <div className="text-[11px] text-slate-400 pt-1 border-t border-white/10">
               * Minimum R100 donation required for Grand Prize eligibility.
             </div>
@@ -220,15 +224,15 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       <div className="leaderboard-header">
         <div>
           <h1 className="leaderboard-title">
-            {isCrazyHair ? (
-              <>The Mane Event: Crazy Hair Challenge <HiSparkles className="title-trophy-icon text-purple-400" /></>
+            {isCreative ? (
+              <>Creative Mustache Challenge <HiSparkles className="title-trophy-icon text-purple-400" /></>
             ) : (
               <>DVT Movember Mustache Challenge <GiMustache className="title-trophy-icon text-cyan-400" /></>
             )}
           </h1>
           <p className="leaderboard-subtitle">
-            {isCrazyHair 
-              ? 'Wild styles, vibrant colors & creative hairdos for women and non-growers! Grand Prize: R1,000 Takealot Voucher for eligible donors.'
+            {isCreative 
+              ? 'Faux, DIY, and artistic mustaches crafted from paper, cotton, wigs, drawings & surprise props! Grand Prize: R1,000 Takealot Voucher for eligible donors.'
               : 'Live bristle standings for genuine, real-life human mustaches across all DVT squads. Grand Prize: R1,000 Takealot Voucher for eligible donors.'}
           </p>
         </div>
@@ -249,7 +253,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       <div className="division-switch-tabs">
         <button
           type="button"
-          className={`division-tab ${!isCrazyHair ? 'active' : ''}`}
+          className={`division-tab ${!isCreative ? 'active' : ''}`}
           onClick={() => {
             setDivision('mustache');
             setSelectedCategory('All');
@@ -260,14 +264,14 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
         </button>
         <button
           type="button"
-          className={`division-tab ${isCrazyHair ? 'active' : ''}`}
+          className={`division-tab ${isCreative ? 'active' : ''}`}
           onClick={() => {
-            setDivision('crazyhair');
+            setDivision('creative');
             setSelectedCategory('All');
-            setSearchParams({ division: 'crazyhair' });
+            setSearchParams({ division: 'creative' });
           }}
         >
-          <HiSparkles className="tab-icon text-purple-400" /> The Mane Event: Crazy Hair ({crazyHairCount})
+          <HiSparkles className="tab-icon text-purple-400" /> Creative Mustache Challenge ({creativeCount})
         </button>
       </div>
 
@@ -352,7 +356,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                 {topThree[0].verdictBadge}
               </div>
               <div className="podium-pedestal gold-pedestal">
-                {isCrazyHair ? 'MANE EVENT CHAMPION' : 'MUSTACHE CHAMPION'}
+                {isCreative ? 'CREATIVE MUSTACHE CHAMPION' : 'MUSTACHE CHAMPION'}
               </div>
             </div>
 
@@ -430,15 +434,15 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
           <TableSkeleton />
         ) : filteredEntries.length === 0 ? (
           <div className="empty-state">
-            {isCrazyHair ? <HiSparkles className="empty-icon text-purple-400" /> : <GiMustache className="empty-icon text-cyan-400" />}
+            {isCreative ? <HiSparkles className="empty-icon text-purple-400" /> : <GiMustache className="empty-icon text-cyan-400" />}
             <h3>No entries in this challenge yet</h3>
             <p>
-              {isCrazyHair 
-                ? 'Be the first to showcase your crazy, creative hairdo in The Mane Event!'
+              {isCreative 
+                ? 'Be the first to craft and showcase your creative mustache!'
                 : 'No mustache contestant records match this filter yet.'}
             </p>
             <button className="action-btn" onClick={onGoToBooth}>
-              {isCrazyHair ? 'Enter The Mane Event' : 'Judge Your Mustache Now'}
+              {isCreative ? 'Enter Creative Mustache Challenge' : 'Judge Your Mustache Now'}
             </button>
           </div>
         ) : (
@@ -452,7 +456,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                     <th>Contestant</th>
                     <th>Style Archetype</th>
                     <th>Prize Eligibility</th>
-                    <th>{isCrazyHair ? 'Scores (Vol / Style / Char)' : 'Scores (D / S / Sw)'}</th>
+                    <th>{isCreative ? 'Scores (Craft / Innov / Humor)' : 'Scores (D / S / Sw)'}</th>
                     <th>Overall</th>
                     <th>Action</th>
                   </tr>
@@ -491,19 +495,19 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                             <FaTrophy className="text-amber-400 text-xs" /> R1,000 Eligible
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 border border-white/10" title="Community Entry • Donate R100+ via Rose to become eligible for R1,000 voucher">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 border border-white/10" title="Community Entry • Donate R100+ via marketing to become eligible for R1,000 voucher">
                             🎗️ Community
                           </span>
                         )}
                       </td>
                       <td className="breakdown-col">
-                        {isCrazyHair ? (
+                        {isCreative ? (
                           <div className="subscores-compact">
-                            <span title="Volume & Texture">Vol: {entry.densityScore}</span>
+                            <span title="Craftsmanship & Texture">Craft: {entry.densityScore}</span>
                             <span>•</span>
-                            <span title="Styling & Form">Style: {entry.symmetryScore}</span>
+                            <span title="Design & Innovation">Innov: {entry.symmetryScore}</span>
                             <span>•</span>
-                            <span title="Wild Charisma">Char: {entry.swaggerScore}</span>
+                            <span title="Audacity & Humor">Humor: {entry.swaggerScore}</span>
                           </div>
                         ) : (
                           <div className="subscores-compact">
@@ -581,9 +585,9 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                         <span className="style-tag">{entry.styleCategory}</span>
                       </div>
                       <div className="mobile-subscores-wrap">
-                        {isCrazyHair ? (
+                        {isCreative ? (
                           <span className="mobile-subscores-text">
-                            Vol: {entry.densityScore} • Style: {entry.symmetryScore} • Char: {entry.swaggerScore}
+                            Craft: {entry.densityScore} • Innov: {entry.symmetryScore} • Humor: {entry.swaggerScore}
                           </span>
                         ) : (
                           <span className="mobile-subscores-text">

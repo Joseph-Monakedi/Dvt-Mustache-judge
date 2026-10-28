@@ -57,6 +57,8 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
     return '#94A3B8';
   };
 
+  const isCreative = verdict.competitionType === 'CreativeMustache' || verdict.competitionType === 'CrazyHair' || verdict.isWoodenSpoon;
+
   return (
     <div className="verdict-container fade-in">
       <div className="verdict-card">
@@ -67,13 +69,13 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
           </div>
           <div>
             <div className="verdict-tag">
-              {verdict.competitionType === 'CrazyHair' || verdict.isWoodenSpoon 
-                ? '🦁 The Mane Event: Crazy Hair Verdict' 
+              {isCreative 
+                ? '🎨 Creative Mustache Verdict' 
                 : '👨🏻 Official Mustache Judging Verdict'}
             </div>
             <h2 className="contestant-display-name">{verdict.contestantName}</h2>
             <div className="contestant-cohort-tag flex items-center gap-2">
-              <span>{verdict.competitionType === 'CrazyHair' ? 'Crazy Hair Challenge' : 'Movember 2026 Contestant'}</span>
+              <span>{isCreative ? 'Creative Mustache Challenge' : 'Movember 2026 Contestant'}</span>
               {verdict.isPrizeEligible ? (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                   🏆 R1,000 Eligible
@@ -184,11 +186,11 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
 
             {/* Sub-Score Bars */}
             <div className="subscores-list">
-              {verdict.competitionType === 'CrazyHair' ? (
+              {isCreative ? (
                 <>
                   <div className="subscore-item">
                     <div className="subscore-labels">
-                      <span>Volume & Texture</span>
+                      <span>Craftsmanship & Texture</span>
                       <span className="subscore-val text-purple-400">{verdict.densityScore || 0}/10</span>
                     </div>
                     <div className="subscore-bar">
@@ -201,7 +203,7 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
 
                   <div className="subscore-item">
                     <div className="subscore-labels">
-                      <span>Creative Styling</span>
+                      <span>Design & Innovation</span>
                       <span className="subscore-val text-purple-400">{verdict.symmetryScore || 0}/10</span>
                     </div>
                     <div className="subscore-bar">
@@ -214,7 +216,7 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
 
                   <div className="subscore-item">
                     <div className="subscore-labels">
-                      <span>Wild Charisma</span>
+                      <span>Audacity & Humor</span>
                       <span className="subscore-val text-purple-400">{verdict.swaggerScore || 0}/10</span>
                     </div>
                     <div className="subscore-bar">

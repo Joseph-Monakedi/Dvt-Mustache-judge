@@ -29,7 +29,7 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [preferredCompetition, setPreferredCompetition] = useState('Mustache'); // 'Mustache' | 'CrazyHair'
+  const [preferredCompetition, setPreferredCompetition] = useState('Mustache'); // 'Mustache' | 'CreativeMustache'
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -133,7 +133,7 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
         {/* Modal Header */}
         <div className="auth-header">
           <div className="auth-logo-badge">
-            <GiMustache className="auth-mustache-icon" />
+            <img src="/dvt-logo.png" alt="DVT" className="auth-logo-img" />
           </div>
           <h2 className="auth-title">
             {mode === 'forgot'
@@ -336,20 +336,20 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
                   <span className="compact-plan-price text-emerald-400 text-xs font-semibold">Free Entry</span>
                 </label>
 
-                {/* Crazy Hair Challenge */}
+                {/* Creative Mustache Challenge */}
                 <label 
-                  className={`compact-plan-item ${preferredCompetition === 'CrazyHair' ? 'selected' : ''}`}
-                  onClick={() => setPreferredCompetition('CrazyHair')}
+                  className={`compact-plan-item ${preferredCompetition === 'CreativeMustache' ? 'selected' : ''}`}
+                  onClick={() => setPreferredCompetition('CreativeMustache')}
                 >
                   <input 
                     type="radio" 
                     name="competitionTrack" 
-                    checked={preferredCompetition === 'CrazyHair'} 
-                    onChange={() => setPreferredCompetition('CrazyHair')} 
+                    checked={preferredCompetition === 'CreativeMustache'} 
+                    onChange={() => setPreferredCompetition('CreativeMustache')} 
                   />
                   <div className="compact-plan-info">
-                    <span className="compact-plan-title">💇‍♀️ The Mane Event: Crazy Hair</span>
-                    <span className="compact-plan-desc text-xs text-slate-400">For women & non-growers (fun, wild, creative hair)</span>
+                    <span className="compact-plan-title">🎨 Creative Mustache Challenge</span>
+                    <span className="compact-plan-desc text-xs text-slate-400">For women & creative non-growers (craft staches from wigs, paper, cotton, props — surprise us!)</span>
                   </div>
                   <span className="compact-plan-price text-purple-400 text-xs font-semibold">Free Entry</span>
                 </label>
@@ -368,9 +368,9 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
                   Only participants who <strong>donate a minimum of R100</strong> are eligible for the voucher. All proceeds go toward raising awareness for <strong>prostate cancer and men's health research</strong>.
                 </p>
                 <div className="p-2 rounded bg-black/40 border border-slate-700/60 text-slate-300">
-                  <span className="font-semibold text-white">To donate:</span> Contact <strong>Rose Allen</strong> via MS Teams or email{' '}
-                  <a href="mailto:RAllen@dvtsoftware.com" className="text-cyan-400 underline hover:text-cyan-300">
-                    RAllen@dvtsoftware.com
+                  <span className="font-semibold text-white">To donate:</span> Email{' '}
+                  <a href="mailto:marketing@dvtsoftware.com" className="text-cyan-400 underline hover:text-cyan-300">
+                    marketing@dvtsoftware.com
                   </a>.
                 </div>
               </div>

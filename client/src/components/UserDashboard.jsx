@@ -121,7 +121,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
       setPaymentBanner({
         type: 'warning',
         title: 'Checkout Cancelled',
-        message: 'Donation checkout was cancelled. You can donate via Rose Allen anytime.'
+        message: 'Donation checkout was cancelled. You can donate via marketing@dvtsoftware.com anytime.'
       });
     }
   }, [token]);
@@ -167,7 +167,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
     );
   }
 
-  const isCrazyHair = user.preferredCompetition === 'CrazyHair';
+  const isCreative = user.preferredCompetition === 'CreativeMustache' || user.preferredCompetition === 'CrazyHair';
   const isEligible = user.isPrizeEligible || user.leaderboardPaid || (user.amountPaid >= 100);
   const hasBaseline = Boolean(user.cleanShaveImageUrl || dashboardData?.cleanShaveImageUrl);
   const baselineDate = user.cleanShaveUploadedAt || dashboardData?.cleanShaveUploadedAt;
@@ -208,18 +208,18 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
         <div className="profile-main-info flex items-center gap-5">
           <div className="profile-avatar-wrap relative shrink-0">
             <div className={`w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr ${
-              isCrazyHair ? 'from-purple-600 to-pink-500 shadow-purple-500/30 border-purple-300/40' : 'from-[#007FBA] to-[#00b4d8] shadow-cyan-500/30 border-cyan-300/40'
+              isCreative ? 'from-purple-600 to-pink-500 shadow-purple-500/30 border-purple-300/40' : 'from-[#007FBA] to-[#00b4d8] shadow-cyan-500/30 border-cyan-300/40'
             } flex items-center justify-center text-white text-4xl shadow-lg border-2`}>
-              {isCrazyHair ? <HiSparkles /> : <GiMustache />}
+              {isCreative ? <HiSparkles /> : <GiMustache />}
             </div>
           </div>
           <div className="profile-details space-y-1">
             <div className="profile-badge-row flex flex-wrap items-center gap-2 mb-1.5">
               <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-[#131f33] ${
-                isCrazyHair ? 'text-purple-300 border-purple-500/30' : 'text-cyan-300 border-cyan-500/30'
+                isCreative ? 'text-purple-300 border-purple-500/30' : 'text-cyan-300 border-cyan-500/30'
               } border`}>
-                {isCrazyHair ? <HiSparkles className="pill-icon" /> : <GiMustache className="pill-icon" />}
-                {isCrazyHair ? 'The Mane Event Contestant' : 'Movember Mustache Contestant'}
+                {isCreative ? <HiSparkles className="pill-icon" /> : <GiMustache className="pill-icon" />}
+                {isCreative ? 'Creative Mustache Contestant' : 'Movember Mustache Contestant'}
               </span>
               <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-white/5 text-slate-400 border border-white/5">
                 <FaCalendarDays className="pill-icon" /> Joined Movember 2026
@@ -288,7 +288,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
                 <span className="block text-[10px] text-slate-300 leading-normal">
                   {isEligible 
                     ? 'Your donation has been approved. You are eligible to win the grand prize!' 
-                    : 'Donate R100+ via Rose Allen to qualify for the R1,000 Takealot Voucher.'}
+                    : 'Donate R100+ via marketing@dvtsoftware.com to qualify for the R1,000 Takealot Voucher.'}
                 </span>
               </div>
             </div>
@@ -308,7 +308,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
       </div>
 
       {/* Clean Shave Baseline Management Card (Only required for Mustache Track) */}
-      {!isCrazyHair ? (
+      {!isCreative ? (
         <div className={`dashboard-cleanshave-banner flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 sm:p-7 rounded-2xl border transition-all ${
           hasBaseline 
             ? 'bg-[#0d1522] border-emerald-500/30 shadow-lg' 
@@ -381,23 +381,23 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
           </div>
         </div>
       ) : (
-        <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-950/30 via-[#0d1522] to-pink-950/30 border border-purple-500/40 flex items-center justify-between gap-4 shadow-xl">
+        <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-950/30 via-[#0d1522] to-pink-950/30 border border-purple-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300 text-2xl shrink-0">
               <HiSparkles />
             </div>
             <div>
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <span>The Mane Event: Crazy Hair Track</span>
+                <span>Creative Mustache Track</span>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 font-semibold">Active</span>
               </h3>
               <p className="text-xs sm:text-sm text-slate-300">
-                No clean shave baseline is needed! Enter with crazy, colorful, creative hair styles whenever you like.
+                No clean shave baseline is needed! Craft your mustache with wigs, paper, cotton, cardboard, drawings, or surprise items — the more creative, the better!
               </p>
             </div>
           </div>
           <Button variant="primary" size="md" icon={FaCamera} onClick={onGoToBooth}>
-            Enter Crazy Hair
+            Enter Creative Stache
           </Button>
         </div>
       )}
@@ -429,11 +429,11 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
         {/* Competition Track */}
         <div className="dash-stat-card bg-[#0d1522] border border-white/10 rounded-2xl p-5 flex items-center gap-4 hover:border-purple-500/40 transition-all">
           <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 text-xl shrink-0">
-            {isCrazyHair ? <HiSparkles /> : <GiMustache />}
+            {isCreative ? <HiSparkles /> : <GiMustache />}
           </div>
           <div>
             <span className="block text-base font-extrabold text-white truncate">
-              {isCrazyHair ? 'The Mane Event' : 'Mustache Challenge'}
+              {isCreative ? 'Creative Mustache' : 'Mustache Challenge'}
             </span>
             <span className="block text-xs font-medium text-slate-400">
               {dashboardData?.leaderboardRank ? `Rank #${dashboardData.leaderboardRank}` : 'Joined Track'}
@@ -477,7 +477,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
             icon={FaCamera}
             onClick={onGoToBooth}
           >
-            {isCrazyHair ? 'New Crazy Hair Attempt' : 'New Mustache Attempt'}
+            {isCreative ? 'New Creative Stache Attempt' : 'New Mustache Attempt'}
           </Button>
 
           <Button 
@@ -506,7 +506,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
       ) : !dashboardData?.entries || dashboardData.entries.length === 0 ? (
         <div className="dashboard-empty-vault bg-[#0d1522] border border-white/10 rounded-2xl p-12 text-center max-w-xl mx-auto space-y-5 shadow-xl">
           <div className="w-20 h-20 mx-auto rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-4xl shadow-lg shadow-cyan-950/50">
-            {isCrazyHair ? <HiSparkles className="empty-icon" /> : <GiMustache className="empty-icon" />}
+            {isCreative ? <HiSparkles className="empty-icon" /> : <GiMustache className="empty-icon" />}
           </div>
           <div className="space-y-2">
             <h3 className="text-xl font-bold text-white">No Submissions Yet</h3>

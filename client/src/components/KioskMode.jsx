@@ -102,7 +102,7 @@ export default function KioskMode({ onExit }) {
       {/* Top Banner / Ticker */}
       <div className="kiosk-top-bar">
         <div className="kiosk-brand">
-          <GiMustache className="kiosk-emoji-icon" />
+          <img src="/dvt-logo.png" alt="DVT" className="kiosk-brand-logo" />
           <div>
             <span className="kiosk-brand-dvt">DVT</span>
             <span className="kiosk-brand-title"> MOVEMBER MUSTACHE JUDGE</span>

@@ -54,9 +54,9 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     }
   }, [user]);
 
-  const isCrazyHair = competitionType === 'CrazyHair';
+  const isCreative = competitionType === 'CreativeMustache' || competitionType === 'CrazyHair';
   const hasCleanShave = Boolean(user?.cleanShaveImageUrl);
-  const needsCleanShave = !isCrazyHair && !hasCleanShave;
+  const needsCleanShave = !isCreative && !hasCleanShave;
 
   // Initialize camera stream
   const startCamera = useCallback(async () => {
@@ -231,7 +231,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
       return;
     }
     if (!capturedBlob) {
-      setValidationError(isCrazyHair ? 'Please snap a photo of your crazy hairstyle.' : 'Please snap a photo of your mustache.');
+      setValidationError(isCreative ? 'Please snap a photo of your creative mustache.' : 'Please snap a photo of your mustache.');
       return;
     }
 
@@ -291,7 +291,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
           <button
             type="button"
             className={`px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
-              competitionType === 'Mustache'
+              !isCreative
                 ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20'
                 : 'text-slate-300 hover:text-white'
             }`}
@@ -306,17 +306,17 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
           <button
             type="button"
             className={`px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
-              competitionType === 'CrazyHair'
+              isCreative
                 ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md shadow-purple-500/20'
                 : 'text-slate-300 hover:text-white'
             }`}
             onClick={() => {
-              setCompetitionType('CrazyHair');
+              setCompetitionType('CreativeMustache');
               handleRetake();
             }}
           >
-            <span className="text-sm sm:text-base">💇‍♀️</span>
-            <span>The Mane Event: Crazy Hair</span>
+            <span className="text-sm sm:text-base">🎨</span>
+            <span>Creative Mustache Challenge</span>
           </button>
         </div>
       </div>
@@ -339,9 +339,9 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
               </div>
             </div>
             <div className="flex-shrink-0 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-700/60 text-slate-300">
-              Donate via <strong>Rose Allen</strong>:{' '}
-              <a href="mailto:RAllen@dvtsoftware.com" className="text-cyan-400 underline hover:text-cyan-300 font-medium">
-                RAllen@dvtsoftware.com
+              Donate via:{' '}
+              <a href="mailto:marketing@dvtsoftware.com" className="text-cyan-400 underline hover:text-cyan-300 font-medium">
+                marketing@dvtsoftware.com
               </a>
             </div>
           </div>
@@ -350,8 +350,8 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
 
       <div className="booth-header">
         <h1 className="booth-title">
-          {isCrazyHair ? (
-            <>The Mane Event: Crazy Hair Challenge 💇‍♀️</>
+          {isCreative ? (
+            <>Creative Mustache Challenge 🎨</>
           ) : needsCleanShave ? (
             <>Step 1: Capture Day 1 Clean Shave Baseline <GiMustache className="title-stache-icon" /></>
           ) : (
@@ -359,8 +359,8 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
           )}
         </h1>
         <p className="booth-subtitle">
-          {isCrazyHair
-            ? 'For women and non-growers! Snap your wildest, most creative hair, wigs, accessories, and crazy colors. Grand Prize: R1,000 Takealot Voucher!'
+          {isCreative
+            ? 'For women and creative non-growers! Craft a wild, funny, or inventive mustache using wigs, paper, cotton, cardboard, drawings, or surprise items. The more creative the better! Grand Prize: R1,000 Takealot Voucher!'
             : needsCleanShave
               ? 'Before entering the mustache contest, snap a fresh clean-shaven photo. This baseline is saved to your profile and used to evaluate your growth over time.'
               : 'Submit as many photos as you want! Growth is evaluated alongside your clean-shave baseline, and only your single highest score is featured on the leaderboard.'}
@@ -377,7 +377,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 <div className="preview-badge">
                   {needsCleanShave 
                     ? 'Clean Shave Snapshot Ready' 
-                    : (isCrazyHair ? 'Crazy Hair Snapshot Ready' : 'Mustache Snapshot Ready')}
+                    : (isCreative ? 'Creative Mustache Snapshot Ready' : 'Mustache Snapshot Ready')}
                 </div>
                 <div className="snapshot-overlay-actions">
                   <button 
@@ -454,8 +454,8 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                   <div className="hud-guidance-banner">
                     <span className="guidance-pulse"></span>
                     <span>
-                      {isCrazyHair 
-                        ? 'Frame your wild, creative hair & pose' 
+                      {isCreative 
+                        ? 'Center your crafted mustache & strike a proud pose' 
                         : (needsCleanShave ? 'Center your clean-shaven face' : 'Center your mustache within outline')}
                     </span>
                   </div>
@@ -490,7 +490,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                   <span className="shutter-text">
                     {needsCleanShave 
                       ? 'SNAP CLEAN SHAVE' 
-                      : (isCrazyHair ? 'SNAP CRAZY HAIR' : 'SNAP MUSTACHE')}
+                      : (isCreative ? 'SNAP CREATIVE MUSTACHE' : 'SNAP MUSTACHE')}
                   </span>
                 </div>
               </button>
@@ -512,13 +512,13 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
         {/* Right: Submission Form */}
         <div className="details-card" ref={detailsCardRef}>
           <h2 className="form-card-title">
-            {isCrazyHair 
-              ? 'Crazy Hair Entry' 
+            {isCreative 
+              ? 'Creative Mustache Entry' 
               : (needsCleanShave ? 'Clean Shave Baseline' : 'Mustache Entry')}
           </h2>
           <p className="form-card-desc">
-            {isCrazyHair
-              ? 'Enter The Mane Event: Crazy Hair Challenge! Unlimited submissions, highest score features on the leaderboard.'
+            {isCreative
+              ? 'Enter the Creative Mustache Challenge! Craft your mustache using paper, cotton, wigs, drawings, or wild props. Unlimited submissions, highest score features on the leaderboard.'
               : needsCleanShave
                 ? 'Record your Day 1 baseline. All future mustache entries are evaluated against this photo.'
                 : 'Unlimited submissions allowed. Only your highest scored photo reaches the leaderboard.'}
@@ -533,7 +533,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 id="contestant-name"
                 type="text" 
                 className="form-input" 
-                placeholder="e.g. Alex M. or Hair Royalty"
+                placeholder="e.g. Alex M. or Craft Maestro"
                 value={name}
                 maxLength={50}
                 onChange={e => setName(e.target.value)}
@@ -547,10 +547,10 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 <FaScaleBalanced className="rules-icon" /> Competition Rules
               </div>
               <ul className="rules-list">
-                {isCrazyHair ? (
+                {isCreative ? (
                   <>
-                    <li>Creative, wild, or colorful hair: volume, styling, wigs, accessories, and fun shapes all count!</li>
-                    <li>Judged on wildness, symmetry, volume, and swagger.</li>
+                    <li>Faux & DIY mustaches: Craft your mustache using wigs, paper, cotton, cardboard, drawings, yarn, or surprise props — the more creative, the better!</li>
+                    <li>Judged on Craftsmanship & Texture, Innovation & Design, and Audacity & Humor.</li>
                     <li>Grand Prize: R1,000 Takealot Voucher for participants who donated R100+.</li>
                     <li>Submit unlimited attempts — only your top score features on the leaderboard.</li>
                   </>
@@ -566,7 +566,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
             </div>
 
             {/* Baseline Status Card for Mustache Growers */}
-            {!isCrazyHair && hasCleanShave && user?.cleanShaveImageUrl && (
+            {!isCreative && hasCleanShave && user?.cleanShaveImageUrl && (
               <div className="booth-baseline-card active fade-in">
                 <div className="booth-baseline-left">
                   <img src={user.cleanShaveImageUrl} alt="Baseline" className="booth-baseline-thumb" />

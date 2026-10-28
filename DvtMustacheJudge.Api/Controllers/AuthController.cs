@@ -57,7 +57,7 @@ public class AuthController : ControllerBase
             PasswordHash = hash,
             Salt = salt,
             Role = "Contestant",
-            PreferredCompetition = string.Equals(request.PreferredCompetition, "CrazyHair", StringComparison.OrdinalIgnoreCase) ? "CrazyHair" : "Mustache",
+            PreferredCompetition = (string.Equals(request.PreferredCompetition, "CreativeMustache", StringComparison.OrdinalIgnoreCase) || string.Equals(request.PreferredCompetition, "CrazyHair", StringComparison.OrdinalIgnoreCase)) ? "CreativeMustache" : "Mustache",
             LeaderboardPaid = false,
             QuizPaid = false,
             CreatedAt = DateTime.UtcNow

@@ -291,7 +291,8 @@ export default function App() {
       {/* Footer */}
       <footer className="app-footer">
         <div className="footer-content">
-          <div className="footer-text">
+          <div className="footer-text flex items-center gap-2">
+            <img src="/dvt-logo.png" alt="DVT" className="footer-dvt-logo" />
             <span>DVT Movember 2026</span> • Celebrating facial hair for a great cause
           </div>
           <div className="footer-links">

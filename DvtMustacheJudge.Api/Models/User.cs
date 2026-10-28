@@ -26,7 +26,7 @@ public class User
     // Entry to Leaderboard / Prize Eligibility (Donated R100+ for R1,000 Takealot voucher)
     public bool LeaderboardPaid { get; set; } = false;
 
-    // Preferred competition track: "Mustache" (Men/Growers) or "CrazyHair" (Women/Non-Growers)
+    // Preferred competition track: "Mustache" (Men/Growers) or "CreativeMustache" (Women/Non-Growers Faux/Craft Mustaches)
     [MaxLength(50)]
     public string PreferredCompetition { get; set; } = "Mustache";
 

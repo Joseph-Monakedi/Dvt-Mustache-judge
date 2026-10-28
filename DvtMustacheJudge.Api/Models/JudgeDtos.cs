@@ -156,6 +156,7 @@ public class LeaderboardResponseDto
 {
     public int TotalEntries { get; set; }
     public int MustacheEntriesCount { get; set; }
+    public int CreativeMustacheEntriesCount { get; set; }
     public int CrazyHairEntriesCount { get; set; }
     public int ChampionshipEntriesCount { get; set; }
     public int WoodenSpoonEntriesCount { get; set; }
@@ -179,6 +180,7 @@ public class AdminOverviewDto
     public int VisibleCount { get; set; }
     public int HiddenCount { get; set; }
     public int MustacheCount { get; set; }
+    public int CreativeMustacheCount { get; set; }
     public int CrazyHairCount { get; set; }
     public int ChampionshipCount { get; set; }
     public int WoodenSpoonCount { get; set; }

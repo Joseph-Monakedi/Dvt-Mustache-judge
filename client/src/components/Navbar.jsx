@@ -31,7 +31,7 @@ export default function Navbar({ totalEntries = 0 }) {
         <div className="navbar-container">
           <Link to="/leaderboard" className="navbar-brand">
             <div className="brand-logo-icon-wrap">
-              <GiMustache className="brand-logo-icon" />
+              <img src="/dvt-logo.png" alt="DVT" className="brand-logo-img" />
             </div>
             <div className="brand-text">
               <div className="brand-title">

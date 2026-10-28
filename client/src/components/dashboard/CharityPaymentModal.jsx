@@ -35,7 +35,7 @@ export default function CharityPaymentModal({
   const eligible = isPrizeEligible || user?.isPrizeEligible || leaderboardPaid || (amountPaid >= 100);
 
   const handleCopyEmail = () => {
-    navigator.clipboard?.writeText('RAllen@dvtsoftware.com');
+    navigator.clipboard?.writeText('marketing@dvtsoftware.com');
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
   };
@@ -107,9 +107,12 @@ export default function CharityPaymentModal({
 
         {/* Donation Instructions Card */}
         <div className="p-5 bg-[#0b1320] border border-cyan-500/30 rounded-2xl space-y-4">
-          <div className="flex items-center gap-2.5 text-cyan-300 font-bold text-sm border-b border-white/10 pb-3">
-            <FaHandHoldingHeart className="text-rose-400 text-lg" />
-            <span>How to Donate (Prostate Cancer Awareness & Research)</span>
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2.5 text-cyan-300 font-bold text-sm">
+              <FaHandHoldingHeart className="text-rose-400 text-lg" />
+              <span>How to Donate (Prostate Cancer Awareness & Research)</span>
+            </div>
+            <img src="/dvt-logo.png" alt="DVT" className="w-6 h-6 object-contain rounded-full drop-shadow-[0_0_8px_rgba(0,180,216,0.4)]" />
           </div>
 
           {/* <p className="text-xs text-slate-300 leading-relaxed">
@@ -119,22 +122,17 @@ export default function CharityPaymentModal({
           <div className="bg-[#070c14] border border-white/10 rounded-xl p-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400">Donation Coordinator:</span>
-              <strong className="text-white text-xs sm:text-sm">Rose Allen</strong>
+              <strong className="text-white text-xs sm:text-sm">DVT Marketing</strong>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400">Contact Method 1:</span>
-              <span className="text-cyan-300 text-xs font-semibold">Microsoft Teams (Rose Allen)</span>
-            </div>
-
-            <div className="flex items-center justify-between pt-1 border-t border-white/5">
-              <span className="text-xs text-slate-400">Contact Method 2:</span>
+              <span className="text-xs text-slate-400">Contact Method:</span>
               <div className="flex items-center gap-2">
                 <a 
-                  href="mailto:RAllen@dvtsoftware.com?subject=DVT%20Movember%20Donation%20-%20Prostate%20Cancer%20Research" 
+                  href="mailto:marketing@dvtsoftware.com?subject=DVT%20Movember%20Donation%20-%20Prostate%20Cancer%20Research" 
                   className="text-cyan-400 hover:underline font-mono text-xs font-bold"
                 >
-                  RAllen@dvtsoftware.com
+                  marketing@dvtsoftware.com
                 </a>
                 <button
                   type="button"
@@ -155,7 +153,7 @@ export default function CharityPaymentModal({
           </div>
 
           <div className="text-[11px] text-slate-400 italic">
-            Once Rose confirms your donation, your account will automatically be marked as <strong>Eligible for the R1,000 Grand Prize</strong> on the leaderboards.
+            Once marketing confirms your donation, your account will automatically be marked as <strong>Eligible for the R1,000 Grand Prize</strong> on the leaderboards.
           </div>
         </div>
 
