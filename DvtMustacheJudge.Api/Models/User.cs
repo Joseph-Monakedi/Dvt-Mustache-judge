@@ -23,8 +23,14 @@ public class User
     [MaxLength(20)]
     public string Role { get; set; } = "Contestant"; // "Contestant" | "Admin"
 
-    // Entry to Leaderboard (R100 fee managed by admin or PayFast)
+    // Entry to Leaderboard / Prize Eligibility (Donated R100+ for R1,000 Takealot voucher)
     public bool LeaderboardPaid { get; set; } = false;
+
+    // Preferred competition track: "Mustache" (Men/Growers) or "CrazyHair" (Women/Non-Growers)
+    [MaxLength(50)]
+    public string PreferredCompetition { get; set; } = "Mustache";
+
+    public bool IsEligibleToWin => LeaderboardPaid || (AmountPaid >= 100);
 
     // Entry to Mustache Quiz Arena (R50 fee managed by admin or PayFast)
     public bool QuizPaid { get; set; } = false;

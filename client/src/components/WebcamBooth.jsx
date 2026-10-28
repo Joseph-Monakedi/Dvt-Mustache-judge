@@ -21,7 +21,7 @@ import { initiatePayFastCheckout } from '../utils/payfast';
 export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
   const { user, token, refreshUser, openAuthModal } = useAuth();
   const [name, setName] = useState(user?.fullName || '');
-  const [isPaying, setIsPaying] = useState(false);
+  const [competitionType, setCompetitionType] = useState(user?.preferredCompetition || 'Mustache');
   const [capturedBlob, setCapturedBlob] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
@@ -44,18 +44,19 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     }
   };
 
-  // Sync user's name
+  // Sync user's name & preferred competition
   useEffect(() => {
     if (user?.fullName && !name) {
       setName(user.fullName);
     }
+    if (user?.preferredCompetition && !competitionType) {
+      setCompetitionType(user.preferredCompetition);
+    }
   }, [user]);
 
-  // Determine stage:
-  // Step 1: User needs to take Day 1 clean shave baseline photo
-  // Step 2: Clean shave is on file; user can submit unlimited growth photos
+  const isCrazyHair = competitionType === 'CrazyHair';
   const hasCleanShave = Boolean(user?.cleanShaveImageUrl);
-  const isPaidOrAdmin = Boolean(user?.leaderboardPaid || user?.role === 'Admin');
+  const needsCleanShave = !isCrazyHair && !hasCleanShave;
 
   // Initialize camera stream
   const startCamera = useCallback(async () => {
@@ -102,8 +103,8 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
   }, [facingMode]);
 
   useEffect(() => {
-    // Only run camera if user is authenticated and paid
-    if (user && isPaidOrAdmin) {
+    // Run camera for authenticated user (free entry for all!)
+    if (user) {
       startCamera();
     }
     return () => {
@@ -115,7 +116,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
         videoRef.current.srcObject = null;
       }
     };
-  }, [startCamera, user, isPaidOrAdmin]);
+  }, [startCamera, user]);
 
   const toggleCameraFacing = () => {
     setFacingMode(prev => (prev === 'user' ? 'environment' : 'user'));
@@ -175,7 +176,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     }
   };
 
-  // Step 1: Save Clean Shave Baseline
+  // Step 1: Save Clean Shave Baseline (only for Mustache growers)
   const handleSaveCleanShaveBaseline = async () => {
     if (!capturedBlob) {
       setValidationError('Please snap or upload your clean-shaven face first.');
@@ -215,7 +216,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     }
   };
 
-  // Step 2: Submit Mustache Growth Entry
+  // Step 2: Submit Entry
   const handleSubmitEntry = e => {
     e.preventDefault();
 
@@ -230,14 +231,15 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
       return;
     }
     if (!capturedBlob) {
-      setValidationError('Please snap a photo of your mustache.');
+      setValidationError(isCrazyHair ? 'Please snap a photo of your crazy hairstyle.' : 'Please snap a photo of your mustache.');
       return;
     }
 
     setValidationError('');
     onJudgeSubmit({
       name: name.trim(),
-      imageBlob: capturedBlob
+      imageBlob: capturedBlob,
+      competitionType
     });
   };
 
@@ -247,10 +249,10 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
       <div className="booth-container fade-in">
         <div className="booth-header">
           <h1 className="booth-title">
-            Enter the Movember Contest <GiMustache className="title-stache-icon" />
+            Enter the Competition <GiMustache className="title-stache-icon" />
           </h1>
           <p className="booth-subtitle">
-            Sign in or register to join the competition and submit your mustache photos.
+            Sign in or register to join the competition and submit your entries.
           </p>
         </div>
 
@@ -262,7 +264,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
             <span className="paywall-pill">Contestant Access</span>
             <h2>Sign In Required to Enter</h2>
             <p>
-              To enter the competition, record your Day 1 clean shave baseline photo, and submit entries for judging, please sign in or register with your email.
+              Free entry for all! Sign in or create your free account to submit your photos for AI judging and join the live leaderboard.
             </p>
 
             <div className="paywall-actions" style={{ marginTop: '24px' }}>
@@ -280,86 +282,88 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     );
   }
 
-  // 2. GATE: Unpaid user (Requires R100 contest fee)
-  if (!isPaidOrAdmin) {
-    return (
-      <div className="booth-container fade-in">
-        <div className="booth-header">
-          <h1 className="booth-title">
-            Movember Contest Pass Required <GiMustache className="title-stache-icon" />
-          </h1>
-          <p className="booth-subtitle">
-            Welcome, <strong>{user.fullName}</strong>. Contest entry requires the R100 Movember charity fee.
-          </p>
-        </div>
-
-        <div className="quiz-paywall-container fade-in">
-          <div className="quiz-paywall-card">
-            <div className="paywall-icon-wrap">
-              <FaHandHoldingDollar className="paywall-lock-icon text-gold" />
-            </div>
-            <span className="paywall-pill">Movember Charity Entry Fee</span>
-            <h2>Contest Pass Required</h2>
-            <p>
-              Entry to the Mustache Contest and live leaderboard requires the <strong>R100</strong> charity donation. 
-              All proceeds support men's mental health, suicide prevention, and prostate/testicular cancer initiatives.
-            </p>
-
-            <div className="paywall-fee-card">
-              <div className="fee-row">
-                <span className="fee-name">Leaderboard Entry Pass</span>
-                <span className="fee-amount text-gold">R100</span>
-              </div>
-              <div className="fee-instruction">
-                Pay securely online with Cards, Instant EFT, SnapScan, or Zapper. Your entry pass activates immediately upon payment!
-              </div>
-            </div>
-
-            <div className="paywall-actions flex flex-col gap-2">
-              <button 
-                type="button" 
-                className="paywall-btn primary flex items-center justify-center gap-2"
-                disabled={isPaying}
-                onClick={async () => {
-                  try {
-                    setIsPaying(true);
-                    await initiatePayFastCheckout({
-                      itemType: 'Leaderboard',
-                      token,
-                      returnPath: '/booth?payment=success',
-                      cancelPath: '/booth?payment=cancelled'
-                    });
-                  } catch (e) {
-                    setIsPaying(false);
-                  }
-                }}
-              >
-                <FaBolt className="btn-icon text-amber-300" /> {isPaying ? 'Connecting to PayFast...' : 'Pay R100 via PayFast & Enter'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 3. MAIN BOOTH:
-  // Step 1: Clean Shave Baseline (if not yet captured)
-  // Step 2: Mustache Growth Submission (if clean shave exists)
+  // 2. MAIN BOOTH: Completely free access for all registered contestants!
   return (
     <div className="booth-container fade-in">
+      {/* Competition Track Switcher */}
+      <div className="flex justify-center mb-6">
+        <div className="inline-flex p-1.5 rounded-2xl bg-slate-900/90 border border-slate-700/80 shadow-xl max-w-full overflow-x-auto">
+          <button
+            type="button"
+            className={`px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
+              competitionType === 'Mustache'
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20'
+                : 'text-slate-300 hover:text-white'
+            }`}
+            onClick={() => {
+              setCompetitionType('Mustache');
+              handleRetake();
+            }}
+          >
+            <GiMustache className="text-base sm:text-lg" />
+            <span>Movember Mustache Challenge</span>
+          </button>
+          <button
+            type="button"
+            className={`px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
+              competitionType === 'CrazyHair'
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md shadow-purple-500/20'
+                : 'text-slate-300 hover:text-white'
+            }`}
+            onClick={() => {
+              setCompetitionType('CrazyHair');
+              handleRetake();
+            }}
+          >
+            <span className="text-sm sm:text-base">💇‍♀️</span>
+            <span>The Mane Event: Crazy Hair</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Donation & Prize Eligibility Banner */}
+      <div className="mb-6 max-w-4xl mx-auto">
+        {user?.isPrizeEligible ? (
+          <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-xs text-emerald-200">
+            <FaCircleCheck className="text-emerald-400 text-lg flex-shrink-0" />
+            <div>
+              <strong className="text-emerald-300">🏆 Grand Prize Eligible (Donated):</strong> Your donation is confirmed! You are officially in the running for the <strong>R1,000 Takealot Voucher</strong> in this challenge track.
+            </div>
+          </div>
+        ) : (
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-300">
+            <div className="flex items-start sm:items-center gap-2.5">
+              <FaHeart className="text-rose-400 text-base flex-shrink-0 mt-0.5 sm:mt-0" />
+              <div>
+                <span className="font-bold text-amber-400">🎗️ Free Community Entry:</span> Open to everyone for free! To be eligible to win the <strong>R1,000 Takealot Voucher</strong>, donate a minimum of R100 towards prostate cancer research.
+              </div>
+            </div>
+            <div className="flex-shrink-0 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-700/60 text-slate-300">
+              Donate via <strong>Rose Allen</strong>:{' '}
+              <a href="mailto:RAllen@dvtsoftware.com" className="text-cyan-400 underline hover:text-cyan-300 font-medium">
+                RAllen@dvtsoftware.com
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="booth-header">
         <h1 className="booth-title">
-          {!hasCleanShave ? (
+          {isCrazyHair ? (
+            <>The Mane Event: Crazy Hair Challenge 💇‍♀️</>
+          ) : needsCleanShave ? (
             <>Step 1: Capture Day 1 Clean Shave Baseline <GiMustache className="title-stache-icon" /></>
           ) : (
-            <>Enter the Movember Contest <GiMustache className="title-stache-icon" /></>
+            <>Enter Movember Mustache Challenge <GiMustache className="title-stache-icon" /></>
           )}
         </h1>
         <p className="booth-subtitle">
-          {!hasCleanShave
-            ? 'Before entering the contest, snap a fresh clean-shaven photo. This baseline is saved to your profile and used to evaluate your growth over time.'
-            : 'Submit as many photos as you want! Growth is evaluated alongside your clean-shave baseline, and only your single highest score is featured on the leaderboard.'}
+          {isCrazyHair
+            ? 'For women and non-growers! Snap your wildest, most creative hair, wigs, accessories, and crazy colors. Grand Prize: R1,000 Takealot Voucher!'
+            : needsCleanShave
+              ? 'Before entering the mustache contest, snap a fresh clean-shaven photo. This baseline is saved to your profile and used to evaluate your growth over time.'
+              : 'Submit as many photos as you want! Growth is evaluated alongside your clean-shave baseline, and only your single highest score is featured on the leaderboard.'}
         </p>
       </div>
 
@@ -371,7 +375,9 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
               <div className="snapshot-preview">
                 <img src={previewUrl} alt="Contestant Preview" className="preview-image" />
                 <div className="preview-badge">
-                  {!hasCleanShave ? 'Clean Shave Snapshot Ready' : 'Mustache Snapshot Ready'}
+                  {needsCleanShave 
+                    ? 'Clean Shave Snapshot Ready' 
+                    : (isCrazyHair ? 'Crazy Hair Snapshot Ready' : 'Mustache Snapshot Ready')}
                 </div>
                 <div className="snapshot-overlay-actions">
                   <button 
@@ -447,7 +453,11 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
 
                   <div className="hud-guidance-banner">
                     <span className="guidance-pulse"></span>
-                    <span>Center your face within the outline</span>
+                    <span>
+                      {isCrazyHair 
+                        ? 'Frame your wild, creative hair & pose' 
+                        : (needsCleanShave ? 'Center your clean-shaven face' : 'Center your mustache within outline')}
+                    </span>
                   </div>
 
                   <div className="hud-camera-controls">
@@ -478,7 +488,9 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 <div className="shutter-inner">
                   <FaCamera className="shutter-icon" />
                   <span className="shutter-text">
-                    {!hasCleanShave ? 'SNAP CLEAN SHAVE' : 'SNAP MUSTACHE'}
+                    {needsCleanShave 
+                      ? 'SNAP CLEAN SHAVE' 
+                      : (isCrazyHair ? 'SNAP CRAZY HAIR' : 'SNAP MUSTACHE')}
                   </span>
                 </div>
               </button>
@@ -500,15 +512,19 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
         {/* Right: Submission Form */}
         <div className="details-card" ref={detailsCardRef}>
           <h2 className="form-card-title">
-            {!hasCleanShave ? 'Clean Shave Baseline' : 'Contestant Details'}
+            {isCrazyHair 
+              ? 'Crazy Hair Entry' 
+              : (needsCleanShave ? 'Clean Shave Baseline' : 'Mustache Entry')}
           </h2>
           <p className="form-card-desc">
-            {!hasCleanShave
-              ? 'Record your Day 1 baseline. All future entries are evaluated against this photo.'
-              : 'Unlimited submissions allowed. Only your highest scored photo reaches the leaderboard.'}
+            {isCrazyHair
+              ? 'Enter The Mane Event: Crazy Hair Challenge! Unlimited submissions, highest score features on the leaderboard.'
+              : needsCleanShave
+                ? 'Record your Day 1 baseline. All future mustache entries are evaluated against this photo.'
+                : 'Unlimited submissions allowed. Only your highest scored photo reaches the leaderboard.'}
           </p>
 
-          <form onSubmit={!hasCleanShave ? (e) => { e.preventDefault(); handleSaveCleanShaveBaseline(); } : handleSubmitEntry} className="judge-form">
+          <form onSubmit={needsCleanShave ? (e) => { e.preventDefault(); handleSaveCleanShaveBaseline(); } : handleSubmitEntry} className="judge-form">
             <div className="form-group">
               <label htmlFor="contestant-name" className="form-label">
                 Contestant Name <span className="required-star">*</span>
@@ -517,7 +533,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 id="contestant-name"
                 type="text" 
                 className="form-input" 
-                placeholder="e.g. Sipho M. or Bristle Champion"
+                placeholder="e.g. Alex M. or Hair Royalty"
                 value={name}
                 maxLength={50}
                 onChange={e => setName(e.target.value)}
@@ -531,14 +547,26 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 <FaScaleBalanced className="rules-icon" /> Competition Rules
               </div>
               <ul className="rules-list">
-                <li>Facial hair only: Judging focuses strictly on mustache growth and styling.</li>
-                <li>Growth evaluated against your Day 1 clean shave photo.</li>
-                <li>Submit unlimited attempts — only your top score features on the leaderboard.</li>
+                {isCrazyHair ? (
+                  <>
+                    <li>Creative, wild, or colorful hair: volume, styling, wigs, accessories, and fun shapes all count!</li>
+                    <li>Judged on wildness, symmetry, volume, and swagger.</li>
+                    <li>Grand Prize: R1,000 Takealot Voucher for participants who donated R100+.</li>
+                    <li>Submit unlimited attempts — only your top score features on the leaderboard.</li>
+                  </>
+                ) : (
+                  <>
+                    <li>Facial hair only: Judging focuses strictly on mustache growth and styling.</li>
+                    <li>Growth evaluated against your Day 1 clean shave photo.</li>
+                    <li>Grand Prize: R1,000 Takealot Voucher for participants who donated R100+.</li>
+                    <li>Submit unlimited attempts — only your top score features on the leaderboard.</li>
+                  </>
+                )}
               </ul>
             </div>
 
-            {/* Baseline Status Card */}
-            {hasCleanShave && user?.cleanShaveImageUrl && (
+            {/* Baseline Status Card for Mustache Growers */}
+            {!isCrazyHair && hasCleanShave && user?.cleanShaveImageUrl && (
               <div className="booth-baseline-card active fade-in">
                 <div className="booth-baseline-left">
                   <img src={user.cleanShaveImageUrl} alt="Baseline" className="booth-baseline-thumb" />
@@ -564,7 +592,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
 
             <button 
               type="submit" 
-              className={`submit-judge-btn ${!capturedBlob ? 'disabled' : ''} ${!hasCleanShave ? 'save-baseline-btn' : ''}`}
+              className={`submit-judge-btn ${!capturedBlob ? 'disabled' : ''} ${needsCleanShave ? 'save-baseline-btn' : ''}`}
               disabled={!capturedBlob || isSubmitting || savingCleanShave}
             >
               {savingCleanShave ? (
@@ -575,16 +603,16 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
               ) : isSubmitting ? (
                 <span className="btn-loading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <span className="btn-spinner"></span>
-                  <span>Submitting for Judging...</span>
+                  <span>Submitting for AI Judging...</span>
                 </span>
-              ) : !hasCleanShave ? (
+              ) : needsCleanShave ? (
                 <>
                   <FaCamera className="btn-icon" />
                   <span>SAVE DAY 1 CLEAN SHAVE BASELINE</span>
                 </>
               ) : (
                 <>
-                  <span>SUBMIT FOR JUDGING</span>
+                  <span>SUBMIT FOR AI JUDGING</span>
                   <FaArrowRight className="btn-arrow" />
                 </>
               )}

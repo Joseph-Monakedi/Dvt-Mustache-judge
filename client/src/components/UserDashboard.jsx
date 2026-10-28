@@ -5,7 +5,6 @@ import {
   FaRotate, 
   FaCircleCheck, 
   FaClock, 
-  FaGamepad, 
   FaCircleInfo, 
   FaCalendarDays,
   FaStar,
@@ -13,9 +12,10 @@ import {
   FaUpload,
   FaUserPlus,
   FaArrowRightToBracket,
-  FaBolt,
-  FaRightFromBracket
+  FaRightFromBracket,
+  FaHandHoldingHeart
 } from 'react-icons/fa6';
+import { HiSparkles } from 'react-icons/hi2';
 import { GiMustache } from 'react-icons/gi';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -105,8 +105,8 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
           await fetchDashboard();
           setPaymentBanner({
             type: 'success',
-            title: 'PayFast Payment Confirmed!',
-            message: '🎉 Your payment was verified successfully and your entry has been automatically approved!'
+            title: 'Donation Confirmed!',
+            message: '🎉 Your donation was verified and your account is marked eligible for the R1,000 Grand Prize!'
           });
           try {
             confetti({ particleCount: 150, spread: 90, origin: { y: 0.3 } });
@@ -120,18 +120,18 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
       window.history.replaceState({}, document.title, window.location.pathname);
       setPaymentBanner({
         type: 'warning',
-        title: 'PayFast Checkout Cancelled',
-        message: 'Your payment was cancelled. You can retry at any time whenever you are ready.'
+        title: 'Checkout Cancelled',
+        message: 'Donation checkout was cancelled. You can donate via Rose Allen anytime.'
       });
     }
   }, [token]);
 
-  // Real-time synchronization when payment approval occurs
+  // Real-time synchronization when donation approval occurs
   useEffect(() => {
     if (token) {
       fetchDashboard();
     }
-  }, [user?.leaderboardPaid, user?.quizPaid, user?.cleanShaveImageUrl]);
+  }, [user?.leaderboardPaid, user?.isPrizeEligible, user?.amountPaid, user?.cleanShaveImageUrl]);
 
   if (!user) {
     return (
@@ -142,7 +142,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">Sign In to View Your Dashboard</h2>
           <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-            Track your best score, view past judging results, manage your entry status, and submit new photos at any time!
+            Track your best score, view past judging results, check your grand prize eligibility status, and submit new photos!
           </p>
           <div className="gate-actions flex flex-col sm:flex-row gap-3 justify-center">
             <Button 
@@ -159,7 +159,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
               icon={FaUserPlus}
               onClick={() => openAuthModal('register')}
             >
-              Create New Account
+              Create Free Account
             </Button>
           </div>
         </div>
@@ -167,12 +167,14 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
     );
   }
 
+  const isCrazyHair = user.preferredCompetition === 'CrazyHair';
+  const isEligible = user.isPrizeEligible || user.leaderboardPaid || (user.amountPaid >= 100);
   const hasBaseline = Boolean(user.cleanShaveImageUrl || dashboardData?.cleanShaveImageUrl);
   const baselineDate = user.cleanShaveUploadedAt || dashboardData?.cleanShaveUploadedAt;
 
   return (
     <div className="user-dashboard-container fade-in max-w-7xl mx-auto px-4 py-8 space-y-8">
-      {/* PayFast Payment Notification Banner */}
+      {/* Donation Notification Banner */}
       {paymentBanner && (
         <div className={`p-4 rounded-xl border flex items-center justify-between gap-4 fade-in ${
           paymentBanner.type === 'success'
@@ -205,14 +207,19 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
       <div className="dashboard-profile-banner flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 sm:p-8 bg-[#0d1522] border border-white/10 rounded-2xl shadow-xl">
         <div className="profile-main-info flex items-center gap-5">
           <div className="profile-avatar-wrap relative shrink-0">
-            <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-[#007FBA] to-[#00b4d8] flex items-center justify-center text-white text-4xl shadow-lg shadow-cyan-500/30 border-2 border-cyan-300/40">
-              <GiMustache className="profile-avatar-icon" />
+            <div className={`w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr ${
+              isCrazyHair ? 'from-purple-600 to-pink-500 shadow-purple-500/30 border-purple-300/40' : 'from-[#007FBA] to-[#00b4d8] shadow-cyan-500/30 border-cyan-300/40'
+            } flex items-center justify-center text-white text-4xl shadow-lg border-2`}>
+              {isCrazyHair ? <HiSparkles /> : <GiMustache />}
             </div>
           </div>
           <div className="profile-details space-y-1">
             <div className="profile-badge-row flex flex-wrap items-center gap-2 mb-1.5">
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-[#131f33] text-cyan-300 border border-cyan-500/30">
-                <GiMustache className="pill-icon" /> Movember Contestant
+              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-[#131f33] ${
+                isCrazyHair ? 'text-purple-300 border-purple-500/30' : 'text-cyan-300 border-cyan-500/30'
+              } border`}>
+                {isCrazyHair ? <HiSparkles className="pill-icon" /> : <GiMustache className="pill-icon" />}
+                {isCrazyHair ? 'The Mane Event Contestant' : 'Movember Mustache Contestant'}
               </span>
               <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-white/5 text-slate-400 border border-white/5">
                 <FaCalendarDays className="pill-icon" /> Joined Movember 2026
@@ -237,150 +244,163 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
           </div>
         </div>
 
-        {/* Charity & Fee Status Badges */}
-        <div className="payment-status-card bg-[#070c14]/80 border border-white/10 rounded-xl p-4 sm:p-5 min-w-[280px] space-y-3">
+        {/* Grand Prize Eligibility & Donation Status Card */}
+        <div className="payment-status-card bg-[#070c14]/80 border border-white/10 rounded-xl p-4 sm:p-5 min-w-[300px] space-y-3">
           <div className="payment-header flex items-center justify-between pb-2 border-b border-white/5">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-              Charity Entry Passes
+              Grand Prize Status
             </span>
             <button 
               type="button" 
               className={`text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                (!user.leaderboardPaid || !user.quizPaid)
+                !isEligible
                   ? 'text-amber-300 hover:text-amber-200 bg-amber-500/15 px-2.5 py-1 rounded-lg border border-amber-500/30 font-bold shadow-sm'
-                  : 'text-cyan-400 hover:text-cyan-300'
+                  : 'text-emerald-400 hover:text-emerald-300 bg-emerald-500/15 px-2.5 py-1 rounded-lg border border-emerald-500/30 font-bold'
               }`}
               onClick={() => setShowPaymentInfo(true)}
-              title="Pay entry fee via PayFast"
+              title="View donation details and Grand Prize eligibility"
             >
-              {(!user.leaderboardPaid || !user.quizPaid) ? (
+              {isEligible ? (
                 <>
-                  <FaBolt className="text-amber-400" /> Pay via PayFast
+                  <FaCircleCheck className="text-emerald-400" /> R1,000 Eligible
                 </>
               ) : (
                 <>
-                  <FaCircleCheck className="text-emerald-400" /> Passes Active
+                  <FaHandHoldingHeart className="text-amber-400" /> Donation Info
                 </>
               )}
             </button>
           </div>
 
-          <div className="status-pills-wrap grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {/* Leaderboard R100 Status */}
-            <div className={`flex items-center gap-3 p-2.5 rounded-lg border text-xs ${
-              user.leaderboardPaid 
-                ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' 
-                : 'bg-amber-950/30 border-amber-500/30 text-amber-300'
-            }`}>
-              <div className="text-base shrink-0">
-                {user.leaderboardPaid ? <FaCircleCheck className="text-emerald-400" /> : <FaClock className="text-amber-400" />}
+          <div className={`p-3 rounded-lg border text-xs ${
+            isEligible 
+              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' 
+              : 'bg-amber-950/30 border-amber-500/30 text-amber-300'
+          }`}>
+            <div className="flex items-start gap-2.5">
+              <div className="text-base shrink-0 mt-0.5">
+                {isEligible ? <FaCircleCheck className="text-emerald-400" /> : <FaClock className="text-amber-400" />}
               </div>
-              <div className="min-w-0">
-                <span className="block font-bold text-white text-[11px]">Leaderboard (R100)</span>
-                <span className="block truncate text-[10px]">
-                  {user.leaderboardPaid ? 'Approved & Live' : 'Payment Pending'}
+              <div className="space-y-0.5">
+                <span className="block font-bold text-white text-[11px]">
+                  {isEligible ? '🏆 Eligible for R1,000 Takealot Voucher' : '🎗️ Community Participant'}
                 </span>
-              </div>
-            </div>
-
-            {/* Quiz R50 Status */}
-            <div className={`flex items-center gap-3 p-2.5 rounded-lg border text-xs ${
-              user.quizPaid 
-                ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' 
-                : 'bg-amber-950/30 border-amber-500/30 text-amber-300'
-            }`}>
-              <div className="text-base shrink-0">
-                {user.quizPaid ? <FaCircleCheck className="text-emerald-400" /> : <FaClock className="text-amber-400" />}
-              </div>
-              <div className="min-w-0">
-                <span className="block font-bold text-white text-[11px]">Quiz Pass (R50)</span>
-                <span className="block truncate text-[10px]">
-                  {user.quizPaid ? 'Pass Active' : 'Pass Pending'}
+                <span className="block text-[10px] text-slate-300 leading-normal">
+                  {isEligible 
+                    ? 'Your donation has been approved. You are eligible to win the grand prize!' 
+                    : 'Donate R100+ via Rose Allen to qualify for the R1,000 Takealot Voucher.'}
                 </span>
               </div>
             </div>
           </div>
 
-          {!user.leaderboardPaid && (
-            <p className="text-[11px] text-slate-400 italic">
-              * Pay R100 to unlock your score on the leaderboard.
-            </p>
-          )}
+          <div className="pt-1 flex items-center justify-between text-[11px]">
+            <span className="text-slate-400">Prostate Cancer Fund:</span>
+            <button
+              type="button"
+              onClick={() => setShowPaymentInfo(true)}
+              className="text-cyan-400 hover:underline font-bold"
+            >
+              How to Donate →
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Day 1 Clean Shave Baseline Management Card */}
-      <div className={`dashboard-cleanshave-banner flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 sm:p-7 rounded-2xl border transition-all ${
-        hasBaseline 
-          ? 'bg-[#0d1522] border-emerald-500/30 shadow-lg' 
-          : 'bg-gradient-to-r from-[#0d1522] via-[#101b2c] to-[#0d1522] border-cyan-500/40 shadow-xl shadow-cyan-950/30'
-      }`}>
-        <div className="cleanshave-banner-left flex items-start gap-4 sm:gap-5">
-          {hasBaseline ? (
-            <div className="relative shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-emerald-500/60 shadow-lg group">
-              <img 
-                src={user.cleanShaveImageUrl || dashboardData?.cleanShaveImageUrl} 
-                alt="Day 1 Clean Shave Baseline" 
-                className="w-full h-full object-cover"
-              />
-              <span className="absolute bottom-0 inset-x-0 bg-emerald-950/90 text-emerald-300 text-[9px] font-black text-center py-0.5 tracking-wider uppercase">
-                Day 1
-              </span>
-            </div>
-          ) : (
-            <div className="shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-cyan-500/10 border-2 border-cyan-400/50 flex items-center justify-center text-cyan-400 text-3xl shadow-lg shadow-cyan-500/20 animate-pulse">
-              <FaCamera className="cleanshave-icon" />
-            </div>
-          )}
-
-          <div className="cleanshave-banner-info space-y-1.5 max-w-2xl">
-            <div className="cleanshave-header-row flex flex-wrap items-center gap-2.5">
-              <h3 className="text-lg sm:text-xl font-bold text-white">
-                {hasBaseline 
-                  ? 'Day 1 Clean Shave Baseline' 
-                  : 'Day 1 Clean Shave Required'}
-              </h3>
-              {hasBaseline ? (
-                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                  <FaCircleCheck className="text-[10px]" /> Baseline Active
+      {/* Clean Shave Baseline Management Card (Only required for Mustache Track) */}
+      {!isCrazyHair ? (
+        <div className={`dashboard-cleanshave-banner flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 sm:p-7 rounded-2xl border transition-all ${
+          hasBaseline 
+            ? 'bg-[#0d1522] border-emerald-500/30 shadow-lg' 
+            : 'bg-gradient-to-r from-[#0d1522] via-[#101b2c] to-[#0d1522] border-cyan-500/40 shadow-xl shadow-cyan-950/30'
+        }`}>
+          <div className="cleanshave-banner-left flex items-start gap-4 sm:gap-5">
+            {hasBaseline ? (
+              <div className="relative shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-emerald-500/60 shadow-lg group">
+                <img 
+                  src={user.cleanShaveImageUrl || dashboardData?.cleanShaveImageUrl} 
+                  alt="Day 1 Clean Shave Baseline" 
+                  className="w-full h-full object-cover"
+                />
+                <span className="absolute bottom-0 inset-x-0 bg-emerald-950/90 text-emerald-300 text-[9px] font-black text-center py-0.5 tracking-wider uppercase">
+                  Day 1
                 </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                  <FaClock className="text-[10px]" /> Required
+              </div>
+            ) : (
+              <div className="shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-cyan-500/10 border-2 border-cyan-400/50 flex items-center justify-center text-cyan-400 text-3xl shadow-lg shadow-cyan-500/20 animate-pulse">
+                <FaCamera className="cleanshave-icon" />
+              </div>
+            )}
+
+            <div className="cleanshave-banner-info space-y-1.5 max-w-2xl">
+              <div className="cleanshave-header-row flex flex-wrap items-center gap-2.5">
+                <h3 className="text-lg sm:text-xl font-bold text-white">
+                  {hasBaseline 
+                    ? 'Day 1 Clean Shave Baseline' 
+                    : 'Day 1 Clean Shave Baseline (Recommended)'}
+                </h3>
+                {hasBaseline ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    <FaCircleCheck className="text-[10px]" /> Baseline Active
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    <FaClock className="text-[10px]" /> Growth Baseline
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                {hasBaseline
+                  ? 'Your baseline is recorded. Future mustache entries are evaluated against this photo to measure follicle growth and transformation.'
+                  : 'Snap a clean-shaven selfie to establish your starting baseline. Your future mustache growth will be judged alongside this photo!'}
+              </p>
+
+              {baselineDate && (
+                <span className="inline-block text-xs font-medium text-slate-400">
+                  Baseline saved: {new Date(baselineDate).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
                 </span>
               )}
             </div>
+          </div>
 
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              {hasBaseline
-                ? 'Your baseline is recorded. Future mustache entries are evaluated against this photo to measure growth.'
-                : 'Snap a photo of your clean-shaven face. Future entries are evaluated alongside this photo to track your growth.'}
-            </p>
-
-            {baselineDate && (
-              <span className="inline-block text-xs font-medium text-slate-400">
-                Baseline saved: {new Date(baselineDate).toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                })}
-              </span>
-            )}
+          <div className="cleanshave-banner-right shrink-0">
+            <Button 
+              variant={hasBaseline ? 'secondary' : 'primary'}
+              size="md"
+              icon={hasBaseline ? FaUpload : FaCamera}
+              onClick={() => setShowCleanShaveModal(true)}
+              className={!hasBaseline ? 'shadow-cyan-500/30' : ''}
+            >
+              {hasBaseline ? 'Replace Baseline Photo' : 'Upload or Snap Clean Shave'}
+            </Button>
           </div>
         </div>
-
-        <div className="cleanshave-banner-right shrink-0">
-          <Button 
-            variant={hasBaseline ? 'secondary' : 'primary'}
-            size="md"
-            icon={hasBaseline ? FaUpload : FaCamera}
-            onClick={() => setShowCleanShaveModal(true)}
-            className={!hasBaseline ? 'shadow-cyan-500/30 animate-pulse' : ''}
-          >
-            {hasBaseline ? 'Replace Baseline Photo' : 'Upload or Snap Clean Shave'}
+      ) : (
+        <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-950/30 via-[#0d1522] to-pink-950/30 border border-purple-500/40 flex items-center justify-between gap-4 shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300 text-2xl shrink-0">
+              <HiSparkles />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <span>The Mane Event: Crazy Hair Track</span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 font-semibold">Active</span>
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300">
+                No clean shave baseline is needed! Enter with crazy, colorful, creative hair styles whenever you like.
+              </p>
+            </div>
+          </div>
+          <Button variant="primary" size="md" icon={FaCamera} onClick={onGoToBooth}>
+            Enter Crazy Hair
           </Button>
         </div>
-      </div>
+      )}
 
       {/* Stats Cards Row */}
       <div className="dashboard-stats-grid grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -406,29 +426,33 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
           </div>
         </div>
 
-        {/* Leaderboard Standing */}
+        {/* Competition Track */}
         <div className="dash-stat-card bg-[#0d1522] border border-white/10 rounded-2xl p-5 flex items-center gap-4 hover:border-purple-500/40 transition-all">
           <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 text-xl shrink-0">
-            <FaTrophy />
+            {isCrazyHair ? <HiSparkles /> : <GiMustache />}
           </div>
           <div>
-            <span className="block text-2xl font-black text-white">
-              {dashboardData?.leaderboardRank ? `#${dashboardData.leaderboardRank}` : user.leaderboardPaid ? 'Unranked' : 'Pending R100'}
+            <span className="block text-base font-extrabold text-white truncate">
+              {isCrazyHair ? 'The Mane Event' : 'Mustache Challenge'}
             </span>
-            <span className="block text-xs font-medium text-slate-400">Leaderboard Standing</span>
+            <span className="block text-xs font-medium text-slate-400">
+              {dashboardData?.leaderboardRank ? `Rank #${dashboardData.leaderboardRank}` : 'Joined Track'}
+            </span>
           </div>
         </div>
 
-        {/* Quiz Arena Pass */}
+        {/* Grand Prize Eligibility */}
         <div className="dash-stat-card bg-[#0d1522] border border-white/10 rounded-2xl p-5 flex items-center gap-4 hover:border-emerald-500/40 transition-all">
           <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xl shrink-0">
-            <FaGamepad />
+            <FaTrophy />
           </div>
           <div>
-            <span className="block text-2xl font-black text-white">
-              {user.quizPaid ? 'Ready' : 'Locked'}
+            <span className={`block text-base font-black ${isEligible ? 'text-emerald-400' : 'text-amber-300'}`}>
+              {isEligible ? 'R1,000 Eligible' : 'Community Entry'}
             </span>
-            <span className="block text-xs font-medium text-slate-400">Quiz Arena Pass</span>
+            <span className="block text-xs font-medium text-slate-400">
+              {isEligible ? 'Min R100 Donated' : 'Donate R100 to Win'}
+            </span>
           </div>
         </div>
       </div>
@@ -443,7 +467,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
             </span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-400">
-            Submit as many entries as you like. Only your highest-scoring mustache is featured on the leaderboard!
+            Submit as many entries as you like. Only your highest-scoring submission is featured on the live leaderboard!
           </p>
         </div>
 
@@ -453,15 +477,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
             icon={FaCamera}
             onClick={onGoToBooth}
           >
-            New Mustache Attempt
-          </Button>
-
-          <Button 
-            variant="secondary"
-            icon={FaGamepad}
-            onClick={onGoToQuiz}
-          >
-            Mustache Quiz Arena
+            {isCrazyHair ? 'New Crazy Hair Attempt' : 'New Mustache Attempt'}
           </Button>
 
           <Button 
@@ -490,12 +506,12 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
       ) : !dashboardData?.entries || dashboardData.entries.length === 0 ? (
         <div className="dashboard-empty-vault bg-[#0d1522] border border-white/10 rounded-2xl p-12 text-center max-w-xl mx-auto space-y-5 shadow-xl">
           <div className="w-20 h-20 mx-auto rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-4xl shadow-lg shadow-cyan-950/50">
-            <GiMustache className="empty-icon" />
+            {isCrazyHair ? <HiSparkles className="empty-icon" /> : <GiMustache className="empty-icon" />}
           </div>
           <div className="space-y-2">
             <h3 className="text-xl font-bold text-white">No Submissions Yet</h3>
             <p className="text-sm text-slate-400 leading-relaxed">
-              You haven't submitted a mustache photo yet! Snap a photo in the booth now to see your score.
+              You haven't submitted a photo yet! Enter the booth now to see your AI score.
             </p>
           </div>
           <Button 
@@ -530,13 +546,14 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
         }}
       />
 
-      {/* Payment Instructions Modal */}
+      {/* Donation & Grand Prize Instructions Modal */}
       <CharityPaymentModal
         isOpen={showPaymentInfo}
         onClose={() => setShowPaymentInfo(false)}
         userName={user.fullName}
         leaderboardPaid={user.leaderboardPaid}
-        quizPaid={user.quizPaid}
+        isPrizeEligible={user.isPrizeEligible}
+        amountPaid={user.amountPaid}
       />
     </div>
   );

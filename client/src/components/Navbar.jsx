@@ -67,15 +67,6 @@ export default function Navbar({ totalEntries = 0 }) {
                 </NavLink>
 
                 <NavLink 
-                  to="/quiz"
-                  className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
-                  aria-label="Mustache Quiz Arena"
-                >
-                  <FaGamepad className="nav-icon text-cyan" />
-                  <span className="nav-label">Quiz Arena</span>
-                </NavLink>
-
-                <NavLink 
                   to="/dashboard"
                   className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
                   aria-label="Dashboard"
@@ -215,17 +206,6 @@ export default function Navbar({ totalEntries = 0 }) {
                 <FaCamera className="mobile-nav-icon" />
               </div>
               <span className="mobile-nav-text">Enter Contest</span>
-            </NavLink>
-
-            <NavLink
-              to="/quiz"
-              className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}
-              aria-label="Quiz Arena"
-            >
-              <div className="mobile-nav-icon-wrap">
-                <FaGamepad className="mobile-nav-icon text-cyan" />
-              </div>
-              <span className="mobile-nav-text">Quiz Arena</span>
             </NavLink>
 
             <NavLink

@@ -62,7 +62,8 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
 
       ctx.fillStyle = '#00b4d8';
       ctx.font = '500 20px Poppins, system-ui, sans-serif';
-      ctx.fillText('MOVEMBER 2026 OFFICIAL VERDICT', width - 460, 80);
+      const headerTitle = verdict.competitionType === 'CrazyHair' ? 'THE MANE EVENT: CRAZY HAIR VERDICT' : 'MOVEMBER 2026 OFFICIAL VERDICT';
+      ctx.fillText(headerTitle, width - 480, 80);
 
       // Divider line
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
@@ -109,7 +110,8 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
 
         ctx.fillStyle = '#94a3b8';
         ctx.font = '500 22px Poppins, system-ui, sans-serif';
-        ctx.fillText('Movember 2026 Contestant', contentX, 225);
+        const cohortText = verdict.competitionType === 'CrazyHair' ? 'The Mane Event Contestant' : 'Movember 2026 Contestant';
+        ctx.fillText(cohortText, contentX, 225);
 
         ctx.fillStyle = '#00b4d8';
         ctx.font = 'bold 28px Poppins, system-ui, sans-serif';
@@ -130,8 +132,8 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
         const scoreY = 375;
         ctx.fillStyle = '#94a3b8';
         ctx.font = '500 18px Poppins';
-        const subscoresText = verdict.isWoodenSpoon
-          ? `Innovation: ${verdict.innovationScore || 0}/10   •   Dedication: ${verdict.dedicationScore || 0}/10   •   Funniness: ${verdict.funninessScore || 0}/10`
+        const subscoresText = verdict.competitionType === 'CrazyHair'
+          ? `Volume: ${verdict.densityScore || 0}/10   •   Styling: ${verdict.symmetryScore || 0}/10   •   Charisma: ${verdict.swaggerScore || 0}/10`
           : `Density: ${verdict.densityScore}/10   •   Symmetry: ${verdict.symmetryScore}/10   •   Swagger: ${verdict.swaggerScore}/10`;
         ctx.fillText(subscoresText, contentX, scoreY);
 
@@ -176,7 +178,10 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
         // Footer
         ctx.fillStyle = '#64748b';
         ctx.font = '500 15px Poppins';
-        ctx.fillText('Certified by DVT Movember Mustache Judge 2026', 60, height - 35);
+        const footerText = verdict.competitionType === 'CrazyHair'
+          ? 'Certified by DVT The Mane Event 2026'
+          : 'Certified by DVT Movember Mustache Judge 2026';
+        ctx.fillText(footerText, 60, height - 35);
 
         resolve(canvas);
       };

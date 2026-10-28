@@ -5,7 +5,8 @@ namespace DvtMustacheJudge.Api.Models;
 public record RegisterRequest(
     [Required, EmailAddress] string Email,
     [Required, MinLength(2), MaxLength(100)] string FullName,
-    [Required, MinLength(6)] string Password
+    [Required, MinLength(6)] string Password,
+    string PreferredCompetition = "Mustache"
 );
 
 public record LoginRequest(
@@ -33,7 +34,9 @@ public record AuthResponse(
     string Token,
     string? CleanShaveImageUrl = null,
     DateTime? CleanShaveUploadedAt = null,
-    string? PaymentMethod = null
+    string? PaymentMethod = null,
+    string? PreferredCompetition = "Mustache",
+    decimal? AmountPaid = null
 );
 
 public record ContestantSummaryDto(
@@ -50,7 +53,14 @@ public record ContestantSummaryDto(
     DateTime JoinedAt,
     string? CleanShaveImageUrl = null,
     DateTime? CleanShaveUploadedAt = null,
-    string? PaymentMethod = null
+    string? PaymentMethod = null,
+    string? PreferredCompetition = "Mustache",
+    decimal? AmountPaid = null
+);
+
+public record SetDonationRequest(
+    bool Eligible,
+    decimal? Amount = null
 );
 
 public record TogglePaymentRequest(

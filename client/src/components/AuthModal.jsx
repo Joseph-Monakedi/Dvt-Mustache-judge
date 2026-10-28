@@ -29,10 +29,9 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState('Combo'); // 'Combo' | 'Leaderboard' | 'Quiz' | 'Free'
+  const [preferredCompetition, setPreferredCompetition] = useState('Mustache'); // 'Mustache' | 'CrazyHair'
 
   const [loading, setLoading] = useState(false);
-  const [isRedirectingPayFast, setIsRedirectingPayFast] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -40,7 +39,6 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
     setMode(initialMode);
     setErrorMessage('');
     setSuccessMessage('');
-    setIsRedirectingPayFast(false);
   }, [initialMode, isOpen]);
 
   // Handle Escape key to close
@@ -100,23 +98,12 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
           throw new Error('Password must be at least 6 characters long.');
         }
 
-        const authData = await register({
+        await register({
           email: email.trim(),
           fullName: fullName.trim(),
-          password
+          password,
+          preferredCompetition
         });
-
-        // If a paid tier is selected, seamlessly redirect to PayFast checkout
-        if (selectedPlan !== 'Free' && authData?.token) {
-          setIsRedirectingPayFast(true);
-          await initiatePayFastCheckout({
-            itemType: selectedPlan,
-            token: authData.token,
-            returnPath: '/dashboard?payment=success',
-            cancelPath: '/dashboard?payment=cancelled'
-          });
-          return;
-        }
 
         if (onLoginSuccess) {
           onLoginSuccess();
@@ -125,11 +112,8 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
       }
     } catch (err) {
       setErrorMessage(err.message || 'Authentication failed. Please try again.');
-      setIsRedirectingPayFast(false);
     } finally {
-      if (!isRedirectingPayFast) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 
@@ -329,78 +313,66 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
             </div>
           )}
 
-          {/* Compact Plan Selection for Registration */}
+          {/* Competition Track Selection for Registration */}
           {mode === 'register' && (
             <div className="auth-compact-plans-group">
-              <label className="form-label">Select Entry Option</label>
+              <label className="form-label">Choose Your Competition</label>
               <div className="compact-plans-list">
-                {/* Combo */}
+                {/* Mustache Challenge */}
                 <label 
-                  className={`compact-plan-item ${selectedPlan === 'Combo' ? 'selected' : ''}`}
-                  onClick={() => setSelectedPlan('Combo')}
+                  className={`compact-plan-item ${preferredCompetition === 'Mustache' ? 'selected' : ''}`}
+                  onClick={() => setPreferredCompetition('Mustache')}
                 >
                   <input 
                     type="radio" 
-                    name="entryPlan" 
-                    checked={selectedPlan === 'Combo'} 
-                    onChange={() => setSelectedPlan('Combo')} 
+                    name="competitionTrack" 
+                    checked={preferredCompetition === 'Mustache'} 
+                    onChange={() => setPreferredCompetition('Mustache')} 
                   />
                   <div className="compact-plan-info">
-                    <span className="compact-plan-title">Combo Pass (Contest + Quiz)</span>
+                    <span className="compact-plan-title">👨 Movember Mustache Challenge</span>
+                    <span className="compact-plan-desc text-xs text-slate-400">For men who can grow facial hair & mustaches</span>
                   </div>
-                  <span className="compact-plan-price">R150</span>
+                  <span className="compact-plan-price text-emerald-400 text-xs font-semibold">Free Entry</span>
                 </label>
 
-                {/* Leaderboard Only */}
+                {/* Crazy Hair Challenge */}
                 <label 
-                  className={`compact-plan-item ${selectedPlan === 'Leaderboard' ? 'selected' : ''}`}
-                  onClick={() => setSelectedPlan('Leaderboard')}
+                  className={`compact-plan-item ${preferredCompetition === 'CrazyHair' ? 'selected' : ''}`}
+                  onClick={() => setPreferredCompetition('CrazyHair')}
                 >
                   <input 
                     type="radio" 
-                    name="entryPlan" 
-                    checked={selectedPlan === 'Leaderboard'} 
-                    onChange={() => setSelectedPlan('Leaderboard')} 
+                    name="competitionTrack" 
+                    checked={preferredCompetition === 'CrazyHair'} 
+                    onChange={() => setPreferredCompetition('CrazyHair')} 
                   />
                   <div className="compact-plan-info">
-                    <span className="compact-plan-title">Mustache Contest Entry</span>
+                    <span className="compact-plan-title">💇‍♀️ The Mane Event: Crazy Hair</span>
+                    <span className="compact-plan-desc text-xs text-slate-400">For women & non-growers (fun, wild, creative hair)</span>
                   </div>
-                  <span className="compact-plan-price">R100</span>
+                  <span className="compact-plan-price text-purple-400 text-xs font-semibold">Free Entry</span>
                 </label>
+              </div>
 
-                {/* Quiz Only */}
-                <label 
-                  className={`compact-plan-item ${selectedPlan === 'Quiz' ? 'selected' : ''}`}
-                  onClick={() => setSelectedPlan('Quiz')}
-                >
-                  <input 
-                    type="radio" 
-                    name="entryPlan" 
-                    checked={selectedPlan === 'Quiz'} 
-                    onChange={() => setSelectedPlan('Quiz')} 
-                  />
-                  <div className="compact-plan-info">
-                    <span className="compact-plan-title">Quiz Arena Pass</span>
-                  </div>
-                  <span className="compact-plan-price">R50</span>
-                </label>
-
-                {/* Pay Later */}
-                <label 
-                  className={`compact-plan-item ${selectedPlan === 'Free' ? 'selected' : ''}`}
-                  onClick={() => setSelectedPlan('Free')}
-                >
-                  <input 
-                    type="radio" 
-                    name="entryPlan" 
-                    checked={selectedPlan === 'Free'} 
-                    onChange={() => setSelectedPlan('Free')} 
-                  />
-                  <div className="compact-plan-info">
-                    <span className="compact-plan-title">Pay Later on Dashboard</span>
-                  </div>
-                  <span className="compact-plan-price text-slate-400">Free</span>
-                </label>
+              {/* Charitable Cause & Prize Eligibility Info Box */}
+              <div className="auth-donation-info-card mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-slate-300">
+                <div className="flex items-center gap-2 text-amber-400 font-semibold mb-1">
+                  <FaHeart className="text-rose-400" />
+                  <span>Grand Prize & Donation Details</span>
+                </div>
+                <p className="mb-1.5 leading-relaxed">
+                  Anyone can enter and appear on the live leaderboards for free! Both tracks feature a <strong>R1,000 Takealot Voucher</strong> grand prize.
+                </p>
+                <p className="mb-1.5 leading-relaxed">
+                  Only participants who <strong>donate a minimum of R100</strong> are eligible for the voucher. All proceeds go toward raising awareness for <strong>prostate cancer and men's health research</strong>.
+                </p>
+                <div className="p-2 rounded bg-black/40 border border-slate-700/60 text-slate-300">
+                  <span className="font-semibold text-white">To donate:</span> Contact <strong>Rose Allen</strong> via MS Teams or email{' '}
+                  <a href="mailto:RAllen@dvtsoftware.com" className="text-cyan-400 underline hover:text-cyan-300">
+                    RAllen@dvtsoftware.com
+                  </a>.
+                </div>
               </div>
             </div>
           )}
@@ -430,19 +402,15 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
             >
               {loading ? (
                 <span className="spinner-wrap">
-                  <span className="loading-spinner"></span> {isRedirectingPayFast ? 'Connecting to PayFast...' : 'Processing...'}
+                  <span className="loading-spinner"></span> Processing...
                 </span>
               ) : mode === 'login' ? (
                 <>
                   <FaRightToBracket className="btn-icon" /> Sign In
                 </>
-              ) : selectedPlan === 'Free' ? (
-                <>
-                  <FaUserPlus className="btn-icon" /> Register & Continue
-                </>
               ) : (
                 <>
-                  <FaBolt className="btn-icon text-amber-300" /> Pay R{selectedPlan === 'Combo' ? '150' : selectedPlan === 'Quiz' ? '50' : '100'} & Register
+                  <FaUserPlus className="btn-icon" /> Join Competition for Free
                 </>
               )}
             </button>

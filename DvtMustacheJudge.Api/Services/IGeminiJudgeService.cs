@@ -10,5 +10,6 @@ public interface IGeminiJudgeService
         string contestantName, 
         Stream? cleanShaveStream = null,
         string? cleanShaveMimeType = null,
+        string competitionType = "Mustache",
         CancellationToken cancellationToken = default);
 }

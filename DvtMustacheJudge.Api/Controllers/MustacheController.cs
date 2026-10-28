@@ -116,25 +116,18 @@ public class MustacheController : ControllerBase
                 return Unauthorized(new { error = "Contestant account not found. Please register or sign in again." });
             }
 
-            // Gating: Contestant must have R100 contest fee verified
-            if (!user.LeaderboardPaid && user.Role != "Admin")
-            {
-                return StatusCode(StatusCodes.Status403Forbidden, new
-                {
-                    error = "R100 Contest Entry required. Please have an Admin verify your payment before entering.",
-                    paywall = true,
-                    fee = "R100",
-                    userId = user.Id
-                });
-            }
-
             var contestantName = !string.IsNullOrWhiteSpace(request.Name) ? request.Name.Trim() : user.FullName;
+
+            var competitionType = !string.IsNullOrWhiteSpace(request.CompetitionType)
+                ? (string.Equals(request.CompetitionType, "CrazyHair", StringComparison.OrdinalIgnoreCase) ? "CrazyHair" : "Mustache")
+                : (string.Equals(user.PreferredCompetition, "CrazyHair", StringComparison.OrdinalIgnoreCase) ? "CrazyHair" : "Mustache");
+            bool isCrazyHair = competitionType == "CrazyHair";
 
             string? cleanShaveUrl = user.CleanShaveImageUrl;
             byte[]? cleanShaveBytes = null;
             string? cleanShaveMime = null;
 
-            // Check if contestant submitted a clean shave baseline image in this request
+            // Check if contestant submitted a clean shave baseline image in this request (only relevant for mustache growers)
             if (request.CleanShaveImage != null && request.CleanShaveImage.Length > 0)
             {
                 using var cMs = new MemoryStream();
@@ -150,10 +143,10 @@ public class MustacheController : ControllerBase
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }
 
-            // Gating: Contestant MUST have a Day 1 clean shave photo saved
-            if (string.IsNullOrWhiteSpace(cleanShaveUrl))
+            // Gating: Mustache growers MUST have a Day 1 clean shave photo saved
+            if (!isCrazyHair && string.IsNullOrWhiteSpace(cleanShaveUrl))
             {
-                return BadRequest(new { error = "You must first take and submit your Day 1 Clean Shave baseline photo before entering contest photos." });
+                return BadRequest(new { error = "You must first take and submit your Day 1 Clean Shave baseline photo before entering mustache contest photos." });
             }
 
             // If cleanShaveBytes is null, load from local disk if available
@@ -196,6 +189,7 @@ public class MustacheController : ControllerBase
                     contestantName,
                     csStream,
                     cleanShaveMime,
+                    competitionType,
                     cancellationToken);
             }
 
@@ -249,6 +243,7 @@ public class MustacheController : ControllerBase
                     ImageUrl = imageUrl,
                     ThumbnailUrl = thumbnailUrl,
                     CleanShaveImageUrl = cleanShaveUrl,
+                    CompetitionType = competitionType,
                     GrowthScore = calculatedGrowthScore,
                     GrowthAnalysis = calculatedGrowthAnalysis,
                     OverallScore = Math.Clamp(judgeResult.OverallScore, 0, 100),
@@ -261,7 +256,7 @@ public class MustacheController : ControllerBase
                     DedicationScore = Math.Clamp(judgeResult.DedicationScore, 0, 10),
                     FunninessScore = Math.Clamp(judgeResult.FunninessScore, 0, 10),
                     MustacheTitle = string.IsNullOrWhiteSpace(judgeResult.MustacheTitle)
-                        ? (judgeResult.OverallScore == 0 ? "Follicle 404" : "The Bristle Contender")
+                        ? (isCrazyHair ? "The Mane Innovator" : (judgeResult.OverallScore == 0 ? "Follicle 404" : "The Bristle Contender"))
                         : judgeResult.MustacheTitle,
                     StyleCategory = string.IsNullOrWhiteSpace(judgeResult.StyleCategory)
                         ? "Other"
@@ -269,7 +264,7 @@ public class MustacheController : ControllerBase
                     RoastCommentary = judgeResult.Roast,
                     CelebrityTwin = judgeResult.CelebrityTwin,
                     VerdictBadge = string.IsNullOrWhiteSpace(judgeResult.VerdictBadge)
-                        ? (judgeResult.OverallScore == 0 ? "Zero-Bristle Deficit" : "Certified Movember Hero")
+                        ? (isCrazyHair ? "Mane Attraction Hero" : (judgeResult.OverallScore == 0 ? "Zero-Bristle Deficit" : "Certified Movember Hero"))
                         : judgeResult.VerdictBadge,
                     CreatedAt = DateTime.UtcNow,
                     IsHidden = false,
@@ -279,10 +274,8 @@ public class MustacheController : ControllerBase
                 _dbContext.MustacheEntries.Add(entry);
                 await _dbContext.SaveChangesAsync();
 
-                bool isEligible = user.LeaderboardPaid || user.Role == "Admin";
-
                 var higherScoreExists = await _dbContext.MustacheEntries
-                    .AnyAsync(e => e.UserId == authenticatedUserId.Value && e.Id != entry.Id && !e.IsHidden && e.OverallScore > entry.OverallScore);
+                    .AnyAsync(e => e.UserId == authenticatedUserId.Value && e.Id != entry.Id && !e.IsHidden && e.CompetitionType == competitionType && e.OverallScore > entry.OverallScore);
                 bool isBest = !higherScoreExists;
 
                 var responseDto = new JudgeResponseDto
@@ -292,6 +285,7 @@ public class MustacheController : ControllerBase
                     ImageUrl = entry.ImageUrl,
                     ThumbnailUrl = entry.ThumbnailUrl,
                     CleanShaveImageUrl = entry.CleanShaveImageUrl,
+                    CompetitionType = entry.CompetitionType,
                     OverallScore = entry.OverallScore,
                     DensityScore = entry.DensityScore,
                     SymmetryScore = entry.SymmetryScore,
@@ -309,7 +303,9 @@ public class MustacheController : ControllerBase
                     CelebrityTwin = entry.CelebrityTwin,
                     VerdictBadge = entry.VerdictBadge,
                     CreatedAt = entry.CreatedAt,
-                    IsLeaderboardEligible = isEligible,
+                    IsLeaderboardEligible = true,
+                    IsPrizeEligible = user.IsEligibleToWin,
+                    AmountDonated = user.AmountPaid ?? 0m,
                     IsBestEntry = isBest,
                     UserId = authenticatedUserId
                 };
@@ -401,19 +397,20 @@ public class MustacheController : ControllerBase
     /// <summary>
     /// Retrieve the live leaderboard.
     /// Only top-scoring entry per contestant is displayed.
-    /// Non-legacy contestants must have their R100 Leaderboard fee approved by admin.
+    /// Open to all contestants. Donated contestants (R100+) are marked as prize-eligible.
     /// </summary>
     [HttpGet("leaderboard")]
     [ProducesResponseType(typeof(LeaderboardResponseDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetLeaderboard(
         [FromQuery] int limit = 50,
         [FromQuery] string? category = null,
-        [FromQuery] string division = "championship")
+        [FromQuery] string division = "mustache")
     {
         if (limit <= 0) limit = 50;
         if (limit > 200) limit = 200;
 
-        var isWoodenSpoon = string.Equals(division, "woodenspoon", StringComparison.OrdinalIgnoreCase);
+        var isCrazyHair = string.Equals(division, "crazyhair", StringComparison.OrdinalIgnoreCase)
+                       || string.Equals(division, "hair", StringComparison.OrdinalIgnoreCase);
 
         var allVisible = await _dbContext.MustacheEntries
             .Include(e => e.User)
@@ -421,25 +418,20 @@ public class MustacheController : ControllerBase
             .Where(e => !e.IsHidden)
             .ToListAsync();
 
-        // Eligible entries:
-        // If UserId is present, user must have LeaderboardPaid == true.
-        // Legacy / seed entries without UserId are preserved.
-        var eligible = allVisible
-            .Where(e => e.UserId == null || (e.User != null && e.User.LeaderboardPaid))
-            .ToList();
-
-        // Calculate division counts (deduplicated by contestant: only top scoring entry per contestant)
-        var championshipCount = eligible
-            .Where(e => !e.IsWoodenSpoon)
+        // Calculate competition division counts (deduplicated by contestant: top scoring entry per contestant)
+        var mustacheCount = allVisible
+            .Where(e => e.CompetitionType != "CrazyHair")
             .GroupBy(e => e.UserId.HasValue ? e.UserId.Value.ToString() : e.Id.ToString())
             .Count();
 
-        var woodenSpoonCount = eligible
-            .Where(e => e.IsWoodenSpoon)
+        var crazyHairCount = allVisible
+            .Where(e => e.CompetitionType == "CrazyHair")
             .GroupBy(e => e.UserId.HasValue ? e.UserId.Value.ToString() : e.Id.ToString())
             .Count();
 
-        var divisionEntries = eligible.Where(e => e.IsWoodenSpoon == isWoodenSpoon).ToList();
+        var divisionEntries = isCrazyHair
+            ? allVisible.Where(e => e.CompetitionType == "CrazyHair").ToList()
+            : allVisible.Where(e => e.CompetitionType != "CrazyHair").ToList();
 
         if (!string.IsNullOrWhiteSpace(category) && !category.Equals("All", StringComparison.OrdinalIgnoreCase))
         {
@@ -468,6 +460,9 @@ public class MustacheController : ControllerBase
                 ImageUrl = e.ImageUrl,
                 ThumbnailUrl = e.ThumbnailUrl,
                 CleanShaveImageUrl = e.CleanShaveImageUrl,
+                CompetitionType = e.CompetitionType,
+                IsPrizeEligible = e.User != null && (e.User.LeaderboardPaid || e.User.AmountPaid >= 100),
+                AmountDonated = e.User?.AmountPaid ?? 0m,
                 OverallScore = e.OverallScore,
                 DensityScore = e.DensityScore,
                 SymmetryScore = e.SymmetryScore,
@@ -491,9 +486,11 @@ public class MustacheController : ControllerBase
         return Ok(new LeaderboardResponseDto
         {
             TotalEntries = totalEntries,
-            ChampionshipEntriesCount = championshipCount,
-            WoodenSpoonEntriesCount = woodenSpoonCount,
-            Division = isWoodenSpoon ? "woodenspoon" : "championship",
+            MustacheEntriesCount = mustacheCount,
+            CrazyHairEntriesCount = crazyHairCount,
+            ChampionshipEntriesCount = mustacheCount,
+            WoodenSpoonEntriesCount = 0,
+            Division = isCrazyHair ? "crazyhair" : "mustache",
             Entries = entries
         });
     }
@@ -532,19 +529,17 @@ public class MustacheController : ControllerBase
 
         var bestEntry = userEntries.OrderByDescending(e => e.OverallScore).ThenByDescending(e => e.CreatedAt).FirstOrDefault();
 
-        // Calculate user's rank on the public leaderboard if their R100 fee is approved
+        // Calculate user's rank on the live competition leaderboard
         int? rank = null;
-        if (user.LeaderboardPaid && bestEntry != null)
+        if (bestEntry != null)
         {
-            var isWoodenSpoon = bestEntry.IsWoodenSpoon;
-            var allLeaderboard = await _dbContext.MustacheEntries
-                .Include(e => e.User)
+            var compType = bestEntry.CompetitionType;
+            var allDivisionEntries = await _dbContext.MustacheEntries
                 .AsNoTracking()
-                .Where(e => !e.IsHidden && e.IsWoodenSpoon == isWoodenSpoon)
-                .Where(e => e.UserId == null || (e.User != null && e.User.LeaderboardPaid))
+                .Where(e => !e.IsHidden && e.CompetitionType == compType)
                 .ToListAsync();
 
-            var topPerUser = allLeaderboard
+            var topPerUser = allDivisionEntries
                 .GroupBy(e => e.UserId.HasValue ? e.UserId.Value.ToString() : e.Id.ToString())
                 .Select(g => g.OrderByDescending(x => x.OverallScore).ThenByDescending(x => x.CreatedAt).First())
                 .OrderByDescending(x => x.OverallScore)
@@ -565,6 +560,9 @@ public class MustacheController : ControllerBase
             ImageUrl = e.ImageUrl,
             ThumbnailUrl = e.ThumbnailUrl,
             CleanShaveImageUrl = e.CleanShaveImageUrl,
+            CompetitionType = e.CompetitionType,
+            IsPrizeEligible = user.IsEligibleToWin,
+            AmountDonated = user.AmountPaid ?? 0m,
             OverallScore = e.OverallScore,
             DensityScore = e.DensityScore,
             SymmetryScore = e.SymmetryScore,
@@ -592,6 +590,9 @@ public class MustacheController : ControllerBase
             Email = user.Email,
             LeaderboardPaid = user.LeaderboardPaid,
             QuizPaid = user.QuizPaid,
+            IsPrizeEligible = user.IsEligibleToWin,
+            AmountDonated = user.AmountPaid ?? 0m,
+            PreferredCompetition = user.PreferredCompetition ?? "Mustache",
             CleanShaveImageUrl = user.CleanShaveImageUrl,
             CleanShaveUploadedAt = user.CleanShaveUploadedAt,
             TotalSubmissions = userEntries.Count,
@@ -610,6 +611,7 @@ public class MustacheController : ControllerBase
     public async Task<IActionResult> GetEntryById(Guid id)
     {
         var entry = await _dbContext.MustacheEntries
+            .Include(e => e.User)
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id && !e.IsHidden);
 
@@ -625,6 +627,9 @@ public class MustacheController : ControllerBase
             ImageUrl = entry.ImageUrl,
             ThumbnailUrl = entry.ThumbnailUrl,
             CleanShaveImageUrl = entry.CleanShaveImageUrl,
+            CompetitionType = entry.CompetitionType,
+            IsPrizeEligible = entry.User != null && (entry.User.LeaderboardPaid || entry.User.AmountPaid >= 100),
+            AmountDonated = entry.User?.AmountPaid ?? 0m,
             OverallScore = entry.OverallScore,
             DensityScore = entry.DensityScore,
             SymmetryScore = entry.SymmetryScore,
@@ -711,6 +716,7 @@ public class MustacheController : ControllerBase
         }
 
         var allEntries = await _dbContext.MustacheEntries
+            .Include(e => e.User)
             .AsNoTracking()
             .OrderByDescending(e => e.CreatedAt)
             .ToListAsync();
@@ -718,8 +724,12 @@ public class MustacheController : ControllerBase
         var total = allEntries.Count;
         var visible = allEntries.Count(e => !e.IsHidden);
         var hidden = allEntries.Count(e => e.IsHidden);
+        var mustacheCount = allEntries.Count(e => e.CompetitionType != "CrazyHair");
+        var crazyHairCount = allEntries.Count(e => e.CompetitionType == "CrazyHair");
         var championship = allEntries.Count(e => !e.IsWoodenSpoon);
         var woodenSpoon = allEntries.Count(e => e.IsWoodenSpoon);
+        var prizeEligible = allEntries.Count(e => e.User != null && (e.User.LeaderboardPaid || (e.User.AmountPaid.HasValue && e.User.AmountPaid.Value >= 100)));
+        var totalDonations = await _dbContext.Users.SumAsync(u => u.AmountPaid ?? 0m);
         var avg = total > 0 ? Math.Round(allEntries.Average(e => e.OverallScore), 1) : 0;
         var top = total > 0 ? allEntries.Max(e => e.OverallScore) : 0;
 
@@ -731,6 +741,9 @@ public class MustacheController : ControllerBase
             ImageUrl = e.ImageUrl,
             ThumbnailUrl = e.ThumbnailUrl,
             CleanShaveImageUrl = e.CleanShaveImageUrl,
+            CompetitionType = e.CompetitionType,
+            IsPrizeEligible = e.User != null && (e.User.LeaderboardPaid || (e.User.AmountPaid.HasValue && e.User.AmountPaid.Value >= 100)),
+            AmountDonated = e.User?.AmountPaid ?? 0m,
             OverallScore = e.OverallScore,
             DensityScore = e.DensityScore,
             SymmetryScore = e.SymmetryScore,
@@ -756,8 +769,12 @@ public class MustacheController : ControllerBase
             TotalSubmissions = total,
             VisibleCount = visible,
             HiddenCount = hidden,
+            MustacheCount = mustacheCount,
+            CrazyHairCount = crazyHairCount,
             ChampionshipCount = championship,
             WoodenSpoonCount = woodenSpoon,
+            PrizeEligibleCount = prizeEligible,
+            TotalDonations = totalDonations,
             AverageScore = avg,
             TopScore = top,
             RemainingAiQuota = _rateLimiter.GetRemainingRequests(),
@@ -769,7 +786,7 @@ public class MustacheController : ControllerBase
     }
 
     /// <summary>
-    /// List all registered contestants and their R100/R50 payment statuses for the admin payment management panel.
+    /// List all registered contestants and their donation / prize eligibility statuses for the admin panel.
     /// </summary>
     [HttpGet("admin/contestants")]
     public async Task<IActionResult> GetAdminContestants()
@@ -807,21 +824,141 @@ public class MustacheController : ControllerBase
                 u.CreatedAt,
                 u.CleanShaveImageUrl,
                 u.CleanShaveUploadedAt,
-                u.PaymentMethod
+                u.PaymentMethod,
+                u.PreferredCompetition ?? "Mustache",
+                u.AmountPaid
             );
         }).ToList();
 
-        var leaderboardPaidCount = users.Count(u => u.LeaderboardPaid);
-        var quizPaidCount = users.Count(u => u.QuizPaid);
-        var totalFunds = (leaderboardPaidCount * 100) + (quizPaidCount * 50);
+        var prizeEligibleCount = users.Count(u => u.IsEligibleToWin);
+        var totalDonations = users.Sum(u => u.AmountPaid ?? 0m);
 
         return Ok(new
         {
             totalContestants = users.Count,
-            leaderboardPaidCount,
-            quizPaidCount,
-            totalFundsRaisedZar = totalFunds,
+            leaderboardPaidCount = prizeEligibleCount,
+            quizPaidCount = 0,
+            eligibleContestantsCount = prizeEligibleCount,
+            totalFundsRaisedZar = totalDonations,
+            totalDonationsZar = totalDonations,
             contestants = contestantDtos
+        });
+    }
+
+    /// <summary>
+    /// Set a contestant's donation amount and prize eligibility.
+    /// </summary>
+    [HttpPost("admin/contestant/{id:guid}/set-donation")]
+    public async Task<IActionResult> SetContestantDonation(Guid id, [FromBody] SetDonationRequest request)
+    {
+        if (!IsAdminAuthorized())
+        {
+            return Unauthorized(new { error = "Admin authorization required." });
+        }
+
+        var user = await _dbContext.Users.FindAsync(id);
+        if (user == null)
+        {
+            return NotFound(new { error = "Contestant not found." });
+        }
+
+        user.LeaderboardPaid = request.Eligible;
+        if (request.Amount.HasValue)
+        {
+            user.AmountPaid = request.Amount.Value;
+            if (user.AmountPaid >= 100)
+            {
+                user.LeaderboardPaid = true;
+            }
+        }
+        else if (request.Eligible && user.AmountPaid < 100)
+        {
+            user.AmountPaid = 100m;
+        }
+
+        if (user.LeaderboardPaid && string.IsNullOrEmpty(user.PaymentMethod))
+        {
+            user.PaymentMethod = "DonationConfirmed";
+            user.PaidAt = DateTime.UtcNow;
+        }
+
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(new
+        {
+            userId = user.Id,
+            fullName = user.FullName,
+            leaderboardPaid = user.LeaderboardPaid,
+            amountPaid = user.AmountPaid,
+            isEligibleToWin = user.IsEligibleToWin,
+            message = $"Contestant {user.FullName} marked as {(user.IsEligibleToWin ? "Eligible to Win" : "Community Participant")} (Donated: R{user.AmountPaid})."
+        });
+    }
+
+    /// <summary>
+    /// Permanently delete a contestant account and all associated submissions/quiz scores.
+    /// </summary>
+    [HttpDelete("admin/contestant/{id:guid}")]
+    public async Task<IActionResult> DeleteContestantAccount(Guid id)
+    {
+        if (!IsAdminAuthorized())
+        {
+            return Unauthorized(new { error = "Admin authorization required." });
+        }
+
+        var user = await _dbContext.Users
+            .Include(u => u.Entries)
+            .FirstOrDefaultAsync(u => u.Id == id);
+
+        if (user == null)
+        {
+            return NotFound(new { error = "Contestant not found." });
+        }
+
+        if (user.Role == "Admin")
+        {
+            return BadRequest(new { error = "Admin accounts cannot be deleted." });
+        }
+
+        // Delete associated entry photos from storage if available
+        foreach (var entry in user.Entries)
+        {
+            try
+            {
+                await _storageService.DeleteImageAsync(entry.ImageUrl);
+                if (!string.IsNullOrWhiteSpace(entry.ThumbnailUrl))
+                {
+                    await _storageService.DeleteImageAsync(entry.ThumbnailUrl);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete storage image for entry {EntryId}", entry.Id);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(user.CleanShaveImageUrl))
+        {
+            try
+            {
+                await _storageService.DeleteImageAsync(user.CleanShaveImageUrl);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete clean shave image for user {UserId}", user.Id);
+            }
+        }
+
+        _dbContext.MustacheEntries.RemoveRange(user.Entries);
+        _dbContext.Users.Remove(user);
+        await _dbContext.SaveChangesAsync();
+
+        _logger.LogInformation("Admin permanently deleted contestant account {UserId} ({Email}).", user.Id, user.Email);
+
+        return Ok(new
+        {
+            success = true,
+            message = $"Contestant {user.FullName} ({user.Email}) and all their entries have been permanently deleted."
         });
     }
 

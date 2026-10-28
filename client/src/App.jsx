@@ -108,15 +108,16 @@ export default function App() {
   }, [location.pathname, isMobile, navigate]);
 
   // Handle Judge Submission
-  const handleJudgeSubmit = async ({ name, imageBlob, cleanShaveBlob }) => {
+  const handleJudgeSubmit = async ({ name, imageBlob, cleanShaveBlob, competitionType = 'Mustache' }) => {
     setIsSubmitting(true);
     setJudgingModalOpen(true);
 
     const formData = new FormData();
     formData.append('name', name);
+    formData.append('competitionType', competitionType);
     
     // Ensure filename and extension
-    const fileName = `mustache_${Date.now()}.jpg`;
+    const fileName = `${competitionType.toLowerCase()}_${Date.now()}.jpg`;
     formData.append('image', imageBlob, fileName);
 
     if (cleanShaveBlob) {

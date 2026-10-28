@@ -67,13 +67,22 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
           </div>
           <div>
             <div className="verdict-tag">
-              {verdict.isWoodenSpoon 
-                ? ` Wooden Spoon Verdict • ${verdict.woodenSpoonReason || 'Creative Submission'}` 
-                : 'Official Judging Verdict'}
+              {verdict.competitionType === 'CrazyHair' || verdict.isWoodenSpoon 
+                ? '🦁 The Mane Event: Crazy Hair Verdict' 
+                : '👨🏻 Official Mustache Judging Verdict'}
             </div>
             <h2 className="contestant-display-name">{verdict.contestantName}</h2>
-            <div className="contestant-cohort-tag">
-              Movember 2026 Contestant
+            <div className="contestant-cohort-tag flex items-center gap-2">
+              <span>{verdict.competitionType === 'CrazyHair' ? 'Crazy Hair Challenge' : 'Movember 2026 Contestant'}</span>
+              {verdict.isPrizeEligible ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  🏆 R1,000 Eligible
+                </span>
+              ) : (
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-white/10">
+                  🎗️ Community Entry
+                </span>
+              )}
             </div>
           </div>
           <div className="archetype-badge">
@@ -175,43 +184,43 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
 
             {/* Sub-Score Bars */}
             <div className="subscores-list">
-              {verdict.isWoodenSpoon ? (
+              {verdict.competitionType === 'CrazyHair' ? (
                 <>
                   <div className="subscore-item">
                     <div className="subscore-labels">
-                      <span>Innovation</span>
-                      <span className="subscore-val text-orange">{verdict.innovationScore || 0}/10</span>
+                      <span>Volume & Texture</span>
+                      <span className="subscore-val text-purple-400">{verdict.densityScore || 0}/10</span>
                     </div>
                     <div className="subscore-bar">
                       <div 
                         className="subscore-fill" 
-                        style={{ width: `${(verdict.innovationScore || 0) * 10}%`, background: 'linear-gradient(90deg, #f97316, #ea580c)' }}
+                        style={{ width: `${(verdict.densityScore || 0) * 10}%`, background: 'linear-gradient(90deg, #a855f7, #9333ea)' }}
                       />
                     </div>
                   </div>
 
                   <div className="subscore-item">
                     <div className="subscore-labels">
-                      <span>Dedication</span>
-                      <span className="subscore-val text-orange">{verdict.dedicationScore || 0}/10</span>
+                      <span>Creative Styling</span>
+                      <span className="subscore-val text-purple-400">{verdict.symmetryScore || 0}/10</span>
                     </div>
                     <div className="subscore-bar">
                       <div 
                         className="subscore-fill" 
-                        style={{ width: `${(verdict.dedicationScore || 0) * 10}%`, background: 'linear-gradient(90deg, #f59e0b, #d97706)' }}
+                        style={{ width: `${(verdict.symmetryScore || 0) * 10}%`, background: 'linear-gradient(90deg, #ec4899, #db2777)' }}
                       />
                     </div>
                   </div>
 
                   <div className="subscore-item">
                     <div className="subscore-labels">
-                      <span>Funniness</span>
-                      <span className="subscore-val text-orange">{verdict.funninessScore || 0}/10</span>
+                      <span>Wild Charisma</span>
+                      <span className="subscore-val text-purple-400">{verdict.swaggerScore || 0}/10</span>
                     </div>
                     <div className="subscore-bar">
                       <div 
                         className="subscore-fill" 
-                        style={{ width: `${(verdict.funninessScore || 0) * 10}%`, background: 'linear-gradient(90deg, #ef4444, #dc2626)' }}
+                        style={{ width: `${(verdict.swaggerScore || 0) * 10}%`, background: 'linear-gradient(90deg, #f43f5e, #e11d48)' }}
                       />
                     </div>
                   </div>

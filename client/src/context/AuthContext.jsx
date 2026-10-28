@@ -46,22 +46,9 @@ export const AuthProvider = ({ children }) => {
             } catch {}
             window.dispatchEvent(new CustomEvent('dvt-payment-approved', {
               detail: {
-                type: 'Leaderboard',
-                title: 'R100 Entry Fee Confirmed!',
-                message: '🎉 Awesome! Your R100 Movember Contest fee is confirmed. Your highest mustache score is now live on the Leaderboard!'
-              }
-            }));
-          }
-
-          if (!wasQuizPaid && isQuizPaid) {
-            try {
-              confetti({ particleCount: 120, spread: 80, origin: { y: 0.3 } });
-            } catch {}
-            window.dispatchEvent(new CustomEvent('dvt-payment-approved', {
-              detail: {
-                type: 'Quiz',
-                title: 'R50 Quiz Pass Confirmed!',
-                message: '🎉 Excellent! Your R50 Quiz pass is active. You are now cleared to join and compete in the Quiz Arena!'
+                type: 'Donation',
+                title: '🏆 Grand Prize Eligibility Confirmed!',
+                message: '🎉 Awesome! Your donation has been verified. You are now officially eligible to win the R1,000 Takealot Voucher!'
               }
             }));
           }
@@ -98,13 +85,11 @@ export const AuthProvider = ({ children }) => {
     fetchCurrentUser();
   }, [fetchCurrentUser]);
 
-  // Real-time polling for payment approvals without page refresh
+  // Real-time polling for donation/eligibility approvals without page refresh
   useEffect(() => {
     if (!token) return;
 
-    // Fast polling (2.5s) when a contestant has pending unpaid statuses
-    // Relaxed polling (10s) when already fully paid
-    const pollInterval = (user && (!user.leaderboardPaid || !user.quizPaid)) ? 2500 : 10000;
+    const pollInterval = (user && !user.leaderboardPaid) ? 3000 : 12000;
 
     const intervalId = setInterval(() => {
       if (document.visibilityState === 'visible') {
@@ -127,7 +112,7 @@ export const AuthProvider = ({ children }) => {
       window.removeEventListener('visibilitychange', handleVisibilityOrFocus);
       window.removeEventListener('focus', handleVisibilityOrFocus);
     };
-  }, [token, user?.leaderboardPaid, user?.quizPaid, fetchCurrentUser]);
+  }, [token, user?.leaderboardPaid, fetchCurrentUser]);
 
   // Login
   const login = async (email, password) => {
@@ -151,6 +136,9 @@ export const AuthProvider = ({ children }) => {
       role: data.role,
       leaderboardPaid: data.leaderboardPaid,
       quizPaid: data.quizPaid,
+      preferredCompetition: data.preferredCompetition || 'Mustache',
+      amountPaid: data.amountPaid ?? 0,
+      isPrizeEligible: data.isPrizeEligible,
       cleanShaveImageUrl: data.cleanShaveImageUrl,
       cleanShaveUploadedAt: data.cleanShaveUploadedAt
     });
@@ -162,11 +150,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Register
-  const register = async ({ email, fullName, password }) => {
+  const register = async ({ email, fullName, password, preferredCompetition = 'Mustache' }) => {
     const res = await fetch(apiUrl('/api/auth/register'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, fullName, password })
+      body: JSON.stringify({ email, fullName, password, preferredCompetition })
     });
 
     const data = await res.json();
@@ -183,6 +171,9 @@ export const AuthProvider = ({ children }) => {
       role: data.role,
       leaderboardPaid: data.leaderboardPaid,
       quizPaid: data.quizPaid,
+      preferredCompetition: data.preferredCompetition || preferredCompetition,
+      amountPaid: data.amountPaid ?? 0,
+      isPrizeEligible: data.isPrizeEligible,
       cleanShaveImageUrl: data.cleanShaveImageUrl,
       cleanShaveUploadedAt: data.cleanShaveUploadedAt
     });

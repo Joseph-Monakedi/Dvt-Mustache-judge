@@ -22,7 +22,11 @@ public class MustacheEntry
     public int SymmetryScore { get; set; }
     public int SwaggerScore { get; set; }
 
-    // Wooden Spoon Division properties (for cartoons, drawings, AI, non-humans, fake mustaches, filters)
+    // Competition division: "Mustache" (Movember Mustache Challenge) or "CrazyHair" (The Mane Event: Crazy Hair Challenge)
+    [MaxLength(50)]
+    public string CompetitionType { get; set; } = "Mustache";
+
+    // Legacy Wooden Spoon Division properties (preserved for backward compatibility)
     public bool IsWoodenSpoon { get; set; } = false;
 
     [MaxLength(100)]

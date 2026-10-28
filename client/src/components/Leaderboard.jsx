@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FaTrophy, FaCrown, FaMagnifyingGlass, FaXmark, FaArrowRight, FaUtensils, FaGamepad } from 'react-icons/fa6';
+import { FaTrophy, FaCrown, FaMagnifyingGlass, FaXmark, FaArrowRight } from 'react-icons/fa6';
+import { HiSparkles } from 'react-icons/hi2';
 import { GiMustache } from 'react-icons/gi';
 import { apiUrl } from '../utils/api';
-import QuizLiveLeaderboard from './quiz/QuizLiveLeaderboard';
 
-const CATEGORIES = [
+const MUSTACHE_CATEGORIES = [
   'All',
   'Chevron',
   'Handlebar',
@@ -15,6 +15,19 @@ const CATEGORIES = [
   'Pencil',
   'Stubbled Maverick',
   'Peach Fuzz'
+];
+
+const CRAZY_HAIR_CATEGORIES = [
+  'All',
+  'Wild Afro',
+  'Neon Punk',
+  'Beehive Extravaganza',
+  'Spiked Mohawk',
+  'Galactic Braids',
+  'Funky Mullet',
+  'Glitter Cascade',
+  'Bedhead Chic',
+  'Creative Chaos'
 ];
 
 function PodiumSkeleton() {
@@ -101,26 +114,19 @@ function TableSkeleton() {
 
 export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [boardType, setBoardType] = useState(() => searchParams.get('tab') === 'quiz' ? 'quiz' : 'mustache');
   const [entries, setEntries] = useState([]);
   const [totalEntries, setTotalEntries] = useState(0);
-  const [championshipCount, setChampionshipCount] = useState(0);
-  const [woodenSpoonCount, setWoodenSpoonCount] = useState(0);
-  const [division, setDivision] = useState('championship'); // 'championship' | 'woodenspoon'
+  const [mustacheCount, setMustacheCount] = useState(0);
+  const [crazyHairCount, setCrazyHairCount] = useState(0);
+  const [division, setDivision] = useState(() => searchParams.get('division') === 'crazyhair' ? 'crazyhair' : 'mustache');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [lastUpdated, setLastUpdated] = useState(() => new Date());
 
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab === 'quiz' && boardType !== 'quiz') {
-      setBoardType('quiz');
-    } else if (!tab && boardType === 'quiz') {
-      setBoardType('mustache');
-    }
-  }, [searchParams]);
+  const isCrazyHair = division === 'crazyhair';
+  const categories = isCrazyHair ? CRAZY_HAIR_CATEGORIES : MUSTACHE_CATEGORIES;
 
   const fetchLeaderboard = async () => {
     try {
@@ -135,8 +141,8 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       const data = await res.json();
       setEntries(data.entries || []);
       setTotalEntries(data.totalEntries || 0);
-      setChampionshipCount(data.championshipEntriesCount || 0);
-      setWoodenSpoonCount(data.woodenSpoonEntriesCount || 0);
+      setMustacheCount(data.mustacheEntriesCount ?? data.championshipEntriesCount ?? 0);
+      setCrazyHairCount(data.crazyHairEntriesCount ?? data.woodenSpoonEntriesCount ?? 0);
       setLastUpdated(new Date());
       setError(null);
     } catch (err) {
@@ -164,74 +170,66 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
-      e.contestantName.toLowerCase().includes(q) ||
-      e.mustacheTitle.toLowerCase().includes(q) ||
-      (e.woodenSpoonReason && e.woodenSpoonReason.toLowerCase().includes(q))
+      (e.contestantName && e.contestantName.toLowerCase().includes(q)) ||
+      (e.mustacheTitle && e.mustacheTitle.toLowerCase().includes(q)) ||
+      (e.styleCategory && e.styleCategory.toLowerCase().includes(q))
     );
   });
 
   const topThree = entries.slice(0, 3);
-  const isSpoonDivision = division === 'woodenspoon';
 
   return (
     <div className="leaderboard-container fade-in">
       {/* Top Ambient Loading Bar during Background Refresh */}
       {loading && entries.length > 0 && <div className="global-loading-bar" />}
 
-      {/* Tournament Arena Mode Switcher */}
-      <div className="flex items-center justify-center p-1.5 bg-[#0b1320] border border-white/10 rounded-2xl max-w-md mx-auto mb-8 shadow-xl">
-        <button
-          type="button"
-          onClick={() => {
-            setBoardType('mustache');
-            setSearchParams({});
-          }}
-          className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-            boardType === 'mustache'
-              ? 'bg-gradient-to-r from-[#007FBA] to-[#00b4d8] text-white shadow-lg shadow-cyan-500/25 border border-cyan-400/40'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <GiMustache className="text-base" /> Mustache Judge
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setBoardType('quiz');
-            setSearchParams({ tab: 'quiz' });
-          }}
-          className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-            boardType === 'quiz'
-              ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black shadow-lg shadow-amber-500/25 border border-yellow-300/40'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <FaGamepad className="text-base" /> Quiz Arena Live
-          <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
-          </span>
-        </button>
+      {/* Grand Prize & Prostate Cancer Awareness Donation Banner */}
+      <div className="mb-8 p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#007FBA]/20 via-[#0b1320] to-purple-950/30 border border-cyan-500/40 shadow-2xl backdrop-blur-md">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-sm">
+                🏆 GRAND PRIZES: R1,000 Takealot Vouchers
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/40">
+                🎗️ Prostate Cancer Awareness & Research
+              </span>
+            </div>
+            <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+              Two Challenges. Free Registration. R1,000 Grand Prizes!
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-3xl leading-relaxed">
+              Anyone can enter and climb the leaderboard for free! The competition is split into two tracks: the <strong>Movember Mustache Challenge</strong> (for mustache growers) and <strong>The Mane Event: Crazy Hair Challenge</strong> (for women and non-growers). 
+              Both tracks offer a grand prize of a <strong>R1,000 Takealot Voucher</strong> to eligible participants who have donated a minimum of <strong>R100</strong>.
+            </p>
+          </div>
+          <div className="shrink-0 p-4 bg-[#070c14]/90 border border-cyan-400/30 rounded-xl text-xs space-y-1.5 text-slate-300 shadow-lg">
+            <div className="font-bold text-cyan-300 flex items-center gap-1.5 text-sm">
+              💬 How to Donate:
+            </div>
+            <div>Contact <strong>Rose Allen</strong> via <strong>MS Teams</strong></div>
+            <div>Or Email: <a href="mailto:RAllen@dvtsoftware.com" className="text-cyan-400 hover:underline font-mono font-bold">RAllen@dvtsoftware.com</a></div>
+            <div className="text-[11px] text-slate-400 pt-1 border-t border-white/10">
+              * Minimum R100 donation required for Grand Prize eligibility.
+            </div>
+          </div>
+        </div>
       </div>
 
-      {boardType === 'quiz' ? (
-        <QuizLiveLeaderboard embedded={true} />
-      ) : (
-        <>
-          {/* Header Banner */}
-          <div className="leaderboard-header">
+      {/* Header Banner */}
+      <div className="leaderboard-header">
         <div>
           <h1 className="leaderboard-title">
-            {isSpoonDivision ? (
-              <>The Wooden Spoon Gallery <FaUtensils className="title-trophy-icon text-orange" /></>
+            {isCrazyHair ? (
+              <>The Mane Event: Crazy Hair Challenge <HiSparkles className="title-trophy-icon text-purple-400" /></>
             ) : (
-              <>DVT Movember Championship <FaTrophy className="title-trophy-icon" /></>
+              <>DVT Movember Mustache Challenge <GiMustache className="title-trophy-icon text-cyan-400" /></>
             )}
           </h1>
           <p className="leaderboard-subtitle">
-            {isSpoonDivision 
-              ? 'Honouring cartoons, doodles, AI marvels, pets, and drawn-on masterpieces.'
-              : 'Live bristle standings for genuine, real-life human mustaches across all DVT squads.'}
+            {isCrazyHair 
+              ? 'Wild styles, vibrant colors & creative hairdos for women and non-growers! Grand Prize: R1,000 Takealot Voucher for eligible donors.'
+              : 'Live bristle standings for genuine, real-life human mustaches across all DVT squads. Grand Prize: R1,000 Takealot Voucher for eligible donors.'}
           </p>
         </div>
 
@@ -241,7 +239,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
             {loading && entries.length > 0 ? (
               <span className="bg-refreshing-pill"><span className="bg-refreshing-dot"></span> Syncing Standings...</span>
             ) : (
-              `LIVE • ${totalEntries} in Division • Refreshed ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+              `LIVE • ${totalEntries} in Challenge • Refreshed ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
             )}
           </span>
         </div>
@@ -251,23 +249,25 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       <div className="division-switch-tabs">
         <button
           type="button"
-          className={`division-tab ${!isSpoonDivision ? 'active' : ''}`}
+          className={`division-tab ${!isCrazyHair ? 'active' : ''}`}
           onClick={() => {
-            setDivision('championship');
+            setDivision('mustache');
             setSelectedCategory('All');
+            setSearchParams({ division: 'mustache' });
           }}
         >
-          <FaTrophy className="tab-icon" /> Genuine Entries ({championshipCount})
+          <GiMustache className="tab-icon text-cyan-400" /> Mustache Challenge ({mustacheCount})
         </button>
         <button
           type="button"
-          className={`division-tab spoon-tab ${isSpoonDivision ? 'active' : ''}`}
+          className={`division-tab ${isCrazyHair ? 'active' : ''}`}
           onClick={() => {
-            setDivision('woodenspoon');
+            setDivision('crazyhair');
             setSelectedCategory('All');
+            setSearchParams({ division: 'crazyhair' });
           }}
         >
-          <FaUtensils className="tab-icon" /> The Wooden Spoon ({woodenSpoonCount})
+          <HiSparkles className="tab-icon text-purple-400" /> The Mane Event: Crazy Hair ({crazyHairCount})
         </button>
       </div>
 
@@ -283,101 +283,119 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
           <PodiumSkeleton />
         ) : topThree.length >= 3 ? (
           <div className="podium-section">
-          {/* 2nd Place (Silver) */}
-          <div 
-            className={`podium-card silver-card ${isSpoonDivision ? 'spoon-podium-card' : ''}`}
-            onClick={() => onSelectEntry(topThree[1])}
-          >
-            <div className="podium-rank-badge silver-badge">2</div>
-            <div className="podium-avatar-wrapper">
-              <img 
-                src={topThree[1].thumbnailUrl || topThree[1].imageUrl} 
-                alt={topThree[1].contestantName} 
-                className="podium-avatar" 
-              />
-            </div>
-            <div className="podium-score silver-score">{topThree[1].overallScore}</div>
-            <h3 className="podium-name">{topThree[1].contestantName}</h3>
-            <div className="podium-title">"{topThree[1].mustacheTitle}"</div>
-            {isSpoonDivision && topThree[1].woodenSpoonReason && (
-              <div className="podium-spoon-reason-badge">
-                 {topThree[1].woodenSpoonReason}
+            {/* 2nd Place (Silver) */}
+            <div 
+              className="podium-card silver-card"
+              onClick={() => onSelectEntry(topThree[1])}
+            >
+              <div className="podium-rank-badge silver-badge">2</div>
+              <div className="podium-avatar-wrapper">
+                <img 
+                  src={topThree[1].thumbnailUrl || topThree[1].imageUrl} 
+                  alt={topThree[1].contestantName} 
+                  className="podium-avatar" 
+                />
               </div>
-            )}
-            <div className="podium-badge-tag">{topThree[1].verdictBadge}</div>
-            <div className="podium-pedestal silver-pedestal">
-              {isSpoonDivision ? '2ND RUNNER UP' : '2ND PLACE'}
-            </div>
-          </div>
+              <div className="podium-score silver-score">{topThree[1].overallScore}</div>
+              <h3 className="podium-name">{topThree[1].contestantName}</h3>
+              <div className="podium-title">"{topThree[1].mustacheTitle}"</div>
+              
+              <div className="my-1.5">
+                {topThree[1].isPrizeEligible ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    🏆 R1,000 Eligible (Donated)
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-white/10">
+                    🎗️ Community Entry
+                  </span>
+                )}
+              </div>
 
-          {/* 1st Place (Gold Champion or Spoon Master) */}
-          <div 
-            className={`podium-card gold-card ${isSpoonDivision ? 'spoon-grand-card' : ''}`}
-            onClick={() => onSelectEntry(topThree[0])}
-          >
-            {isSpoonDivision ? (
-              <FaUtensils className="crown-icon text-orange" />
-            ) : (
+              <div className="podium-badge-tag">{topThree[1].verdictBadge}</div>
+              <div className="podium-pedestal silver-pedestal">2ND PLACE</div>
+            </div>
+
+            {/* 1st Place (Gold Champion) */}
+            <div 
+              className="podium-card gold-card"
+              onClick={() => onSelectEntry(topThree[0])}
+            >
               <FaCrown className="crown-icon" />
-            )}
-            <div className={`podium-rank-badge ${isSpoonDivision ? 'spoon-badge' : 'gold-badge'}`}>1</div>
-            <div className={`podium-avatar-wrapper ${isSpoonDivision ? 'spoon-avatar-border' : 'gold-avatar-border'}`}>
-              <img 
-                src={topThree[0].thumbnailUrl || topThree[0].imageUrl} 
-                alt={topThree[0].contestantName} 
-                className="podium-avatar" 
-              />
-            </div>
-            <div className={`podium-score ${isSpoonDivision ? 'spoon-score' : 'gold-score'}`}>
-              {topThree[0].overallScore}
-            </div>
-            <h3 className="podium-name gold-text">{topThree[0].contestantName}</h3>
-            <div className="podium-title">"{topThree[0].mustacheTitle}"</div>
-            {isSpoonDivision && topThree[0].woodenSpoonReason && (
-              <div className="podium-spoon-reason-badge">
-                 {topThree[0].woodenSpoonReason}
+              <div className="podium-rank-badge gold-badge">1</div>
+              <div className="podium-avatar-wrapper gold-avatar-border">
+                <img 
+                  src={topThree[0].thumbnailUrl || topThree[0].imageUrl} 
+                  alt={topThree[0].contestantName} 
+                  className="podium-avatar" 
+                />
               </div>
-            )}
-            <div className={`podium-badge-tag ${isSpoonDivision ? 'spoon-tag' : 'gold-tag'}`}>
-              {topThree[0].verdictBadge}
-            </div>
-            <div className={`podium-pedestal ${isSpoonDivision ? 'spoon-pedestal' : 'gold-pedestal'}`}>
-              {isSpoonDivision ? 'WOODEN SPOON CHAMPION' : 'GRAND CHAMPION'}
-            </div>
-          </div>
+              <div className="podium-score gold-score">
+                {topThree[0].overallScore}
+              </div>
+              <h3 className="podium-name gold-text">{topThree[0].contestantName}</h3>
+              <div className="podium-title">"{topThree[0].mustacheTitle}"</div>
+              
+              <div className="my-1.5">
+                {topThree[0].isPrizeEligible ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 shadow-md">
+                    🏆 R1,000 Grand Prize Eligible
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-white/10">
+                    🎗️ Community Leader
+                  </span>
+                )}
+              </div>
 
-          {/* 3rd Place (Bronze) */}
-          <div 
-            className={`podium-card bronze-card ${isSpoonDivision ? 'spoon-podium-card' : ''}`}
-            onClick={() => onSelectEntry(topThree[2])}
-          >
-            <div className="podium-rank-badge bronze-badge">3</div>
-            <div className="podium-avatar-wrapper">
-              <img 
-                src={topThree[2].thumbnailUrl || topThree[2].imageUrl} 
-                alt={topThree[2].contestantName} 
-                className="podium-avatar" 
-              />
-            </div>
-            <div className="podium-score bronze-score">{topThree[2].overallScore}</div>
-            <h3 className="podium-name">{topThree[2].contestantName}</h3>
-            <div className="podium-title">"{topThree[2].mustacheTitle}"</div>
-            {isSpoonDivision && topThree[2].woodenSpoonReason && (
-              <div className="podium-spoon-reason-badge">
-                 {topThree[2].woodenSpoonReason}
+              <div className="podium-badge-tag gold-tag">
+                {topThree[0].verdictBadge}
               </div>
-            )}
-            <div className="podium-badge-tag">{topThree[2].verdictBadge}</div>
-            <div className="podium-pedestal bronze-pedestal">3RD PLACE</div>
+              <div className="podium-pedestal gold-pedestal">
+                {isCrazyHair ? 'MANE EVENT CHAMPION' : 'MUSTACHE CHAMPION'}
+              </div>
+            </div>
+
+            {/* 3rd Place (Bronze) */}
+            <div 
+              className="podium-card bronze-card"
+              onClick={() => onSelectEntry(topThree[2])}
+            >
+              <div className="podium-rank-badge bronze-badge">3</div>
+              <div className="podium-avatar-wrapper">
+                <img 
+                  src={topThree[2].thumbnailUrl || topThree[2].imageUrl} 
+                  alt={topThree[2].contestantName} 
+                  className="podium-avatar" 
+                />
+              </div>
+              <div className="podium-score bronze-score">{topThree[2].overallScore}</div>
+              <h3 className="podium-name">{topThree[2].contestantName}</h3>
+              <div className="podium-title">"{topThree[2].mustacheTitle}"</div>
+              
+              <div className="my-1.5">
+                {topThree[2].isPrizeEligible ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    🏆 R1,000 Eligible (Donated)
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-white/10">
+                    🎗️ Community Entry
+                  </span>
+                )}
+              </div>
+
+              <div className="podium-badge-tag">{topThree[2].verdictBadge}</div>
+              <div className="podium-pedestal bronze-pedestal">3RD PLACE</div>
+            </div>
           </div>
-        </div>
-      ) : null
-    )}
+        ) : null
+      )}
 
       {/* Filter and Search Bar */}
       <div className="leaderboard-controls">
         <div className="category-chips">
-          {CATEGORIES.map(cat => (
+          {categories.map(cat => (
             <button
               key={cat}
               type="button"
@@ -412,15 +430,15 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
           <TableSkeleton />
         ) : filteredEntries.length === 0 ? (
           <div className="empty-state">
-            <GiMustache className="empty-icon" />
-            <h3>No entries in this division</h3>
+            {isCrazyHair ? <HiSparkles className="empty-icon text-purple-400" /> : <GiMustache className="empty-icon text-cyan-400" />}
+            <h3>No entries in this challenge yet</h3>
             <p>
-              {isSpoonDivision 
-                ? 'No cartoon, AI or drawn-on submissions yet. Try uploading a doodle in the booth!'
-                : 'No real contestant records match this filter.'}
+              {isCrazyHair 
+                ? 'Be the first to showcase your crazy, creative hairdo in The Mane Event!'
+                : 'No mustache contestant records match this filter yet.'}
             </p>
             <button className="action-btn" onClick={onGoToBooth}>
-              Judge Your Mustache Now
+              {isCrazyHair ? 'Enter The Mane Event' : 'Judge Your Mustache Now'}
             </button>
           </div>
         ) : (
@@ -433,10 +451,8 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                     <th>Rank</th>
                     <th>Contestant</th>
                     <th>Style Archetype</th>
-                    {isSpoonDivision && <th>Wooden Spoon Reason</th>}
-                    <th>
-                      {isSpoonDivision ? 'Scores (Inn / Ded / Fun)' : 'Scores (D / S / Sw)'}
-                    </th>
+                    <th>Prize Eligibility</th>
+                    <th>{isCrazyHair ? 'Scores (Vol / Style / Char)' : 'Scores (D / S / Sw)'}</th>
                     <th>Overall</th>
                     <th>Action</th>
                   </tr>
@@ -449,7 +465,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                       onClick={() => onSelectEntry(entry)}
                     >
                       <td className="rank-col">
-                        <span className={`rank-pill ${isSpoonDivision ? 'rank-spoon' : entry.rank <= 3 ? `rank-${entry.rank}` : 'rank-other'}`}>
+                        <span className={`rank-pill ${entry.rank <= 3 ? `rank-${entry.rank}` : 'rank-other'}`}>
                           #{entry.rank}
                         </span>
                       </td>
@@ -469,21 +485,25 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                       <td className="category-col">
                         <span className="style-tag">{entry.styleCategory}</span>
                       </td>
-                      {isSpoonDivision && (
-                        <td className="spoon-reason-col">
-                          <span className="division-badge badge-woodenspoon">
-                             {entry.woodenSpoonReason || 'Creative Submission'}
+                      <td className="prize-col">
+                        {entry.isPrizeEligible ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm" title="Donated R100+ • Eligible for R1,000 Takealot Voucher">
+                            <FaTrophy className="text-amber-400 text-xs" /> R1,000 Eligible
                           </span>
-                        </td>
-                      )}
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 border border-white/10" title="Community Entry • Donate R100+ via Rose to become eligible for R1,000 voucher">
+                            🎗️ Community
+                          </span>
+                        )}
+                      </td>
                       <td className="breakdown-col">
-                        {isSpoonDivision ? (
-                          <div className="subscores-compact spoon-subscores">
-                            <span title="Innovation">Inn: {entry.innovationScore}</span>
+                        {isCrazyHair ? (
+                          <div className="subscores-compact">
+                            <span title="Volume & Texture">Vol: {entry.densityScore}</span>
                             <span>•</span>
-                            <span title="Dedication">Ded: {entry.dedicationScore}</span>
+                            <span title="Styling & Form">Style: {entry.symmetryScore}</span>
                             <span>•</span>
-                            <span title="Funniness">Fun: {entry.funninessScore}</span>
+                            <span title="Wild Charisma">Char: {entry.swaggerScore}</span>
                           </div>
                         ) : (
                           <div className="subscores-compact">
@@ -496,7 +516,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                         )}
                       </td>
                       <td className="overall-col">
-                        <div className={`score-badge ${isSpoonDivision ? 'score-woodenspoon' : entry.overallScore === 0 ? 'score-zero' : entry.overallScore >= 90 ? 'score-gold' : entry.overallScore >= 80 ? 'score-cyan' : 'score-standard'}`}>
+                        <div className={`score-badge ${entry.overallScore === 0 ? 'score-zero' : entry.overallScore >= 90 ? 'score-gold' : entry.overallScore >= 80 ? 'score-cyan' : 'score-standard'}`}>
                           {entry.overallScore}
                         </div>
                       </td>
@@ -529,10 +549,21 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                   tabIndex={0}
                 >
                   <div className="mobile-card-top">
-                    <span className={`rank-pill ${isSpoonDivision ? 'rank-spoon' : entry.rank <= 3 ? `rank-${entry.rank}` : 'rank-other'}`}>
-                      #{entry.rank}
-                    </span>
-                    <div className={`score-badge ${isSpoonDivision ? 'score-woodenspoon' : entry.overallScore === 0 ? 'score-zero' : entry.overallScore >= 90 ? 'score-gold' : entry.overallScore >= 80 ? 'score-cyan' : 'score-standard'}`}>
+                    <div className="flex items-center gap-2">
+                      <span className={`rank-pill ${entry.rank <= 3 ? `rank-${entry.rank}` : 'rank-other'}`}>
+                        #{entry.rank}
+                      </span>
+                      {entry.isPrizeEligible ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                          🏆 Eligible
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-white/10">
+                          🎗️ Community
+                        </span>
+                      )}
+                    </div>
+                    <div className={`score-badge ${entry.overallScore === 0 ? 'score-zero' : entry.overallScore >= 90 ? 'score-gold' : entry.overallScore >= 80 ? 'score-cyan' : 'score-standard'}`}>
                       {entry.overallScore}
                     </div>
                   </div>
@@ -548,16 +579,11 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                       <div className="mobile-card-title">"{entry.mustacheTitle}"</div>
                       <div className="mobile-card-tags">
                         <span className="style-tag">{entry.styleCategory}</span>
-                        {isSpoonDivision && entry.woodenSpoonReason && (
-                          <span className="division-badge badge-woodenspoon mobile-reason-tag">
-                             {entry.woodenSpoonReason}
-                          </span>
-                        )}
                       </div>
                       <div className="mobile-subscores-wrap">
-                        {isSpoonDivision ? (
-                          <span className="mobile-subscores-text text-orange">
-                            Inn: {entry.innovationScore} • Ded: {entry.dedicationScore} • Fun: {entry.funninessScore}
+                        {isCrazyHair ? (
+                          <span className="mobile-subscores-text">
+                            Vol: {entry.densityScore} • Style: {entry.symmetryScore} • Char: {entry.swaggerScore}
                           </span>
                         ) : (
                           <span className="mobile-subscores-text">
@@ -576,8 +602,6 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
           </>
         )}
       </div>
-        </>
-      )}
     </div>
   );
 }

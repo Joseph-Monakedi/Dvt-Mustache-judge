@@ -57,6 +57,7 @@ public class AuthController : ControllerBase
             PasswordHash = hash,
             Salt = salt,
             Role = "Contestant",
+            PreferredCompetition = string.Equals(request.PreferredCompetition, "CrazyHair", StringComparison.OrdinalIgnoreCase) ? "CrazyHair" : "Mustache",
             LeaderboardPaid = false,
             QuizPaid = false,
             CreatedAt = DateTime.UtcNow
@@ -77,7 +78,9 @@ public class AuthController : ControllerBase
             token,
             user.CleanShaveImageUrl,
             user.CleanShaveUploadedAt,
-            user.PaymentMethod
+            user.PaymentMethod,
+            user.PreferredCompetition,
+            user.AmountPaid
         ));
     }
 
@@ -108,6 +111,7 @@ public class AuthController : ControllerBase
                     PasswordHash = hash,
                     Salt = salt,
                     Role = "Admin",
+                    PreferredCompetition = "Mustache",
                     LeaderboardPaid = true,
                     QuizPaid = true,
                     CreatedAt = DateTime.UtcNow
@@ -149,7 +153,9 @@ public class AuthController : ControllerBase
             token,
             user.CleanShaveImageUrl,
             user.CleanShaveUploadedAt,
-            user.PaymentMethod
+            user.PaymentMethod,
+            user.PreferredCompetition,
+            user.AmountPaid
         ));
     }
 
@@ -192,7 +198,11 @@ public class AuthController : ControllerBase
             user.QuizPaid,
             user.PaymentMethod,
             user.AmountPaid,
+            amountDonated = user.AmountPaid,
+            isPrizeEligible = user.IsEligibleToWin,
+            preferredCompetition = user.PreferredCompetition,
             user.PaidAt,
+            donatedAt = user.PaidAt,
             user.CleanShaveImageUrl,
             user.CleanShaveUploadedAt,
             user.CreatedAt,

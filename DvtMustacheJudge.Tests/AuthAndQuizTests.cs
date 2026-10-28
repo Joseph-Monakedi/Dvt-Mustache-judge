@@ -6,6 +6,7 @@ using DvtMustacheJudge.Api.Controllers;
 using DvtMustacheJudge.Api.Data;
 using DvtMustacheJudge.Api.Models;
 using DvtMustacheJudge.Api.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -147,20 +148,29 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
             await db.SaveChangesAsync();
         }
 
-        // Leaderboard check: user has NOT paid R100 yet, so neither entry should be on public leaderboard
+        // Leaderboard check: anyone can participate on the leaderboard!
+        // Should be deduplicated to only the top entry (score 95), initially not prize eligible
         var lbResUnpaid = await _client.GetAsync("/api/mustache/leaderboard?limit=100");
         var lbBodyUnpaid = await lbResUnpaid.Content.ReadAsStringAsync();
         using var lbDocUnpaid = JsonDocument.Parse(lbBodyUnpaid);
-        var entriesUnpaid = lbDocUnpaid.RootElement.GetProperty("entries").EnumerateArray();
-        Assert.DoesNotContain(entriesUnpaid, e => e.GetProperty("contestantName").GetString() == "Deduplication King");
+        var entriesUnpaid = lbDocUnpaid.RootElement.GetProperty("entries").EnumerateArray()
+            .Where(e => e.GetProperty("contestantName").GetString() == "Deduplication King")
+            .ToList();
 
-        // Admin approves R100 leaderboard fee
-        var adminToggleReq = new HttpRequestMessage(HttpMethod.Post, $"/api/mustache/admin/contestant/{userId}/toggle-leaderboard-paid");
-        adminToggleReq.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
-        var toggleRes = await _client.SendAsync(adminToggleReq);
-        Assert.Equal(HttpStatusCode.OK, toggleRes.StatusCode);
+        Assert.Single(entriesUnpaid);
+        Assert.Equal(95, entriesUnpaid[0].GetProperty("overallScore").GetInt32());
+        Assert.False(entriesUnpaid[0].GetProperty("isPrizeEligible").GetBoolean());
 
-        // Leaderboard check again: ONLY top entry (score 95) should be present (1 entry total for this contestant!)
+        // Admin confirms donation (R100) and marks as prize eligible
+        var adminDonationReq = new HttpRequestMessage(HttpMethod.Post, $"/api/mustache/admin/contestant/{userId}/set-donation")
+        {
+            Content = JsonContent.Create(new SetDonationRequest(true, 100))
+        };
+        adminDonationReq.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        var donationRes = await _client.SendAsync(adminDonationReq);
+        Assert.Equal(HttpStatusCode.OK, donationRes.StatusCode);
+
+        // Leaderboard check again: ONLY top entry (score 95) is present and is now prize eligible!
         var lbResPaid = await _client.GetAsync("/api/mustache/leaderboard?limit=100");
         var lbBodyPaid = await lbResPaid.Content.ReadAsStringAsync();
         using var lbDocPaid = JsonDocument.Parse(lbBodyPaid);
@@ -170,6 +180,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
 
         Assert.Single(matchingEntries);
         Assert.Equal(95, matchingEntries[0].GetProperty("overallScore").GetInt32());
+        Assert.True(matchingEntries[0].GetProperty("isPrizeEligible").GetBoolean());
     }
 
     [Fact]
@@ -527,5 +538,48 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
         using var loginDoc = JsonDocument.Parse(loginJson);
         Assert.True(loginDoc.RootElement.TryGetProperty("token", out var tokenProp));
         Assert.NotEmpty(tokenProp.GetString()!);
+    }
+
+    [Fact]
+    public async Task Admin_ShouldBeAbleToDeleteContestantAccount()
+    {
+        // 1. Create a user with an entry
+        var email = $"delete_user_{Guid.NewGuid()}@dvt.co.za";
+        var regRes = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "To Be Deleted", "password123", "Mustache"));
+        Assert.Equal(HttpStatusCode.OK, regRes.StatusCode);
+
+        Guid userId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var user = db.Users.First(u => u.Email == email.ToLower());
+            userId = user.Id;
+
+            db.MustacheEntries.Add(new MustacheEntry
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                ContestantName = "To Be Deleted",
+                ImageUrl = "/mock_del.jpg",
+                ThumbnailUrl = "/thumb_del.jpg",
+                OverallScore = 70,
+                CompetitionType = "Mustache"
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // 2. Admin deletes user
+        var deleteReq = new HttpRequestMessage(HttpMethod.Delete, $"/api/mustache/admin/contestant/{userId}");
+        deleteReq.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        var deleteRes = await _client.SendAsync(deleteReq);
+        Assert.Equal(HttpStatusCode.OK, deleteRes.StatusCode);
+
+        // 3. User and entries should be gone from DB
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Assert.Null(await db.Users.FindAsync(userId));
+            Assert.False(await db.MustacheEntries.AnyAsync(e => e.UserId == userId));
+        }
     }
 }

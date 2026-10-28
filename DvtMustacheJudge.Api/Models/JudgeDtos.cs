@@ -64,6 +64,7 @@ public class JudgeRequestDto
     public string Name { get; set; } = string.Empty;
     public IFormFile? Image { get; set; }
     public IFormFile? CleanShaveImage { get; set; }
+    public string CompetitionType { get; set; } = "Mustache";
 }
 
 public class JudgeResponseDto
@@ -73,6 +74,7 @@ public class JudgeResponseDto
     public string ImageUrl { get; set; } = string.Empty;
     public string ThumbnailUrl { get; set; } = string.Empty;
     public string? CleanShaveImageUrl { get; set; }
+    public string CompetitionType { get; set; } = "Mustache";
     public int OverallScore { get; set; }
     public int DensityScore { get; set; }
     public int SymmetryScore { get; set; }
@@ -91,6 +93,8 @@ public class JudgeResponseDto
     public string VerdictBadge { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public bool IsLeaderboardEligible { get; set; }
+    public bool IsPrizeEligible { get; set; }
+    public decimal AmountDonated { get; set; }
     public bool IsBestEntry { get; set; }
     public Guid? UserId { get; set; }
 }
@@ -107,6 +111,9 @@ public class UserEntriesResponseDto
     public string Email { get; set; } = string.Empty;
     public bool LeaderboardPaid { get; set; }
     public bool QuizPaid { get; set; }
+    public bool IsPrizeEligible { get; set; }
+    public decimal AmountDonated { get; set; }
+    public string PreferredCompetition { get; set; } = "Mustache";
     public string? CleanShaveImageUrl { get; set; }
     public DateTime? CleanShaveUploadedAt { get; set; }
     public int TotalSubmissions { get; set; }
@@ -123,6 +130,9 @@ public class LeaderboardEntryDto
     public string ImageUrl { get; set; } = string.Empty;
     public string ThumbnailUrl { get; set; } = string.Empty;
     public string? CleanShaveImageUrl { get; set; }
+    public string CompetitionType { get; set; } = "Mustache";
+    public bool IsPrizeEligible { get; set; }
+    public decimal AmountDonated { get; set; }
     public int OverallScore { get; set; }
     public int DensityScore { get; set; }
     public int SymmetryScore { get; set; }
@@ -145,9 +155,11 @@ public class LeaderboardEntryDto
 public class LeaderboardResponseDto
 {
     public int TotalEntries { get; set; }
+    public int MustacheEntriesCount { get; set; }
+    public int CrazyHairEntriesCount { get; set; }
     public int ChampionshipEntriesCount { get; set; }
     public int WoodenSpoonEntriesCount { get; set; }
-    public string Division { get; set; } = "championship";
+    public string Division { get; set; } = "mustache";
     public List<LeaderboardEntryDto> Entries { get; set; } = new();
 }
 
@@ -166,8 +178,12 @@ public class AdminOverviewDto
     public int TotalSubmissions { get; set; }
     public int VisibleCount { get; set; }
     public int HiddenCount { get; set; }
+    public int MustacheCount { get; set; }
+    public int CrazyHairCount { get; set; }
     public int ChampionshipCount { get; set; }
     public int WoodenSpoonCount { get; set; }
+    public int PrizeEligibleCount { get; set; }
+    public decimal TotalDonations { get; set; }
     public double AverageScore { get; set; }
     public int TopScore { get; set; }
     public int RemainingAiQuota { get; set; } = 3;
