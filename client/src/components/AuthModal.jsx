@@ -367,11 +367,13 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
                 <p className="mb-1.5 leading-relaxed">
                   Only participants who <strong>donate a minimum of R100</strong> are eligible for the voucher. All proceeds go toward raising awareness for <strong>prostate cancer and men's health research</strong>.
                 </p>
-                <div className="p-2 rounded bg-black/40 border border-slate-700/60 text-slate-300">
-                  <span className="font-semibold text-white">To donate:</span> Email{' '}
-                  <a href="mailto:marketing@dvtsoftware.com" className="text-cyan-400 underline hover:text-cyan-300">
-                    marketing@dvtsoftware.com
-                  </a>.
+                <div className="p-2.5 rounded-lg bg-black/50 border border-cyan-500/30 text-xs text-slate-300 space-y-1">
+                  <div className="flex items-center justify-between text-cyan-300 font-bold">
+                    <span>EFT Donation (FNB):</span>
+                    <span className="text-[10px] bg-cyan-500/20 px-1.5 py-0.5 rounded text-cyan-200 font-mono">Acc: 625 3333 8621</span>
+                  </div>
+                  <div>Acc Holder: <strong className="text-white">Rosemary Allen</strong> • Branch: <span className="font-mono text-white">254 005</span> (Cheque)</div>
+                  <div>Send POP to: <a href="mailto:marketing@dvtsoftware.com" className="text-cyan-400 underline hover:text-cyan-300 font-mono font-semibold">marketing@dvtsoftware.com</a></div>
                 </div>
               </div>
             </div>

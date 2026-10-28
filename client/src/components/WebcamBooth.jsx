@@ -338,11 +338,8 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 <span className="font-bold text-amber-400">🎗️ Free Community Entry:</span> Open to everyone for free! To be eligible to win the <strong>R1,000 Takealot Voucher</strong>, donate a minimum of R100 towards prostate cancer research.
               </div>
             </div>
-            <div className="flex-shrink-0 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-700/60 text-slate-300">
-              Donate via:{' '}
-              <a href="mailto:marketing@dvtsoftware.com" className="text-cyan-400 underline hover:text-cyan-300 font-medium">
-                marketing@dvtsoftware.com
-              </a>
+            <div className="flex-shrink-0 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-cyan-500/30 text-xs text-slate-300">
+              <span className="text-cyan-300 font-bold">EFT:</span> FNB • Acc: <strong className="text-white font-mono">625 3333 8621</strong> (POP to <a href="mailto:marketing@dvtsoftware.com" className="text-cyan-400 underline hover:text-cyan-300 font-medium">marketing@dvtsoftware.com</a>)
             </div>
           </div>
         )}

@@ -7,7 +7,9 @@ import {
   FaCopy,
   FaCheck,
   FaTrophy,
-  FaShieldHalved
+  FaShieldHalved,
+  FaBuildingColumns,
+  FaReceipt
 } from 'react-icons/fa6';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
@@ -24,7 +26,7 @@ export default function CharityPaymentModal({
   amountPaid = 0
 }) {
   const { token, user } = useAuth();
-  const [copied, setCopied] = useState(false);
+  const [copiedField, setCopiedField] = useState('');
   const [loadingType, setLoadingType] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -34,10 +36,10 @@ export default function CharityPaymentModal({
 
   const eligible = isPrizeEligible || user?.isPrizeEligible || leaderboardPaid || (amountPaid >= 100);
 
-  const handleCopyEmail = () => {
-    navigator.clipboard?.writeText('marketing@dvtsoftware.com');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 3000);
+  const handleCopy = (text, fieldName) => {
+    navigator.clipboard?.writeText(text);
+    setCopiedField(fieldName);
+    setTimeout(() => setCopiedField(''), 2500);
   };
 
   const handlePayFast = async (itemType) => {
@@ -105,55 +107,131 @@ export default function CharityPaymentModal({
           </div>
         </div>
 
-        {/* Donation Instructions Card */}
-        <div className="p-5 bg-[#0b1320] border border-cyan-500/30 rounded-2xl space-y-4">
+        {/* EFT Banking Details Card */}
+        <div className="p-5 bg-[#0b1320] border border-cyan-500/30 rounded-2xl space-y-4 shadow-xl">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div className="flex items-center gap-2.5 text-cyan-300 font-bold text-sm">
-              <FaHandHoldingHeart className="text-rose-400 text-lg" />
-              <span>How to Donate (Prostate Cancer Awareness & Research)</span>
+              <FaBuildingColumns className="text-cyan-400 text-lg" />
+              <span>Direct EFT Banking Details (South Africa)</span>
             </div>
-            <img src="/dvt-logo.png" alt="DVT" className="w-6 h-6 object-contain rounded-full drop-shadow-[0_0_8px_rgba(0,180,216,0.4)]" />
+            <span className="text-[11px] font-black tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+              FNB
+            </span>
           </div>
 
-          {/* <p className="text-xs text-slate-300 leading-relaxed">
-            Online card checkout via PayFast is currently being finalized. For now, all donations are handled directly through DVT:
-          </p> */}
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Please make your donation via EFT. A minimum of <strong>R100</strong> makes you eligible for the <strong>R1,000 Takealot Voucher</strong> grand prize.
+          </p>
 
-          <div className="bg-[#070c14] border border-white/10 rounded-xl p-4 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400">Donation Coordinator:</span>
-              <strong className="text-white text-xs sm:text-sm">DVT Marketing</strong>
+          <div className="bg-[#070c14] border border-white/10 rounded-xl divide-y divide-white/5 overflow-hidden text-xs">
+            <div className="flex items-center justify-between p-3 hover:bg-white/[0.02]">
+              <span className="text-slate-400">Bank:</span>
+              <strong className="text-white font-bold text-sm">First National Bank (FNB)</strong>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400">Contact Method:</span>
+            <div className="flex items-center justify-between p-3 hover:bg-white/[0.02]">
+              <span className="text-slate-400">Account Holder:</span>
+              <div className="flex items-center gap-2">
+                <strong className="text-white font-semibold">Rosemary Allen</strong>
+                <button
+                  type="button"
+                  onClick={() => handleCopy('Rosemary Allen', 'holder')}
+                  className="p-1 rounded text-slate-400 hover:text-white transition-colors"
+                  title="Copy account holder"
+                >
+                  {copiedField === 'holder' ? <FaCheck className="text-emerald-400 text-xs" /> : <FaCopy className="text-xs" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 hover:bg-white/[0.02] bg-cyan-950/20">
+              <span className="text-cyan-300 font-semibold">Account Number:</span>
+              <div className="flex items-center gap-2">
+                <strong className="text-white font-mono text-sm tracking-wider">625 3333 8621</strong>
+                <button
+                  type="button"
+                  onClick={() => handleCopy('62533338621', 'account')}
+                  className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 font-semibold text-[11px] flex items-center gap-1 transition-all"
+                  title="Copy account number"
+                >
+                  {copiedField === 'account' ? (
+                    <>
+                      <FaCheck className="text-emerald-400 text-xs" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaCopy className="text-xs" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 hover:bg-white/[0.02]">
+              <span className="text-slate-400">Account Type:</span>
+              <span className="text-slate-200 font-medium">Cheque Account</span>
+            </div>
+
+            <div className="flex items-center justify-between p-3 hover:bg-white/[0.02]">
+              <span className="text-slate-400">Branch Code:</span>
+              <div className="flex items-center gap-2">
+                <span className="text-white font-mono font-medium">254 005</span>
+                <button
+                  type="button"
+                  onClick={() => handleCopy('254005', 'branch')}
+                  className="p-1 rounded text-slate-400 hover:text-white transition-colors"
+                  title="Copy branch code"
+                >
+                  {copiedField === 'branch' ? <FaCheck className="text-emerald-400 text-xs" /> : <FaCopy className="text-xs" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 hover:bg-white/[0.02]">
+              <span className="text-slate-400">Payment Reference:</span>
+              <div className="flex items-center gap-2">
+                <span className="text-amber-300 font-mono font-semibold text-[11px]">
+                  {userName || user?.displayName || user?.email ? `${userName || user?.displayName || user?.email.split('@')[0]} - Movember` : 'Your Name - Movember'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(userName || user?.displayName || user?.email || 'Your Name - Movember', 'reference')}
+                  className="p-1 rounded text-slate-400 hover:text-white transition-colors"
+                  title="Copy reference"
+                >
+                  {copiedField === 'reference' ? <FaCheck className="text-emerald-400 text-xs" /> : <FaCopy className="text-xs" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 hover:bg-white/[0.02]">
+              <span className="text-slate-400">Send Proof of Payment (POP):</span>
               <div className="flex items-center gap-2">
                 <a 
-                  href="mailto:marketing@dvtsoftware.com?subject=DVT%20Movember%20Donation%20-%20Prostate%20Cancer%20Research" 
+                  href="mailto:marketing@dvtsoftware.com?subject=DVT%20Movember%20Donation%20Proof%20of%20Payment"
                   className="text-cyan-400 hover:underline font-mono text-xs font-bold"
                 >
                   marketing@dvtsoftware.com
                 </a>
                 <button
                   type="button"
-                  onClick={handleCopyEmail}
+                  onClick={() => handleCopy('marketing@dvtsoftware.com', 'email')}
                   className="p-1 rounded text-slate-400 hover:text-white transition-colors"
-                  title="Copy email to clipboard"
-                  aria-label="Copy email address"
+                  title="Copy email"
                 >
-                  {copied ? <FaCheck className="text-emerald-400 text-xs" /> : <FaCopy className="text-xs" />}
+                  {copiedField === 'email' ? <FaCheck className="text-emerald-400 text-xs" /> : <FaCopy className="text-xs" />}
                 </button>
               </div>
             </div>
-
-            <div className="flex items-center justify-between pt-1 border-t border-white/5">
-              <span className="text-xs text-slate-400">Grand Prize Eligibility:</span>
-              <span className="text-amber-300 font-bold text-xs">Min R100 Donation</span>
-            </div>
           </div>
 
-          <div className="text-[11px] text-slate-400 italic">
-            Once marketing confirms your donation, your account will automatically be marked as <strong>Eligible for the R1,000 Grand Prize</strong> on the leaderboards.
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200 flex items-start gap-2.5">
+            <FaReceipt className="text-amber-400 text-base shrink-0 mt-0.5" />
+            <div>
+              <strong>How verification works:</strong> Once you make your transfer and email your proof of payment (POP) to <strong>marketing@dvtsoftware.com</strong>, the team will verify it and mark your profile as <strong>Eligible for the R1,000 Takealot Voucher</strong> on the leaderboards.
+            </div>
           </div>
         </div>
 

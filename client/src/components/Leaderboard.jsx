@@ -207,14 +207,21 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
               </p>
             </div>
           </div>
-          <div className="shrink-0 p-4 bg-[#070c14]/90 border border-cyan-400/30 rounded-xl text-xs space-y-1.5 text-slate-300 shadow-lg">
-            <div className="font-bold text-cyan-300 flex items-center gap-1.5 text-sm">
-              💬 How to Donate:
+          <div className="shrink-0 p-4 bg-[#070c14]/95 border border-cyan-400/40 rounded-xl text-xs space-y-1.5 text-slate-300 shadow-xl min-w-[270px]">
+            <div className="font-bold text-cyan-300 flex items-center justify-between text-sm border-b border-white/10 pb-1.5">
+              <span>🏦 Direct EFT Donation:</span>
+              <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">FNB</span>
             </div>
-            <div>Contact <strong>DVT Marketing</strong> via email</div>
-            <div>Email: <a href="mailto:marketing@dvtsoftware.com" className="text-cyan-400 hover:underline font-mono font-bold">marketing@dvtsoftware.com</a></div>
-            <div className="text-[11px] text-slate-400 pt-1 border-t border-white/10">
-              * Minimum R100 donation required for Grand Prize eligibility.
+            <div className="flex justify-between pt-0.5"><span className="text-slate-400">Bank:</span> <strong className="text-white">FNB</strong></div>
+            <div className="flex justify-between"><span className="text-slate-400">Account:</span> <strong className="text-cyan-300 font-mono tracking-wider">625 3333 8621</strong></div>
+            <div className="flex justify-between"><span className="text-slate-400">Name:</span> <span className="text-white">Rosemary Allen</span></div>
+            <div className="flex justify-between"><span className="text-slate-400">Branch:</span> <span className="text-white font-mono">254 005</span></div>
+            <div className="flex justify-between"><span className="text-slate-400">Type:</span> <span className="text-slate-200">Cheque Account</span></div>
+            <div className="text-[11px] text-slate-300 pt-1.5 border-t border-white/10">
+              Send POP to: <a href="mailto:marketing@dvtsoftware.com?subject=DVT%20Movember%20Donation%20Proof%20of%20Payment" className="text-cyan-400 hover:underline font-mono font-bold">marketing@dvtsoftware.com</a>
+            </div>
+            <div className="text-[10px] text-amber-300 font-semibold pt-0.5">
+              * Min R100 donation to qualify for R1,000 Grand Prize
             </div>
           </div>
         </div>
