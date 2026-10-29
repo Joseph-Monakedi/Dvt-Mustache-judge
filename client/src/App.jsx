@@ -217,8 +217,7 @@ export default function App() {
                   onReset={handleResetBooth}
                   onViewLeaderboard={() => {
                     const isCreativeVerdict = activeVerdict?.competitionType === 'CreativeMustache' 
-                      || activeVerdict?.competitionType === 'CrazyHair' 
-                      || activeVerdict?.isWoodenSpoon;
+                      || activeVerdict?.competitionType === 'CrazyHair';
                     setActiveVerdict(null);
                     navigate(isCreativeVerdict ? '/leaderboard?division=creative' : '/leaderboard?division=mustache');
                   }}

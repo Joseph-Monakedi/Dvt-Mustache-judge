@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { GiMustache } from 'react-icons/gi';
 import { 
   FaCamera, 
@@ -21,23 +21,24 @@ import { apiUrl } from '../utils/api';
 import { initiatePayFastCheckout } from '../utils/payfast';
 
 export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
+  const navigate = useNavigate();
   const { user, token, refreshUser, openAuthModal } = useAuth();
   const [searchParams] = useSearchParams();
   const [name, setName] = useState(user?.fullName || '');
   
   const getInitialCompetitionType = () => {
+    if (user?.preferredCompetition) {
+      const isUserCreative = user.preferredCompetition.toLowerCase().includes('creative') || user.preferredCompetition.toLowerCase().includes('hair');
+      return isUserCreative ? 'CreativeMustache' : 'Mustache';
+    }
     const trackParam = searchParams.get('track') || searchParams.get('division') || searchParams.get('competition');
     if (trackParam && (trackParam.toLowerCase().includes('creative') || trackParam.toLowerCase().includes('hair'))) {
       return 'CreativeMustache';
     }
-    if (user?.preferredCompetition && (user.preferredCompetition.toLowerCase().includes('creative') || user.preferredCompetition.toLowerCase().includes('hair'))) {
-      return 'CreativeMustache';
-    }
-    return user?.preferredCompetition || 'Mustache';
+    return 'Mustache';
   };
 
   const [competitionType, setCompetitionType] = useState(getInitialCompetitionType);
-  const hasUserManuallyToggledRef = useRef(false);
   const [capturedBlob, setCapturedBlob] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
@@ -62,25 +63,17 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
 
   const userFullName = user?.fullName;
   const userPreferredComp = user?.preferredCompetition;
-  const trackParam = searchParams.get('track') || searchParams.get('division') || searchParams.get('competition');
 
-  // Sync user's name & preferred competition when user profile loads or URL query params change
+  // Registered contestants can only enter the track they signed up for (managed in Dashboard)
   useEffect(() => {
     if (userFullName && !name) {
       setName(userFullName);
     }
-    if (!hasUserManuallyToggledRef.current) {
-      if (trackParam) {
-        const isParamCreative = trackParam.toLowerCase().includes('creative') || trackParam.toLowerCase().includes('hair');
-        const target = isParamCreative ? 'CreativeMustache' : 'Mustache';
-        setCompetitionType(prev => (prev !== target ? target : prev));
-      } else if (userPreferredComp) {
-        const isUserCreative = userPreferredComp.toLowerCase().includes('creative') || userPreferredComp.toLowerCase().includes('hair');
-        const target = isUserCreative ? 'CreativeMustache' : 'Mustache';
-        setCompetitionType(prev => (prev !== target ? target : prev));
-      }
+    if (userPreferredComp) {
+      const isUserCreative = userPreferredComp.toLowerCase().includes('creative') || userPreferredComp.toLowerCase().includes('hair');
+      setCompetitionType(isUserCreative ? 'CreativeMustache' : 'Mustache');
     }
-  }, [userFullName, userPreferredComp, trackParam, name]);
+  }, [userFullName, userPreferredComp, name]);
 
   const isCreative = competitionType === 'CreativeMustache' || competitionType === 'CrazyHair';
   const hasCleanShave = Boolean(user?.cleanShaveImageUrl);
@@ -327,42 +320,46 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
   // 2. MAIN BOOTH: Completely free access for all registered contestants!
   return (
     <div className="booth-container fade-in">
-      {/* Competition Track Switcher */}
-      <div className="flex justify-center mb-6">
-        <div className="inline-flex p-1.5 rounded-2xl bg-slate-900/90 border border-slate-700/80 shadow-xl max-w-full overflow-x-auto">
-          <button
-            type="button"
-            className={`px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
-              !isCreative
-                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'text-slate-300 hover:text-white'
-            }`}
-            onClick={() => {
-              hasUserManuallyToggledRef.current = true;
-              setCompetitionType('Mustache');
-              handleRetake();
-            }}
-          >
-            <GiMustache className="text-base sm:text-lg" />
-            <span>Movember Mustache Challenge</span>
-          </button>
-          <button
-            type="button"
-            className={`px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
-              isCreative
-                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md shadow-purple-500/20'
-                : 'text-slate-300 hover:text-white'
-            }`}
-            onClick={() => {
-              hasUserManuallyToggledRef.current = true;
-              setCompetitionType('CreativeMustache');
-              handleRetake();
-            }}
-          >
-            <span className="text-sm sm:text-base">🎨</span>
-            <span>Creative Mustache Challenge</span>
-          </button>
+      {/* Registered Contestant Track Banner (One enters the track signed up for at registration) */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 mb-6 rounded-2xl bg-slate-900/90 border border-slate-700/70 shadow-lg max-w-4xl mx-auto">
+        <div className="flex items-center gap-3.5">
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 ${
+            isCreative 
+              ? 'bg-purple-950/80 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-900/40' 
+              : 'bg-amber-950/80 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-900/40'
+          }`}>
+            {isCreative ? <span>🎨</span> : <GiMustache className="text-2xl" />}
+          </div>
+          <div className="text-left">
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase font-extrabold tracking-wider text-slate-400">
+                Your Registered Track:
+              </span>
+              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-md ${
+                isCreative 
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' 
+                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+              }`}>
+                {isCreative ? 'Creative Challenge' : 'Movember Mustache'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 font-medium mt-0.5">
+              {isCreative 
+                ? 'Judging faux, paper, prop, and creative mustaches for women and supporters.' 
+                : 'Judging natural facial hair and grooming growth.'}
+            </p>
+          </div>
         </div>
+
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard')}
+          className="shrink-0 text-xs font-bold px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 border border-white/10 hover:border-cyan-500/40 hover:text-cyan-300 transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+          title="Switch competition track in your dashboard"
+        >
+          <span>Switch Track in Dashboard</span>
+          <span className="text-xs">→</span>
+        </button>
       </div>
 
       {/* Donation & Prize Eligibility Banner */}
@@ -432,7 +429,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
         </h1>
         <p className="booth-subtitle">
           {isCreative
-            ? 'For women and creative non-growers! Craft a wild, funny, or inventive mustache using wigs, paper, cotton, cardboard, drawings, or surprise items. The more creative the better! Grand Prize: R1,000 Takealot Voucher!'
+            ? 'Women can participate too by taking part in the creative challenge! Craft a wild, funny, or inventive mustache using wigs, paper, cotton, cardboard, drawings, or surprise items. The more creative the better! Grand Prize: R1,000 Takealot Voucher!'
             : needsCleanShave
               ? 'Before entering the mustache contest, snap a fresh clean-shaven photo. This baseline is saved to your profile and used to evaluate your growth over time.'
               : 'Submit as many photos as you want! Growth is evaluated alongside your clean-shave baseline, and only your single highest score is featured on the leaderboard.'}

@@ -13,7 +13,7 @@ const STAGES = [
 const COURT_TIPS = [
   'Tip: Judging evaluates facial hair growth, density, and styling.',
   'Tip: The Larnie and The Upper-Lip styles earn top marks for classic charm.',
-  'Notice: Pet whiskers or drawings are awarded the Wooden Spoon!',
+  'Notice: Crafted DIY mustaches and props compete in the Creative Challenge!',
   'Fact: Tom Selleck is the unofficial spirit guide of Movember.',
   'Tip: Submit as many attempts as you want — your best score counts!'
 ];

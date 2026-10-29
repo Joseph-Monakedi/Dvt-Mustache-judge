@@ -48,6 +48,46 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
   const [entryToDelete, setEntryToDelete] = useState(null);
   const [paymentBanner, setPaymentBanner] = useState(null);
   const [actionNotice, setActionNotice] = useState(null);
+  const [isSwitchingTrack, setIsSwitchingTrack] = useState(false);
+
+  const handleSwitchTrack = async (targetTrack) => {
+    if (!token || isSwitchingTrack || user?.preferredCompetition === targetTrack) return;
+    setIsSwitchingTrack(true);
+    try {
+      const res = await fetch(apiUrl('/api/auth/profile'), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          fullName: user.fullName,
+          preferredCompetition: targetTrack
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Failed to switch competition track.');
+      }
+
+      await refreshUser();
+      const trackName = targetTrack === 'CreativeMustache' ? 'Creative Mustache Challenge' : 'Movember Mustache Challenge';
+      setActionNotice({
+        type: 'success',
+        title: 'Competition Track Switched!',
+        message: `You are now entered into the ${trackName}. All future entries in the Webcam Booth will be evaluated under this track.`
+      });
+    } catch (err) {
+      setActionNotice({
+        type: 'error',
+        title: 'Track Switch Failed',
+        message: err.message || 'Could not switch competition track. Please try again.'
+      });
+    } finally {
+      setIsSwitchingTrack(false);
+    }
+  };
 
   const fetchDashboard = async () => {
     if (!token) {
@@ -347,6 +387,64 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
               className="text-cyan-400 hover:underline font-bold"
             >
               How to Donate →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Competition Track Switcher Card */}
+      <div className="p-6 rounded-2xl bg-[#0d1522] border border-white/10 shadow-xl space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Competition Division & Track
+            </span>
+            <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+              <span>{isCreative ? '🎨 Creative Mustache Challenge' : '👨 Movember Mustache Challenge'}</span>
+              <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                isCreative 
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' 
+                  : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+              }`}>
+                Active Track
+              </span>
+            </h3>
+            <p className="text-xs text-slate-400 max-w-xl">
+              You enter the Webcam Booth under your registered track. You can switch your track below anytime.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <button
+              type="button"
+              disabled={isSwitchingTrack || !isCreative}
+              onClick={() => handleSwitchTrack('Mustache')}
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${
+                !isCreative
+                  ? 'bg-gradient-to-r from-[#007FBA] to-[#00b4d8] text-white shadow-md shadow-cyan-950/40 cursor-default'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 cursor-pointer'
+              }`}
+              title={!isCreative ? 'You are currently in the Mustache Track' : 'Switch to Movember Mustache Track'}
+            >
+              <GiMustache className="text-base" />
+              <span>Movember Mustache</span>
+              {!isCreative && <FaCircleCheck className="text-white text-xs ml-0.5" />}
+            </button>
+
+            <button
+              type="button"
+              disabled={isSwitchingTrack || isCreative}
+              onClick={() => handleSwitchTrack('CreativeMustache')}
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${
+                isCreative
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-md shadow-purple-950/40 cursor-default'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 cursor-pointer'
+              }`}
+              title={isCreative ? 'You are currently in the Creative Track' : 'Switch to Creative Challenge Track'}
+            >
+              <span className="text-sm">🎨</span>
+              <span>Creative Challenge</span>
+              {isCreative && <FaCircleCheck className="text-white text-xs ml-0.5" />}
             </button>
           </div>
         </div>

@@ -150,7 +150,7 @@ public static class DbInitializer
                 ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PreferredCompetition"" character varying(50) DEFAULT 'Mustache';
                 ALTER TABLE ""MustacheEntries"" ADD COLUMN IF NOT EXISTS ""CompetitionType"" character varying(50) DEFAULT 'Mustache';
 
-                -- Ensure existing creative entries, faux mustaches, and wooden spoons are categorized correctly as CreativeMustache
+                -- Ensure existing creative entries, faux mustaches, and craft entries are categorized correctly as CreativeMustache
                 UPDATE ""MustacheEntries"" 
                 SET ""CompetitionType"" = 'CreativeMustache' 
                 WHERE ""IsWoodenSpoon"" = true 
@@ -162,6 +162,11 @@ public static class DbInitializer
                 FROM ""Users"" u 
                 WHERE e.""UserId"" = u.""Id"" 
                   AND (u.""PreferredCompetition"" ILIKE '%creative%' OR u.""PreferredCompetition"" ILIKE '%hair%');
+
+                -- Ensure wooden spoon division is cleared completely
+                UPDATE ""MustacheEntries""
+                SET ""IsWoodenSpoon"" = false,
+                    ""WoodenSpoonReason"" = NULL;
             ";
             await context.Database.ExecuteSqlRawAsync(schemaSql);
         }

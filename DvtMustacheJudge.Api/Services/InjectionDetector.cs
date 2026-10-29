@@ -21,12 +21,12 @@ public static class InjectionDetector
         "ignore previous", "ignore all", "ignore criteria", "ignore instructions",
         "ignore rules", "disregard previous", "disregard all", "disregard instructions",
         "forget previous", "forget all", "forget everything", "drop all instructions",
-        "drop instructions", "override instructions", "override prompt",
+        "drop instructions", "override instructions", "override prompt", "override score",
         "system prompt", "system instruction", "system override", "developer message",
         "developer instruction", "you are now", "act as", "jailbreak", "dan mode",
         "give max score", "give 100", "give perfect", "award 100", "grant 100",
         "grant max", "score: 100", "score:100", "score 100", "bypass instructions",
-        "bypass safety", "prompt injection", "sql injection"
+        "bypass safety", "prompt injection", "sql injection", "<script"
     };
 
     /// <summary>
@@ -56,6 +56,8 @@ public static class InjectionDetector
         if (Regex.IsMatch(normalized, @"\bignore\s+(all|prior|previous|criteria|the|any)\b", RegexOptions.IgnoreCase) ||
             Regex.IsMatch(normalized, @"\bdrop\s+(all|the|prior|previous)\s+(instructions|rules|criteria)\b", RegexOptions.IgnoreCase) ||
             Regex.IsMatch(normalized, @"\b(give|award|grant)\s+(me\s+)?(a\s+)?(max|perfect|100)\b", RegexOptions.IgnoreCase) ||
+            Regex.IsMatch(normalized, @"\boverride\s+.*score\b", RegexOptions.IgnoreCase) ||
+            Regex.IsMatch(normalized, @"\b(system|developer)\s*:\s*", RegexOptions.IgnoreCase) ||
             Regex.IsMatch(normalized, @"\b(system|developer)\s+(prompt|instruction|override)\b", RegexOptions.IgnoreCase))
         {
             matchedPattern = "Prompt Injection Pattern";
@@ -88,66 +90,71 @@ public static class InjectionDetector
     }
 
     /// <summary>
-    /// Applies the unhackable Wooden Spoon verdict to a GeminiJudgeResult.
-    /// Preserves the AI-generated roast so there are no hardcoded roasts.
+    /// Rejects a prompt injection or SQL injection attempt in the Main Movember Mustache Challenge.
     /// </summary>
-    public static void ApplyWoodenSpoonInjectionVerdict(GeminiJudgeResult result)
+    public static void RejectMainChallengeInjection(GeminiJudgeResult result)
     {
-        result.IsWoodenSpoon = true;
-        result.WoodenSpoonReason = "Prompt / SQL Injection";
-        result.InnovationScore = Math.Clamp(result.InnovationScore > 0 ? result.InnovationScore : 9, 1, 10);
-        result.DedicationScore = Math.Clamp(result.DedicationScore > 0 ? result.DedicationScore : 8, 1, 10);
-        result.FunninessScore = Math.Clamp(result.FunninessScore > 0 ? result.FunninessScore : 10, 1, 10);
-        result.OverallScore = (result.InnovationScore * 3) + (result.DedicationScore * 3) + (result.FunninessScore * 4);
-
-        if (string.IsNullOrWhiteSpace(result.MustacheTitle) || result.MustacheTitle == "Follicle 404: Not Found")
-        {
-            result.MustacheTitle = "The Bobby Tables Exploit";
-        }
-        if (string.IsNullOrWhiteSpace(result.StyleCategory) || result.StyleCategory == "Other")
-        {
-            result.StyleCategory = "SQL/Prompt Injection";
-        }
-        if (string.IsNullOrWhiteSpace(result.VerdictBadge) || result.VerdictBadge == "Zero-Bristle Deficit")
-        {
-            result.VerdictBadge = "Jailbreak Defeated";
-        }
-        if (string.IsNullOrWhiteSpace(result.CelebrityTwin))
-        {
-            result.CelebrityTwin = "90% Little Bobby Tables, 10% Cyber Infiltrator";
-        }
-        // Do NOT set or overwrite result.Roast here — let the AI come up with the roast!
+        result.IsAppropriate = false;
+        result.InappropriateReason = "Prompt injection attempt detected: Instruction override or prompt injection attempt rejected.";
+        result.OverallScore = 0;
+        result.DensityScore = 0;
+        result.SymmetryScore = 0;
+        result.SwaggerScore = 0;
+        result.InnovationScore = 0;
+        result.DedicationScore = 0;
+        result.FunninessScore = 0;
+        result.IsWoodenSpoon = false;
+        result.WoodenSpoonReason = null;
+        result.MustacheTitle = "Rejected";
+        result.StyleCategory = "Other";
+        result.VerdictBadge = "Prompt Injection Rejected";
+        result.CelebrityTwin = "None";
+        result.Roast = "Submission rejected: Prompt and instruction injection attempts are strictly prohibited in the Movember Mustache Challenge.";
     }
 
     /// <summary>
-    /// Applies the unhackable Wooden Spoon verdict to an existing MustacheEntry.
-    /// Preserves the existing/AI roast so there are no hardcoded roasts.
+    /// Scores a creative hack or injection concept in the Creative Mustache Challenge.
     /// </summary>
-    public static void ApplyWoodenSpoonInjectionVerdict(MustacheEntry entry)
+    public static void ApplyCreativeChallengeInjection(GeminiJudgeResult result)
     {
-        entry.IsWoodenSpoon = true;
-        entry.WoodenSpoonReason = "Prompt / SQL Injection";
-        if (entry.InnovationScore == 0) entry.InnovationScore = 9;
-        if (entry.DedicationScore == 0) entry.DedicationScore = 8;
-        if (entry.FunninessScore == 0) entry.FunninessScore = 10;
-        entry.OverallScore = (entry.InnovationScore * 3) + (entry.DedicationScore * 3) + (entry.FunninessScore * 4);
+        result.IsAppropriate = true;
+        result.InappropriateReason = null;
+        result.IsWoodenSpoon = false;
+        result.WoodenSpoonReason = null;
+        result.DensityScore = Math.Clamp(result.DensityScore > 0 ? result.DensityScore : 7, 1, 10);
+        result.SymmetryScore = Math.Clamp(result.SymmetryScore > 0 ? result.SymmetryScore : 8, 1, 10);
+        result.SwaggerScore = Math.Clamp(result.SwaggerScore > 0 ? result.SwaggerScore : 9, 1, 10);
+        result.InnovationScore = 9;
+        result.DedicationScore = 8;
+        result.FunninessScore = 9;
+        result.OverallScore = (int)Math.Round((result.DensityScore * 3.5) + (result.SymmetryScore * 3.5) + (result.SwaggerScore * 3.0));
 
-        if (string.IsNullOrWhiteSpace(entry.MustacheTitle) || entry.MustacheTitle == "Follicle 404: Not Found")
-        {
-            entry.MustacheTitle = "The Bobby Tables Exploit";
-        }
-        if (string.IsNullOrWhiteSpace(entry.StyleCategory) || entry.StyleCategory == "Other")
-        {
-            entry.StyleCategory = "SQL/Prompt Injection";
-        }
-        if (string.IsNullOrWhiteSpace(entry.VerdictBadge) || entry.VerdictBadge == "Zero-Bristle Deficit")
-        {
-            entry.VerdictBadge = "Jailbreak Defeated";
-        }
-        if (string.IsNullOrWhiteSpace(entry.CelebrityTwin))
-        {
-            entry.CelebrityTwin = "90% Little Bobby Tables, 10% Cyber Infiltrator";
-        }
-        // Do NOT overwrite entry.RoastCommentary here — let the AI come up with the roast!
+        result.MustacheTitle = "The Bobby Tables Exploit";
+        result.StyleCategory = "Household Avant-Garde";
+        result.VerdictBadge = "Creative Code Maestro";
+        result.CelebrityTwin = "80% Little Bobby Tables, 20% Creative Hacker";
+        result.Roast = "Audacious cyber craft attempt detected! While parameterized queries held the line, your comedic ingenuity earns legitimate honors in the Creative Mustache Challenge.";
+    }
+
+    /// <summary>
+    /// Scores a creative hack or injection concept on a MustacheEntry for the Creative Mustache Challenge.
+    /// </summary>
+    public static void ApplyCreativeChallengeInjection(MustacheEntry entry)
+    {
+        entry.CompetitionType = "CreativeMustache";
+        entry.IsWoodenSpoon = false;
+        entry.WoodenSpoonReason = null;
+        if (entry.DensityScore == 0) entry.DensityScore = 7;
+        if (entry.SymmetryScore == 0) entry.SymmetryScore = 8;
+        if (entry.SwaggerScore == 0) entry.SwaggerScore = 9;
+        entry.InnovationScore = 9;
+        entry.DedicationScore = 8;
+        entry.FunninessScore = 9;
+        entry.OverallScore = (int)Math.Round((entry.DensityScore * 3.5) + (entry.SymmetryScore * 3.5) + (entry.SwaggerScore * 3.0));
+
+        entry.MustacheTitle = "The Bobby Tables Exploit";
+        entry.StyleCategory = "Household Avant-Garde";
+        entry.VerdictBadge = "Creative Code Maestro";
+        entry.CelebrityTwin = "80% Little Bobby Tables, 20% Creative Hacker";
     }
 }

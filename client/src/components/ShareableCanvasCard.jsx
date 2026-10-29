@@ -52,7 +52,7 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
       ctx.strokeRect(20, 20, width - 40, height - 40);
 
       // 2. Header
-      const isCreative = verdict.competitionType === 'CreativeMustache' || verdict.competitionType === 'CrazyHair' || verdict.isWoodenSpoon;
+      const isCreative = verdict.competitionType === 'CreativeMustache' || verdict.competitionType === 'CrazyHair';
       const headerTitle = isCreative ? 'CREATIVE MUSTACHE CHALLENGE VERDICT' : 'MOVEMBER 2026 OFFICIAL VERDICT';
 
       // 3. Load Images

@@ -161,7 +161,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       setEntries(data.entries || []);
       setTotalEntries(data.totalEntries || 0);
       setMustacheCount(data.mustacheEntriesCount ?? data.championshipEntriesCount ?? 0);
-      setCreativeCount(data.creativeMustacheEntriesCount ?? data.crazyHairEntriesCount ?? data.woodenSpoonEntriesCount ?? 0);
+      setCreativeCount(data.creativeMustacheEntriesCount ?? data.crazyHairEntriesCount ?? 0);
       setLastUpdated(new Date());
       setError(null);
     } catch (err) {
@@ -220,7 +220,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                 Two Challenges. Free Registration. R1,000 Grand Prizes!
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 max-w-3xl leading-relaxed">
-                Anyone can enter and climb the leaderboard for free! The competition is split into two tracks: the <strong>Movember Mustache Challenge</strong> (for natural mustache growers) and <strong>The Creative Mustache Challenge</strong> (for women and creative non-growers crafting DIY staches from wigs, paper, cotton, drawings, props, etc.). 
+                Anyone can enter and climb the leaderboard for free! The competition is split into two tracks: the <strong>Movember Mustache Challenge</strong> (for natural mustache growers) and <strong>The Creative Mustache Challenge</strong> (women can participate too by taking part in the creative challenge — crafting DIY staches from wigs, paper, cotton, drawings, props, etc.). 
                 Both tracks offer a grand prize of a <strong>R1,000 Takealot Voucher</strong> to eligible participants who have donated a minimum of <strong>R100</strong>.
               </p>
             </div>
@@ -257,7 +257,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
           </h1>
           <p className="leaderboard-subtitle">
             {isCreative 
-              ? 'Faux, DIY, and artistic mustaches crafted from paper, cotton, wigs, drawings & surprise props! Grand Prize: R1,000 Takealot Voucher for eligible donors.'
+              ? 'Women can participate too by taking part in the creative challenge! Craft faux, DIY, and artistic mustaches from paper, cotton, wigs, drawings & surprise props. Grand Prize: R1,000 Takealot Voucher for eligible donors.'
               : 'Live bristle standings for genuine, real-life human mustaches across all DVT squads. Grand Prize: R1,000 Takealot Voucher for eligible donors.'}
           </p>
         </div>

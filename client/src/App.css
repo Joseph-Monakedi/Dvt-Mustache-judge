@@ -129,6 +129,159 @@
   line-height: 1;
 }
 
+/* ========================================================
+   Global Button System (Guarantees background, padding & clickable affordance)
+   ======================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 11px 22px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  text-decoration: none;
+  user-select: none;
+  outline: none;
+  box-sizing: border-box;
+  white-space: nowrap;
+  position: relative;
+  background-color: #1E293B;
+  color: #F8FAFC;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.btn:focus-visible {
+  outline: 2px solid #00B4D8;
+  outline-offset: 2px;
+}
+
+.btn:disabled,
+.btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Primary Button (Vibrant Cyan / Teal Movember Gradient) */
+.btn-primary {
+  background: linear-gradient(135deg, #00B4D8 0%, #0077B6 100%) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(0, 180, 216, 0.5) !important;
+  box-shadow: 0 4px 18px rgba(0, 180, 216, 0.35) !important;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #38BDF8 0%, #0284C7 100%) !important;
+  border-color: #38BDF8 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 6px 24px rgba(0, 180, 216, 0.55) !important;
+}
+
+/* Secondary Button (Sleek Slate / Dark Navy Button with Distinct Border and Glow) */
+.btn-secondary {
+  background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
+  color: #F8FAFC !important;
+  border: 1px solid rgba(148, 163, 184, 0.35) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #334155 0%, #1E293B 100%) !important;
+  border-color: rgba(0, 180, 216, 0.6) !important;
+  color: #38BDF8 !important;
+  box-shadow: 0 6px 22px rgba(0, 180, 216, 0.25) !important;
+}
+
+/* Subtle / Glass Action Button */
+.btn-subtle {
+  background: rgba(30, 41, 59, 0.8) !important;
+  color: #E2E8F0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.btn-subtle:hover:not(:disabled) {
+  background: rgba(51, 65, 85, 0.95) !important;
+  border-color: rgba(0, 180, 216, 0.55) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Outline Button */
+.btn-outline {
+  background: rgba(0, 180, 216, 0.12) !important;
+  color: #38BDF8 !important;
+  border: 1px solid rgba(0, 180, 216, 0.45) !important;
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: rgba(0, 180, 216, 0.25) !important;
+  border-color: #38BDF8 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 16px rgba(0, 180, 216, 0.3) !important;
+}
+
+/* Gold / Hero Glow Button */
+.btn-gold,
+.btn-gold-glow {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%) !important;
+  color: #070C14 !important;
+  font-weight: 800 !important;
+  border: 1px solid rgba(245, 158, 11, 0.5) !important;
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4) !important;
+}
+
+.btn-gold:hover:not(:disabled),
+.btn-gold-glow:hover:not(:disabled) {
+  background: linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%) !important;
+  color: #070C14 !important;
+  border-color: #FBBF24 !important;
+  box-shadow: 0 6px 26px rgba(245, 158, 11, 0.6) !important;
+}
+
+/* Button Sizing */
+.btn-sm {
+  padding: 7px 15px !important;
+  font-size: 12.5px !important;
+  border-radius: 8px !important;
+}
+
+.btn-lg {
+  padding: 14px 28px !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  border-radius: 12px !important;
+}
+
+.btn-xl {
+  padding: 16px 32px !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  border-radius: 14px !important;
+}
+
+.w-full {
+  width: 100%;
+}
+
 .title-stache-icon {
   vertical-align: middle;
   color: var(--accent-cyan);
@@ -1399,75 +1552,7 @@
   border-color: rgba(245, 158, 11, 0.5);
 }
 
-.division-tab.spoon-tab.active {
-  background: linear-gradient(135deg, #ea580c 0%, #b45309 100%);
-  color: #ffffff;
-  box-shadow: 0 4px 15px rgba(234, 88, 12, 0.35);
-  border-color: rgba(234, 88, 12, 0.5);
-}
 
-/* Wooden Spoon Podium Stylings */
-.spoon-podium-card {
-  border-color: rgba(217, 119, 6, 0.3) !important;
-}
-
-.spoon-grand-card {
-  border-color: rgba(234, 88, 12, 0.5) !important;
-  box-shadow: 0 10px 30px rgba(234, 88, 12, 0.2) !important;
-}
-
-.spoon-score {
-  color: #fb923c !important;
-  font-size: 38px;
-  font-weight: 800;
-}
-
-.spoon-badge {
-  background: linear-gradient(135deg, #ea580c, #b45309) !important;
-  color: #fff !important;
-}
-
-.spoon-avatar-border {
-  border-color: #ea580c !important;
-}
-
-.spoon-tag {
-  background: rgba(234, 88, 12, 0.15) !important;
-  color: #fdba74 !important;
-}
-
-.spoon-pedestal {
-  background: linear-gradient(135deg, #ea580c, #9a3412) !important;
-  color: #fff !important;
-}
-
-.rank-spoon {
-  background: rgba(234, 88, 12, 0.2);
-  color: #fdba74;
-  border: 1px solid rgba(234, 88, 12, 0.35);
-}
-
-.spoon-subscores {
-  color: #fb923c !important;
-}
-
-.spoon-reason-col {
-  white-space: nowrap;
-}
-
-.podium-spoon-reason-badge {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 12px;
-  background: rgba(234, 88, 12, 0.2);
-  color: #fdba74;
-  border: 1px solid rgba(234, 88, 12, 0.4);
-  margin-bottom: 6px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
 
 .mobile-subscores-wrap {
   margin-top: 5px;
@@ -2405,16 +2490,6 @@
   border-color: #ef4444;
 }
 
-.btn-make-spoon {
-  background: rgba(217, 119, 6, 0.15);
-  color: #fcd34d;
-  border: 1px solid rgba(217, 119, 6, 0.3);
-}
-
-.btn-make-spoon:hover {
-  background: rgba(217, 119, 6, 0.3);
-}
-
 .btn-make-genuine {
   background: rgba(59, 130, 246, 0.15);
   color: #93c5fd;
@@ -2441,18 +2516,6 @@
   background: rgba(245, 158, 11, 0.15);
   color: #fbbf24;
   border: 1px solid rgba(245, 158, 11, 0.3);
-}
-
-.badge-woodenspoon {
-  background: rgba(180, 83, 9, 0.25);
-  color: #fed7aa;
-  border: 1px solid rgba(217, 119, 6, 0.4);
-}
-
-.score-woodenspoon {
-  color: #f97316;
-  background: rgba(249, 115, 22, 0.12);
-  border: 1px solid rgba(249, 115, 22, 0.25);
 }
 
 .inline-icon {
@@ -6823,19 +6886,48 @@
 }
 
 .comparison-label-chip {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  right: 8px;
-  background: rgba(7, 12, 20, 0.85);
+  width: 100%;
+  background: rgba(15, 23, 42, 0.9);
   backdrop-filter: blur(8px);
   color: #94a3b8;
   font-size: 11px;
   font-weight: 600;
   text-align: center;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 5px 8px;
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.comparison-label-chip.style-chip {
+  background: rgba(0, 180, 216, 0.14);
+  color: #38bdf8;
+  border-color: rgba(0, 180, 216, 0.35);
+  font-weight: 700;
+}
+
+.verdict-photo-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.verdict-single-style-chip {
+  width: 100%;
+  background: rgba(0, 180, 216, 0.12);
+  color: #38bdf8;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  border: 1px solid rgba(0, 180, 216, 0.35);
+  box-sizing: border-box;
 }
 
 /* Follicle Growth Card */
@@ -7247,6 +7339,35 @@
 
   .transformation-comparison-wrapper {
     gap: 10px;
+  }
+}
+
+@media (max-width: 600px) {
+  .transformation-comparison-wrapper {
+    gap: 8px;
+  }
+
+  .comparison-card {
+    padding: 8px;
+    gap: 6px;
+    border-radius: 10px;
+  }
+
+  .comparison-badge {
+    font-size: 8.5px;
+    padding: 3px 6px;
+    gap: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  .comparison-label-chip {
+    font-size: 10px;
+    padding: 4px 6px;
+    border-radius: 6px;
+  }
+
+  .comparison-label-chip.style-chip {
+    font-size: 10px;
   }
 }
 
@@ -7958,9 +8079,19 @@
 .poster-quick-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
   justify-content: center;
-  margin-bottom: 28px;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.poster-quick-actions .btn {
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 12px;
+  min-height: 46px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 .btn-gold-glow {
@@ -8222,12 +8353,39 @@
 
 /* Deep-Dive Inspector Card */
 .style-inspector-card {
+  position: relative;
   background: #0D1522;
   border: 2px solid rgba(245, 158, 11, 0.4);
   border-radius: var(--radius-lg);
   padding: 32px;
   margin-bottom: 40px;
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6);
+}
+
+.inspector-close-btn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 15px;
+  z-index: 5;
+}
+
+.inspector-close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #EF4444;
+  transform: scale(1.08);
 }
 
 .inspector-header {
@@ -8403,6 +8561,15 @@
   flex-direction: column;
 }
 
+.inspector-cta-row .btn {
+  padding: 13px 22px !important;
+  font-size: 14.5px !important;
+  font-weight: 700 !important;
+  border-radius: 12px !important;
+  min-height: 46px;
+  width: 100%;
+}
+
 /* Rules Grid */
 .rules-grid {
   display: grid;
@@ -8461,8 +8628,8 @@
   margin: 0;
 }
 
-/* Wooden Spoon Warning Card */
-.wooden-spoon-warning-card {
+/* Integrity Warning Card */
+.integrity-warning-card {
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: var(--radius-md);
@@ -8591,8 +8758,18 @@
 
 .cta-buttons {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.cta-buttons .btn {
+  padding: 14px 28px !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  border-radius: 12px !important;
+  min-height: 48px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
 }
 
 /* Style Guide Chip on Leaderboard */

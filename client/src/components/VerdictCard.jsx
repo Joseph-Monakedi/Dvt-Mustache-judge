@@ -57,7 +57,7 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
     return '#94A3B8';
   };
 
-  const isCreative = verdict.competitionType === 'CreativeMustache' || verdict.competitionType === 'CrazyHair' || verdict.isWoodenSpoon;
+  const isCreative = verdict.competitionType === 'CreativeMustache' || verdict.competitionType === 'CrazyHair';
 
   return (
     <div className="verdict-container fade-in">
@@ -108,9 +108,9 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
                     alt="Day 1 Clean Shave Baseline" 
                     className="comparison-photo"
                   />
-                  <div className="comparison-label-chip">
-                    Day 1 Baseline
-                  </div>
+                </div>
+                <div className="comparison-label-chip">
+                  Day 1 Baseline
                 </div>
               </div>
 
@@ -125,9 +125,9 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
                     alt={verdict.contestantName} 
                     className="comparison-photo"
                   />
-                  <div className="style-chip">
-                    Style: {verdict.styleCategory}
-                  </div>
+                </div>
+                <div className="comparison-label-chip style-chip">
+                  Style: {verdict.styleCategory}
                 </div>
               </div>
             </div>
@@ -139,9 +139,9 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
                   alt={verdict.contestantName} 
                   className="verdict-photo"
                 />
-                <div className="style-chip">
-                  Style: {verdict.styleCategory}
-                </div>
+              </div>
+              <div className="verdict-single-style-chip">
+                Style: {verdict.styleCategory}
               </div>
             </div>
           )}

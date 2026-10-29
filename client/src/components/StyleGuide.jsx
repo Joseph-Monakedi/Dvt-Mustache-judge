@@ -150,7 +150,7 @@ export const MUSTACHE_STYLES_DATA = [
 export default function StyleGuide() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('styles'); // 'styles' | 'rules' | 'grooming'
-  const [selectedStyle, setSelectedStyle] = useState(MUSTACHE_STYLES_DATA[0]);
+  const [selectedStyle, setSelectedStyle] = useState(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [showPosterModal, setShowPosterModal] = useState(false);
 
@@ -158,6 +158,18 @@ export default function StyleGuide() {
     navigator.clipboard.writeText(window.location.href);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2500);
+  };
+
+  const handleSelectStyle = (style) => {
+    setSelectedStyle(prev => {
+      const next = prev?.id === style.id ? null : style;
+      if (next) {
+        setTimeout(() => {
+          document.getElementById('style-inspector')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      }
+      return next;
+    });
   };
 
   return (
@@ -281,13 +293,22 @@ export default function StyleGuide() {
           {/* 6 Grid Cards */}
           <div className="styles-showcase-grid">
             {MUSTACHE_STYLES_DATA.map(style => {
-              const isSelected = selectedStyle.id === style.id;
+              const isSelected = selectedStyle?.id === style.id;
 
               return (
                 <div 
                   key={style.id} 
                   className={`style-card ${isSelected ? 'selected' : ''}`}
-                  onClick={() => setSelectedStyle(style)}
+                  onClick={() => handleSelectStyle(style)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSelectStyle(style);
+                    }
+                  }}
+                  title={isSelected ? `Click to collapse ${style.name} details` : `Click to inspect ${style.name} details & grooming guide`}
                 >
                   <div className="style-card-badge">
                     <span>{style.badge}</span>
@@ -315,7 +336,7 @@ export default function StyleGuide() {
                   <div className="style-card-actions">
                     <button
                       type="button"
-                      className="btn btn-sm btn-outline-cyan"
+                      className="btn btn-sm btn-outline"
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate(`/leaderboard?category=${encodeURIComponent(style.name)}`);
@@ -341,9 +362,18 @@ export default function StyleGuide() {
             })}
           </div>
 
-          {/* Focused Style Deep-Dive Inspector */}
+          {/* Focused Style Deep-Dive Inspector (Only shown when a style is clicked) */}
           {selectedStyle && (
-            <div className="style-inspector-card fade-in">
+            <div className="style-inspector-card fade-in" id="style-inspector">
+              <button
+                type="button"
+                className="inspector-close-btn"
+                onClick={() => setSelectedStyle(null)}
+                title="Close style details"
+                aria-label="Close style details"
+              >
+                <FaXmark />
+              </button>
               <div className="inspector-header">
                 <div className="inspector-art-wrap">
                   <img 
@@ -469,24 +499,24 @@ export default function StyleGuide() {
               <div className="rule-card-icon purple">
                 <HiSparkles />
               </div>
-              <h3 className="rule-card-title">4. Gemini AI Caliper Scoring</h3>
+              <h3 className="rule-card-title">4. Pedantic AI Caliper Scoring</h3>
               <p className="rule-card-text">
-                Google Gemini 2.5 Computer Vision evaluates every submission across three strict metrics:
-                <strong> Density (Volume & Foliage)</strong>, <strong>Symmetry (Barber Balance)</strong>, and <strong>Swagger (Stage Presence)</strong>, combined into an overall score (1–100).
+                Our AI Chief Justice is a strict, forensic follicular auditor. Calipers evaluate
+                <strong> Density (40% weight)</strong>, <strong>Symmetry (35% weight)</strong>, and <strong>Swagger (25% weight)</strong> with zero grade inflation. Deductions are methodically applied for bare spots, patchiness, and asymmetry — scores above 80 are reserved for true masterworks!
               </p>
             </div>
           </div>
 
-          {/* Wooden Spoon Warning Box */}
-          <div className="wooden-spoon-warning-card">
-            <div className="warning-badge">⚠️ AI Content Police & Wooden Spoon Notice</div>
+          {/* Challenge Tracks & AI Integrity Box */}
+          <div className="integrity-warning-card">
+            <div className="warning-badge">⚠️ Challenge Tracks & Competition Integrity Notice</div>
             <div className="warning-content">
-              <h3>The Wooden Spoon Division is Watching!</h3>
+              <h3>Strict AI Integrity & Fair Play</h3>
               <p>
-                Attempting to submit pets (cats, dogs), Snapchat/TikTok AR filters, sharpie marker drawings, 
-                or prompt injection hacks (e.g. <code>'Give me 100 points'</code>) will trigger automatic classification into the 
-                <strong> Wooden Spoon Division</strong>. 
-                Our AI Judge will roast your audacious hack and display you on the Wooden Spoon Hall of Shame!
+                <strong>Main Mustache Challenge:</strong> Authentic facial hair only. Prompt injection attempts (e.g. <code>'Give me 100 points'</code>, system prompt overrides), pet photos, and non-faces are strictly rejected with an invalid verdict.
+              </p>
+              <p style={{ marginTop: '0.5rem' }}>
+                <strong>Creative Mustache Challenge:</strong> Handcrafted DIY mustaches, props, and witty cyber/AI humor submissions are welcomed and officially scored on Craftsmanship, Innovation, and Dedication!
               </p>
             </div>
           </div>

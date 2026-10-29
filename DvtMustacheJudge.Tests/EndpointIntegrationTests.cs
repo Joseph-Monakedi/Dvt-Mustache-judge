@@ -29,7 +29,7 @@ public class TestGeminiJudgeService : DvtMustacheJudge.Api.Services.IGeminiJudge
             return Task.FromResult(new GeminiJudgeResult
             {
                 IsAppropriate = false,
-                InappropriateReason = "NSFW behaviour detected in image.",
+                InappropriateReason = "Inappropriate or NSFW behaviour detected in image.",
                 OverallScore = 0
             });
         }
@@ -96,7 +96,8 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                         ImageUrl = "https://example.com/img.jpg",
                         CreatedAt = DateTime.UtcNow.AddMinutes(-i),
                         IsHidden = false,
-                        IsWoodenSpoon = i > 14
+                        IsWoodenSpoon = false,
+                        CompetitionType = i > 14 ? "CreativeMustache" : "Mustache"
                     });
                 }
                 db.SaveChanges();
@@ -455,10 +456,10 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         var creativeResult = JsonSerializer.Deserialize<LeaderboardResponseDto>(await creativeLb.Content.ReadAsStringAsync(), _jsonOptions);
         Assert.NotNull(creativeResult);
 
-        // Verify none of the mustache entries are wooden spoon or tagged creative
+        // Verify none of the mustache entries are tagged creative
         foreach (var entry in mustacheResult.Entries)
         {
-            Assert.False(entry.IsWoodenSpoon, $"Mustache division should not contain wooden spoon entry: {entry.ContestantName}");
+            Assert.False(entry.IsWoodenSpoon);
             Assert.NotEqual("CreativeMustache", entry.CompetitionType);
             Assert.NotEqual("CrazyHair", entry.CompetitionType);
         }
@@ -499,5 +500,69 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         var updatedMustacheResult = JsonSerializer.Deserialize<LeaderboardResponseDto>(await updatedMustacheLb.Content.ReadAsStringAsync(), _jsonOptions);
         Assert.NotNull(updatedMustacheResult);
         Assert.DoesNotContain(updatedMustacheResult.Entries, e => e.ContestantName == "Paper Origami Stache Master");
+    }
+
+    [Fact]
+    public async Task JudgeEndpoint_PromptInjectionInMainChallenge_ReturnsBadRequestAndDoesNotPersist()
+    {
+        var (token, _) = await CreatePaidContestantWithCleanShaveAsync("Hacker Contestant");
+
+        using var formData = new MultipartFormDataContent();
+        formData.Add(new StringContent("Bobby Tables'; DROP TABLE MustacheEntries;--"), "Name");
+        formData.Add(new StringContent("Mustache"), "CompetitionType");
+
+        var dummyImageBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
+        var imageContent = new ByteArrayContent(dummyImageBytes);
+        imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        formData.Add(imageContent, "Image", "injection_stache.jpg");
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/api/mustache/judge") { Content = formData };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(req);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Submission rejected", json);
+        Assert.Contains("Prompt injection", json);
+
+        var lb = await _client.GetAsync("/api/mustache/leaderboard?division=mustache");
+        var lbJson = await lb.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("Bobby Tables", lbJson);
+    }
+
+    [Fact]
+    public async Task JudgeEndpoint_PromptInjectionInCreativeChallenge_ReturnsOkAndScoresAsCreativeEntry()
+    {
+        var email = $"creative_hacker_{Guid.NewGuid():N}@example.com";
+        var reg = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "Cyber Mo Bro", "password123", "CreativeMustache"));
+        var regDoc = JsonDocument.Parse(await reg.Content.ReadAsStringAsync());
+        var token = regDoc.RootElement.GetProperty("token").GetString()!;
+
+        using var formData = new MultipartFormDataContent();
+        formData.Add(new StringContent("Bobby Tables'; DROP TABLE MustacheEntries;--"), "Name");
+        formData.Add(new StringContent("CreativeMustache"), "CompetitionType");
+
+        var dummyImageBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
+        var imageContent = new ByteArrayContent(dummyImageBytes);
+        imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        formData.Add(imageContent, "Image", "cyber_stache.jpg");
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/api/mustache/judge") { Content = formData };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(req);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var judgeData = JsonSerializer.Deserialize<JudgeResponseDto>(await response.Content.ReadAsStringAsync(), _jsonOptions);
+        Assert.NotNull(judgeData);
+        Assert.Equal("CreativeMustache", judgeData.CompetitionType);
+        Assert.False(judgeData.IsWoodenSpoon, "Wooden spoon must not be set on creative challenge injections.");
+        Assert.True(judgeData.OverallScore > 0, "Creative hacks should receive a score in Creative Challenge.");
+        Assert.Equal("Creative Code Maestro", judgeData.VerdictBadge);
+
+        // Verify it appears on creative leaderboard
+        var updatedCreativeLb = await _client.GetAsync("/api/mustache/leaderboard?division=creative");
+        var creativeResult = JsonSerializer.Deserialize<LeaderboardResponseDto>(await updatedCreativeLb.Content.ReadAsStringAsync(), _jsonOptions);
+        Assert.NotNull(creativeResult);
+        Assert.Contains(creativeResult.Entries, e => e.ContestantName == "Bobby Tables'; DROP TABLE MustacheEntries;--");
     }
 }

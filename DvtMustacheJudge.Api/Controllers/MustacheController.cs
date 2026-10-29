@@ -129,8 +129,13 @@ public class MustacheController : ControllerBase
                 string.Equals(request.CompetitionType, "Creative", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(request.CompetitionType, "CrazyHair", StringComparison.OrdinalIgnoreCase));
 
-            // Default to Creative if explicitly requested, or if user's account preference is Creative and they didn't explicitly submit as a natural grower with a clean shave
-            bool isCreative = isRequestCreative || (isUserCreative && (string.IsNullOrWhiteSpace(request.CompetitionType) || !string.Equals(request.CompetitionType, "Mustache", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(user.CleanShaveImageUrl)));
+            // Contestants can only enter the track they signed up for at registration (or switched to in the dashboard)
+            bool isCreative = user != null 
+                ? isUserCreative 
+                : (!string.IsNullOrWhiteSpace(request.CompetitionType) && (
+                    string.Equals(request.CompetitionType, "CreativeMustache", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(request.CompetitionType, "Creative", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(request.CompetitionType, "CrazyHair", StringComparison.OrdinalIgnoreCase)));
             var competitionType = isCreative ? "CreativeMustache" : "Mustache";
 
             string? cleanShaveUrl = user.CleanShaveImageUrl;
@@ -203,22 +208,32 @@ public class MustacheController : ControllerBase
                     cancellationToken);
             }
 
-            // 2.5 Check for Prompt or SQL injection attempts (all injections are classified as Wooden Spoon)
-            if (InjectionDetector.IsInjectionAttempt(contestantName, out _) ||
-                judgeResult.WoodenSpoonReason == "Prompt / SQL Injection")
+            // 2.5 Check for Prompt or SQL injection attempts
+            bool isInjection = InjectionDetector.IsInjectionAttempt(contestantName, out _) ||
+                               (judgeResult.InappropriateReason?.Contains("injection", StringComparison.OrdinalIgnoreCase) == true) ||
+                               (judgeResult.Roast?.Contains("injection", StringComparison.OrdinalIgnoreCase) == true && !isCreative);
+
+            if (isInjection)
             {
-                judgeResult.IsAppropriate = true;
-                judgeResult.InappropriateReason = null;
-                InjectionDetector.ApplyWoodenSpoonInjectionVerdict(judgeResult);
+                if (isCreative)
+                {
+                    _logger.LogInformation("Creative injection concept submitted for '{Name}'. Scoring in Creative Mustache Challenge.", contestantName);
+                    InjectionDetector.ApplyCreativeChallengeInjection(judgeResult);
+                }
+                else
+                {
+                    _logger.LogWarning("Prompt or SQL injection attempt rejected in Main Challenge for '{Name}'.", contestantName);
+                    InjectionDetector.RejectMainChallengeInjection(judgeResult);
+                }
             }
 
-            // 3. Moderate Image: Deny if NSFW, nudity, vulgar gestures, or inappropriate content detected
+            // 3. Moderate Image: Deny if NSFW, nudity, vulgar gestures, prompt injection or inappropriate content detected
             if (!judgeResult.IsAppropriate)
             {
-                _logger.LogWarning("Submission denied due to inappropriate/NSFW image content for contestant '{Name}': {Reason}",
+                _logger.LogWarning("Submission denied due to policy violation for contestant '{Name}': {Reason}",
                     contestantName, judgeResult.InappropriateReason);
                 // The image stream was in-memory only and is NEVER uploaded to storage or persisted in the DB.
-                return BadRequest(new { error = $"Submission rejected: Inappropriate or NSFW behaviour detected in image. ({judgeResult.InappropriateReason ?? "Content policy violation"})" });
+                return BadRequest(new { error = $"Submission rejected: {judgeResult.InappropriateReason ?? "Content policy violation"}" });
             }
 
             // 4. Upload image to storage ONLY AFTER both name and photo are verified appropriate
@@ -245,7 +260,7 @@ public class MustacheController : ControllerBase
                     ? judgeResult.GrowthAnalysis
                     : (cleanShaveUrl != null ? $"Measured transformation from Day 1 Clean Shave! Growth progressed into a solid {judgeResult.StyleCategory}." : null);
 
-                var finalCompetitionType = (isCreative || judgeResult.IsWoodenSpoon || isUserCreative) ? "CreativeMustache" : "Mustache";
+                var finalCompetitionType = (isCreative || isUserCreative) ? "CreativeMustache" : "Mustache";
 
                 // 5. Save entry to database
                 var entry = new MustacheEntry
@@ -262,13 +277,13 @@ public class MustacheController : ControllerBase
                     DensityScore = Math.Clamp(judgeResult.DensityScore, 0, 10),
                     SymmetryScore = Math.Clamp(judgeResult.SymmetryScore, 0, 10),
                     SwaggerScore = Math.Clamp(judgeResult.SwaggerScore, 0, 10),
-                    IsWoodenSpoon = judgeResult.IsWoodenSpoon,
-                    WoodenSpoonReason = judgeResult.WoodenSpoonReason,
+                    IsWoodenSpoon = false,
+                    WoodenSpoonReason = null,
                     InnovationScore = Math.Clamp(judgeResult.InnovationScore, 0, 10),
                     DedicationScore = Math.Clamp(judgeResult.DedicationScore, 0, 10),
                     FunninessScore = Math.Clamp(judgeResult.FunninessScore, 0, 10),
                     MustacheTitle = string.IsNullOrWhiteSpace(judgeResult.MustacheTitle)
-                        ? ((isCreative || judgeResult.IsWoodenSpoon) ? "The Crafty Maestro" : (judgeResult.OverallScore == 0 ? "Follicle 404" : "The Bristle Contender"))
+                        ? (isCreative ? "The Crafty Maestro" : (judgeResult.OverallScore == 0 ? "Follicle 404" : "The Bristle Contender"))
                         : judgeResult.MustacheTitle,
                     StyleCategory = string.IsNullOrWhiteSpace(judgeResult.StyleCategory)
                         ? "Other"
@@ -276,7 +291,7 @@ public class MustacheController : ControllerBase
                     RoastCommentary = judgeResult.Roast,
                     CelebrityTwin = judgeResult.CelebrityTwin,
                     VerdictBadge = string.IsNullOrWhiteSpace(judgeResult.VerdictBadge)
-                        ? ((isCreative || judgeResult.IsWoodenSpoon) ? "Craft Follicle Hero" : (judgeResult.OverallScore == 0 ? "Zero-Bristle Deficit" : "Certified Movember Hero"))
+                        ? (isCreative ? "Craft Follicle Hero" : (judgeResult.OverallScore == 0 ? "Zero-Bristle Deficit" : "Certified Movember Hero"))
                         : judgeResult.VerdictBadge,
                     CreatedAt = DateTime.UtcNow,
                     IsHidden = false,
@@ -304,8 +319,8 @@ public class MustacheController : ControllerBase
                     SwaggerScore = entry.SwaggerScore,
                     GrowthScore = entry.GrowthScore,
                     GrowthAnalysis = entry.GrowthAnalysis,
-                    IsWoodenSpoon = entry.IsWoodenSpoon,
-                    WoodenSpoonReason = entry.WoodenSpoonReason,
+                    IsWoodenSpoon = false,
+                    WoodenSpoonReason = null,
                     InnovationScore = entry.InnovationScore,
                     DedicationScore = entry.DedicationScore,
                     FunninessScore = entry.FunninessScore,
@@ -483,8 +498,8 @@ public class MustacheController : ControllerBase
                 SwaggerScore = e.SwaggerScore,
                 GrowthScore = e.GrowthScore,
                 GrowthAnalysis = e.GrowthAnalysis,
-                IsWoodenSpoon = e.IsWoodenSpoon,
-                WoodenSpoonReason = e.WoodenSpoonReason,
+                IsWoodenSpoon = false,
+                WoodenSpoonReason = null,
                 InnovationScore = e.InnovationScore,
                 DedicationScore = e.DedicationScore,
                 FunninessScore = e.FunninessScore,
@@ -586,8 +601,8 @@ public class MustacheController : ControllerBase
             SwaggerScore = e.SwaggerScore,
             GrowthScore = e.GrowthScore,
             GrowthAnalysis = e.GrowthAnalysis,
-            IsWoodenSpoon = e.IsWoodenSpoon,
-            WoodenSpoonReason = e.WoodenSpoonReason,
+            IsWoodenSpoon = false,
+            WoodenSpoonReason = null,
             InnovationScore = e.InnovationScore,
             DedicationScore = e.DedicationScore,
             FunninessScore = e.FunninessScore,
@@ -653,8 +668,8 @@ public class MustacheController : ControllerBase
             SwaggerScore = entry.SwaggerScore,
             GrowthScore = entry.GrowthScore,
             GrowthAnalysis = entry.GrowthAnalysis,
-            IsWoodenSpoon = entry.IsWoodenSpoon,
-            WoodenSpoonReason = entry.WoodenSpoonReason,
+            IsWoodenSpoon = false,
+            WoodenSpoonReason = null,
             InnovationScore = entry.InnovationScore,
             DedicationScore = entry.DedicationScore,
             FunninessScore = entry.FunninessScore,
@@ -743,8 +758,7 @@ public class MustacheController : ControllerBase
         var hidden = allEntries.Count(e => e.IsHidden);
         var mustacheCount = allEntries.Count(e => !IsCreativeEntry(e));
         var creativeCount = allEntries.Count(e => IsCreativeEntry(e));
-        var championship = allEntries.Count(e => !e.IsWoodenSpoon);
-        var woodenSpoon = allEntries.Count(e => e.IsWoodenSpoon);
+        var championship = mustacheCount;
         var prizeEligible = allEntries.Count(e => e.User != null && (e.User.LeaderboardPaid || (e.User.AmountPaid.HasValue && e.User.AmountPaid.Value >= 100)));
         var totalDonations = await _dbContext.Users.SumAsync(u => u.AmountPaid ?? 0m);
         var avg = total > 0 ? Math.Round(allEntries.Average(e => e.OverallScore), 1) : 0;
@@ -767,8 +781,8 @@ public class MustacheController : ControllerBase
             SwaggerScore = e.SwaggerScore,
             GrowthScore = e.GrowthScore,
             GrowthAnalysis = e.GrowthAnalysis,
-            IsWoodenSpoon = e.IsWoodenSpoon,
-            WoodenSpoonReason = e.WoodenSpoonReason,
+            IsWoodenSpoon = false,
+            WoodenSpoonReason = null,
             InnovationScore = e.InnovationScore,
             DedicationScore = e.DedicationScore,
             FunninessScore = e.FunninessScore,
@@ -790,7 +804,7 @@ public class MustacheController : ControllerBase
             CreativeMustacheCount = creativeCount,
             CrazyHairCount = creativeCount,
             ChampionshipCount = championship,
-            WoodenSpoonCount = woodenSpoon,
+            WoodenSpoonCount = 0,
             PrizeEligibleCount = prizeEligible,
             TotalDonations = totalDonations,
             AverageScore = avg,
@@ -1086,10 +1100,11 @@ public class MustacheController : ControllerBase
     }
 
     /// <summary>
-    /// Toggle whether an entry belongs to the Wooden Spoon division or Championship division.
+    /// Toggle whether an entry belongs to the Mustache Challenge or Creative Mustache Challenge.
     /// </summary>
+    [HttpPost("admin/entry/{id:guid}/toggle-track")]
     [HttpPost("admin/entry/{id:guid}/toggle-woodenspoon")]
-    public async Task<IActionResult> ToggleWoodenSpoon(Guid id)
+    public async Task<IActionResult> ToggleChallengeTrack(Guid id)
     {
         if (!IsAdminAuthorized())
         {
@@ -1102,15 +1117,13 @@ public class MustacheController : ControllerBase
             return NotFound(new { error = "Entry not found." });
         }
 
-        entry.IsWoodenSpoon = !entry.IsWoodenSpoon;
-        entry.CompetitionType = entry.IsWoodenSpoon ? "CreativeMustache" : "Mustache";
-        if (entry.IsWoodenSpoon && string.IsNullOrWhiteSpace(entry.WoodenSpoonReason))
-        {
-            entry.WoodenSpoonReason = "Creative Mustache";
-        }
+        bool wasCreative = IsCreativeEntry(entry);
+        entry.CompetitionType = wasCreative ? "Mustache" : "CreativeMustache";
+        entry.IsWoodenSpoon = false;
+        entry.WoodenSpoonReason = null;
         await _dbContext.SaveChangesAsync();
 
-        return Ok(new { id = entry.Id, isWoodenSpoon = entry.IsWoodenSpoon, competitionType = entry.CompetitionType, woodenSpoonReason = entry.WoodenSpoonReason });
+        return Ok(new { id = entry.Id, isWoodenSpoon = false, competitionType = entry.CompetitionType, woodenSpoonReason = (string?)null });
     }
 
     /// <summary>
@@ -1423,18 +1436,25 @@ public class MustacheController : ControllerBase
                     entry.ContestantName,
                     cancellationToken: cancellationToken);
 
-                if (InjectionDetector.IsInjectionAttempt(entry.ContestantName, out _) ||
-                    result.WoodenSpoonReason == "Prompt / SQL Injection")
+                bool isCreative = IsCreativeEntry(entry);
+                if (InjectionDetector.IsInjectionAttempt(entry.ContestantName, out _))
                 {
-                    InjectionDetector.ApplyWoodenSpoonInjectionVerdict(result);
+                    if (isCreative)
+                    {
+                        InjectionDetector.ApplyCreativeChallengeInjection(result);
+                    }
+                    else
+                    {
+                        InjectionDetector.RejectMainChallengeInjection(result);
+                    }
                 }
 
                 entry.OverallScore = Math.Clamp(result.OverallScore, 0, 100);
                 entry.DensityScore = Math.Clamp(result.DensityScore, 0, 10);
                 entry.SymmetryScore = Math.Clamp(result.SymmetryScore, 0, 10);
                 entry.SwaggerScore = Math.Clamp(result.SwaggerScore, 0, 10);
-                entry.IsWoodenSpoon = result.IsWoodenSpoon;
-                entry.WoodenSpoonReason = result.WoodenSpoonReason;
+                entry.IsWoodenSpoon = false;
+                entry.WoodenSpoonReason = null;
                 entry.InnovationScore = Math.Clamp(result.InnovationScore, 0, 10);
                 entry.DedicationScore = Math.Clamp(result.DedicationScore, 0, 10);
                 entry.FunninessScore = Math.Clamp(result.FunninessScore, 0, 10);
@@ -1461,8 +1481,8 @@ public class MustacheController : ControllerBase
                     DensityScore = entry.DensityScore,
                     SymmetryScore = entry.SymmetryScore,
                     SwaggerScore = entry.SwaggerScore,
-                    IsWoodenSpoon = entry.IsWoodenSpoon,
-                    WoodenSpoonReason = entry.WoodenSpoonReason,
+                    IsWoodenSpoon = false,
+                    WoodenSpoonReason = null,
                     InnovationScore = entry.InnovationScore,
                     DedicationScore = entry.DedicationScore,
                     FunninessScore = entry.FunninessScore,
@@ -1535,11 +1555,10 @@ public class MustacheController : ControllerBase
 
     /// <summary>
     /// Helper to identify whether an entry belongs to the Creative Mustache Challenge division.
-    /// Includes faux mustaches, wooden spoon submissions, craft props, or entries tagged with Creative/Hair division.
+    /// Includes faux mustaches, craft props, or entries tagged with Creative/Hair division.
     /// </summary>
     private static bool IsCreativeEntry(MustacheEntry e)
     {
-        if (e.IsWoodenSpoon) return true;
         if (!string.IsNullOrWhiteSpace(e.CompetitionType))
         {
             var ct = e.CompetitionType.Trim();

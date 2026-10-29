@@ -296,10 +296,10 @@ export default function AdminPortal({ onBackToApp }) {
     }
   };
 
-  // Toggle Competition Track between Mustache and CrazyHair
+  // Toggle Competition Track between Mustache and Creative Mustache
   const handleToggleTrack = async (id) => {
     try {
-      const res = await fetch(apiUrl(`/api/mustache/admin/entry/${id}/toggle-woodenspoon`), {
+      const res = await fetch(apiUrl(`/api/mustache/admin/entry/${id}/toggle-track`), {
         method: 'POST',
         headers: { 'X-Admin-Password': adminPassword }
       });
@@ -312,19 +312,21 @@ export default function AdminPortal({ onBackToApp }) {
         const updatedEntries = prev.entries.map(e => 
           e.id === id ? { 
             ...e, 
-            isWoodenSpoon: result.isWoodenSpoon, 
-            competitionType: result.isWoodenSpoon ? 'CreativeMustache' : 'Mustache'
+            competitionType: result.competitionType
           } : e
         );
+        const mustacheCount = updatedEntries.filter(e => e.competitionType !== 'CreativeMustache' && e.competitionType !== 'CrazyHair').length;
+        const creativeCount = updatedEntries.filter(e => e.competitionType === 'CreativeMustache' || e.competitionType === 'CrazyHair').length;
         return {
           ...prev,
-          championshipCount: updatedEntries.filter(e => !e.isWoodenSpoon).length,
-          woodenSpoonCount: updatedEntries.filter(e => e.isWoodenSpoon).length,
+          championshipCount: mustacheCount,
+          mustacheEntriesCount: mustacheCount,
+          creativeMustacheEntriesCount: creativeCount,
           entries: updatedEntries
         };
       });
 
-      setActionMessage(result.isWoodenSpoon 
+      setActionMessage(result.competitionType === 'CreativeMustache' 
         ? 'Moved entry to Creative Mustache Challenge.' 
         : 'Moved entry to Mustache Challenge.');
       setTimeout(() => setActionMessage(''), 3000);
@@ -562,7 +564,8 @@ export default function AdminPortal({ onBackToApp }) {
         visibleCount: 0,
         hiddenCount: 0,
         championshipCount: 0,
-        woodenSpoonCount: 0,
+        mustacheEntriesCount: 0,
+        creativeMustacheEntriesCount: 0,
         averageScore: 0,
         topScore: 0,
         remainingAiQuota: prev?.maxAiQuotaPerMinute ?? 3,
@@ -585,7 +588,7 @@ export default function AdminPortal({ onBackToApp }) {
 
   // Filter entries
   const filteredEntries = (overview?.entries || []).filter(e => {
-    const isCreative = e.isWoodenSpoon || e.competitionType === 'CreativeMustache' || e.competitionType === 'CrazyHair';
+    const isCreative = e.competitionType === 'CreativeMustache' || e.competitionType === 'CrazyHair';
     if (filterMode === 'mustache' && isCreative) return false;
     if ((filterMode === 'creative' || filterMode === 'crazyhair') && !isCreative) return false;
     if (filterMode === 'visible' && e.isHidden) return false;
@@ -999,11 +1002,11 @@ export default function AdminPortal({ onBackToApp }) {
               </div>
               <div className="admin-stat-card">
                 <div className="stat-label"><GiMustache className="inline-icon text-cyan" /> Mustache Challenge Entries</div>
-                <div className="stat-val text-cyan">{overview.mustacheEntriesCount ?? overview.championshipCount ?? overview.entries.filter(e => !e.isWoodenSpoon).length}</div>
+                <div className="stat-val text-cyan">{overview.mustacheEntriesCount ?? overview.championshipCount ?? overview.entries.filter(e => e.competitionType !== 'CreativeMustache' && e.competitionType !== 'CrazyHair').length}</div>
               </div>
               <div className="admin-stat-card">
                 <div className="stat-label"><HiSparkles className="inline-icon text-purple-400" /> Creative Mustache Entries</div>
-                <div className="stat-val text-purple-400">{overview.creativeMustacheEntriesCount ?? overview.crazyHairEntriesCount ?? overview.woodenSpoonCount ?? overview.entries.filter(e => e.isWoodenSpoon || e.competitionType === 'CreativeMustache').length}</div>
+                <div className="stat-val text-purple-400">{overview.creativeMustacheEntriesCount ?? overview.crazyHairEntriesCount ?? overview.entries.filter(e => e.competitionType === 'CreativeMustache' || e.competitionType === 'CrazyHair').length}</div>
               </div>
               <div className="admin-stat-card">
                 <div className="stat-label">Public / Visible</div>
@@ -1186,7 +1189,7 @@ export default function AdminPortal({ onBackToApp }) {
                     {filteredEntries.map(entry => {
                       const isSelected = selectedIds.has(entry.id);
                       const isRowReanalysing = reanalysingId === entry.id;
-                      const isCreative = entry.isWoodenSpoon || entry.competitionType === 'CreativeMustache' || entry.competitionType === 'CrazyHair';
+                      const isCreative = entry.competitionType === 'CreativeMustache' || entry.competitionType === 'CrazyHair';
                       return (
                         <tr 
                           key={entry.id} 

@@ -349,7 +349,7 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
                   />
                   <div className="compact-plan-info">
                     <span className="compact-plan-title">🎨 Creative Mustache Challenge</span>
-                    <span className="compact-plan-desc text-xs text-slate-400">For women & creative non-growers (craft staches from wigs, paper, cotton, props — surprise us!)</span>
+                    <span className="compact-plan-desc text-xs text-slate-400">Women can participate too! Craft staches from wigs, paper, cotton, props — surprise us!</span>
                   </div>
                   <span className="compact-plan-price text-purple-400 text-xs font-semibold">Free Entry</span>
                 </label>
