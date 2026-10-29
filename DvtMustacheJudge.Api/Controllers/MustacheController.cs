@@ -115,13 +115,23 @@ public class MustacheController : ControllerBase
             {
                 return Unauthorized(new { error = "Contestant account not found. Please register or sign in again." });
             }
+            ArgumentNullException.ThrowIfNull(user);
 
             var contestantName = !string.IsNullOrWhiteSpace(request.Name) ? request.Name.Trim() : user.FullName;
 
-            var competitionType = !string.IsNullOrWhiteSpace(request.CompetitionType)
-                ? ((string.Equals(request.CompetitionType, "CreativeMustache", StringComparison.OrdinalIgnoreCase) || string.Equals(request.CompetitionType, "Creative", StringComparison.OrdinalIgnoreCase) || string.Equals(request.CompetitionType, "CrazyHair", StringComparison.OrdinalIgnoreCase)) ? "CreativeMustache" : "Mustache")
-                : ((string.Equals(user.PreferredCompetition, "CreativeMustache", StringComparison.OrdinalIgnoreCase) || string.Equals(user.PreferredCompetition, "CrazyHair", StringComparison.OrdinalIgnoreCase)) ? "CreativeMustache" : "Mustache");
-            bool isCreative = competitionType == "CreativeMustache";
+            var isUserCreative = user != null && (
+                string.Equals(user.PreferredCompetition, "CreativeMustache", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(user.PreferredCompetition, "CrazyHair", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(user.PreferredCompetition, "Creative", StringComparison.OrdinalIgnoreCase));
+
+            var isRequestCreative = !string.IsNullOrWhiteSpace(request.CompetitionType) && (
+                string.Equals(request.CompetitionType, "CreativeMustache", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(request.CompetitionType, "Creative", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(request.CompetitionType, "CrazyHair", StringComparison.OrdinalIgnoreCase));
+
+            // Default to Creative if explicitly requested, or if user's account preference is Creative and they didn't explicitly submit as a natural grower with a clean shave
+            bool isCreative = isRequestCreative || (isUserCreative && (string.IsNullOrWhiteSpace(request.CompetitionType) || !string.Equals(request.CompetitionType, "Mustache", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(user.CleanShaveImageUrl)));
+            var competitionType = isCreative ? "CreativeMustache" : "Mustache";
 
             string? cleanShaveUrl = user.CleanShaveImageUrl;
             byte[]? cleanShaveBytes = null;
@@ -235,6 +245,8 @@ public class MustacheController : ControllerBase
                     ? judgeResult.GrowthAnalysis
                     : (cleanShaveUrl != null ? $"Measured transformation from Day 1 Clean Shave! Growth progressed into a solid {judgeResult.StyleCategory}." : null);
 
+                var finalCompetitionType = (isCreative || judgeResult.IsWoodenSpoon || isUserCreative) ? "CreativeMustache" : "Mustache";
+
                 // 5. Save entry to database
                 var entry = new MustacheEntry
                 {
@@ -243,7 +255,7 @@ public class MustacheController : ControllerBase
                     ImageUrl = imageUrl,
                     ThumbnailUrl = thumbnailUrl,
                     CleanShaveImageUrl = cleanShaveUrl,
-                    CompetitionType = competitionType,
+                    CompetitionType = finalCompetitionType,
                     GrowthScore = calculatedGrowthScore,
                     GrowthAnalysis = calculatedGrowthAnalysis,
                     OverallScore = Math.Clamp(judgeResult.OverallScore, 0, 100),
@@ -256,7 +268,7 @@ public class MustacheController : ControllerBase
                     DedicationScore = Math.Clamp(judgeResult.DedicationScore, 0, 10),
                     FunninessScore = Math.Clamp(judgeResult.FunninessScore, 0, 10),
                     MustacheTitle = string.IsNullOrWhiteSpace(judgeResult.MustacheTitle)
-                        ? (isCreative ? "The Crafty Maestro" : (judgeResult.OverallScore == 0 ? "Follicle 404" : "The Bristle Contender"))
+                        ? ((isCreative || judgeResult.IsWoodenSpoon) ? "The Crafty Maestro" : (judgeResult.OverallScore == 0 ? "Follicle 404" : "The Bristle Contender"))
                         : judgeResult.MustacheTitle,
                     StyleCategory = string.IsNullOrWhiteSpace(judgeResult.StyleCategory)
                         ? "Other"
@@ -264,7 +276,7 @@ public class MustacheController : ControllerBase
                     RoastCommentary = judgeResult.Roast,
                     CelebrityTwin = judgeResult.CelebrityTwin,
                     VerdictBadge = string.IsNullOrWhiteSpace(judgeResult.VerdictBadge)
-                        ? (isCreative ? "Craft Follicle Hero" : (judgeResult.OverallScore == 0 ? "Zero-Bristle Deficit" : "Certified Movember Hero"))
+                        ? ((isCreative || judgeResult.IsWoodenSpoon) ? "Craft Follicle Hero" : (judgeResult.OverallScore == 0 ? "Zero-Bristle Deficit" : "Certified Movember Hero"))
                         : judgeResult.VerdictBadge,
                     CreatedAt = DateTime.UtcNow,
                     IsHidden = false,
@@ -275,7 +287,7 @@ public class MustacheController : ControllerBase
                 await _dbContext.SaveChangesAsync();
 
                 var higherScoreExists = await _dbContext.MustacheEntries
-                    .AnyAsync(e => e.UserId == authenticatedUserId.Value && e.Id != entry.Id && !e.IsHidden && e.CompetitionType == competitionType && e.OverallScore > entry.OverallScore);
+                    .AnyAsync(e => e.UserId == authenticatedUserId.Value && e.Id != entry.Id && !e.IsHidden && e.CompetitionType == finalCompetitionType && e.OverallScore > entry.OverallScore);
                 bool isBest = !higherScoreExists;
 
                 var responseDto = new JudgeResponseDto
@@ -422,18 +434,18 @@ public class MustacheController : ControllerBase
 
         // Calculate competition division counts (deduplicated by contestant: top scoring entry per contestant)
         var mustacheCount = allVisible
-            .Where(e => e.CompetitionType != "CreativeMustache" && e.CompetitionType != "CrazyHair")
+            .Where(e => !IsCreativeEntry(e))
             .GroupBy(e => e.UserId.HasValue ? e.UserId.Value.ToString() : e.Id.ToString())
             .Count();
 
         var creativeCount = allVisible
-            .Where(e => e.CompetitionType == "CreativeMustache" || e.CompetitionType == "CrazyHair")
+            .Where(e => IsCreativeEntry(e))
             .GroupBy(e => e.UserId.HasValue ? e.UserId.Value.ToString() : e.Id.ToString())
             .Count();
 
         var divisionEntries = isCreative
-            ? allVisible.Where(e => e.CompetitionType == "CreativeMustache" || e.CompetitionType == "CrazyHair").ToList()
-            : allVisible.Where(e => e.CompetitionType != "CreativeMustache" && e.CompetitionType != "CrazyHair").ToList();
+            ? allVisible.Where(e => IsCreativeEntry(e)).ToList()
+            : allVisible.Where(e => !IsCreativeEntry(e)).ToList();
 
         if (!string.IsNullOrWhiteSpace(category) && !category.Equals("All", StringComparison.OrdinalIgnoreCase))
         {
@@ -536,13 +548,15 @@ public class MustacheController : ControllerBase
         int? rank = null;
         if (bestEntry != null)
         {
-            var compType = bestEntry.CompetitionType;
+            bool isBestCreative = IsCreativeEntry(bestEntry);
             var allDivisionEntries = await _dbContext.MustacheEntries
+                .Include(e => e.User)
                 .AsNoTracking()
-                .Where(e => !e.IsHidden && e.CompetitionType == compType)
+                .Where(e => !e.IsHidden)
                 .ToListAsync();
 
             var topPerUser = allDivisionEntries
+                .Where(e => IsCreativeEntry(e) == isBestCreative)
                 .GroupBy(e => e.UserId.HasValue ? e.UserId.Value.ToString() : e.Id.ToString())
                 .Select(g => g.OrderByDescending(x => x.OverallScore).ThenByDescending(x => x.CreatedAt).First())
                 .OrderByDescending(x => x.OverallScore)
@@ -727,8 +741,8 @@ public class MustacheController : ControllerBase
         var total = allEntries.Count;
         var visible = allEntries.Count(e => !e.IsHidden);
         var hidden = allEntries.Count(e => e.IsHidden);
-        var mustacheCount = allEntries.Count(e => e.CompetitionType != "CreativeMustache" && e.CompetitionType != "CrazyHair");
-        var creativeCount = allEntries.Count(e => e.CompetitionType == "CreativeMustache" || e.CompetitionType == "CrazyHair");
+        var mustacheCount = allEntries.Count(e => !IsCreativeEntry(e));
+        var creativeCount = allEntries.Count(e => IsCreativeEntry(e));
         var championship = allEntries.Count(e => !e.IsWoodenSpoon);
         var woodenSpoon = allEntries.Count(e => e.IsWoodenSpoon);
         var prizeEligible = allEntries.Count(e => e.User != null && (e.User.LeaderboardPaid || (e.User.AmountPaid.HasValue && e.User.AmountPaid.Value >= 100)));
@@ -1449,5 +1463,39 @@ public class MustacheController : ControllerBase
     public async Task<IActionResult> ReanalyseSingleEntry(Guid id, CancellationToken cancellationToken = default)
     {
         return await ReanalyseEntries(new ReanalyseRequestDto { Ids = new List<Guid> { id } }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Helper to identify whether an entry belongs to the Creative Mustache Challenge division.
+    /// Includes faux mustaches, wooden spoon submissions, craft props, or entries tagged with Creative/Hair division.
+    /// </summary>
+    private static bool IsCreativeEntry(MustacheEntry e)
+    {
+        if (e.IsWoodenSpoon) return true;
+        if (!string.IsNullOrWhiteSpace(e.CompetitionType))
+        {
+            var ct = e.CompetitionType.Trim();
+            if (ct.Equals("CreativeMustache", StringComparison.OrdinalIgnoreCase) ||
+                ct.Equals("Creative", StringComparison.OrdinalIgnoreCase) ||
+                ct.Equals("CrazyHair", StringComparison.OrdinalIgnoreCase) ||
+                ct.Contains("creative", StringComparison.OrdinalIgnoreCase) ||
+                ct.Contains("hair", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        if (e.User != null && !string.IsNullOrWhiteSpace(e.User.PreferredCompetition))
+        {
+            var pc = e.User.PreferredCompetition.Trim();
+            if (pc.Equals("CreativeMustache", StringComparison.OrdinalIgnoreCase) ||
+                pc.Equals("Creative", StringComparison.OrdinalIgnoreCase) ||
+                pc.Equals("CrazyHair", StringComparison.OrdinalIgnoreCase) ||
+                pc.Contains("creative", StringComparison.OrdinalIgnoreCase) ||
+                pc.Contains("hair", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

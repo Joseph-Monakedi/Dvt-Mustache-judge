@@ -427,16 +427,21 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
         </div>
 
         {/* Competition Track */}
-        <div className="dash-stat-card bg-[#0d1522] border border-white/10 rounded-2xl p-5 flex items-center gap-4 hover:border-purple-500/40 transition-all">
-          <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 text-xl shrink-0">
+        <div 
+          className="dash-stat-card bg-[#0d1522] border border-white/10 rounded-2xl p-5 flex items-center gap-4 hover:border-purple-500/40 transition-all cursor-pointer group"
+          onClick={() => onGoToLeaderboard ? onGoToLeaderboard(isCreative ? 'creative' : 'mustache') : navigate(isCreative ? '/leaderboard?division=creative' : '/leaderboard')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 text-xl shrink-0 group-hover:scale-105 transition-transform">
             {isCreative ? <HiSparkles /> : <GiMustache />}
           </div>
           <div>
-            <span className="block text-base font-extrabold text-white truncate">
+            <span className="block text-base font-extrabold text-white truncate group-hover:text-purple-300 transition-colors">
               {isCreative ? 'Creative Mustache' : 'Mustache Challenge'}
             </span>
             <span className="block text-xs font-medium text-slate-400">
-              {dashboardData?.leaderboardRank ? `Rank #${dashboardData.leaderboardRank}` : 'Joined Track'}
+              {dashboardData?.leaderboardRank ? `Rank #${dashboardData.leaderboardRank} (View Standings →)` : 'View Challenge Standings →'}
             </span>
           </div>
         </div>

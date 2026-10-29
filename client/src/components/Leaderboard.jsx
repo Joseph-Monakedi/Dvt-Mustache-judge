@@ -118,7 +118,10 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
   const [totalEntries, setTotalEntries] = useState(0);
   const [mustacheCount, setMustacheCount] = useState(0);
   const [creativeCount, setCreativeCount] = useState(0);
-  const [division, setDivision] = useState(() => (searchParams.get('division') === 'creative' || searchParams.get('division') === 'creativemustache' || searchParams.get('division') === 'crazyhair') ? 'creative' : 'mustache');
+  const [division, setDivision] = useState(() => {
+    const d = searchParams.get('division');
+    return (d && (d.toLowerCase().includes('creative') || d.toLowerCase().includes('hair'))) ? 'creative' : 'mustache';
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(() => searchParams.get('category') || 'All');
@@ -126,11 +129,20 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
   const [lastUpdated, setLastUpdated] = useState(() => new Date());
 
   useEffect(() => {
+    const divParam = searchParams.get('division');
+    if (divParam) {
+      const isDivCreative = divParam.toLowerCase().includes('creative') || divParam.toLowerCase().includes('hair');
+      const targetDiv = isDivCreative ? 'creative' : 'mustache';
+      if (targetDiv !== division) {
+        setDivision(targetDiv);
+        setSelectedCategory('All');
+      }
+    }
     const catParam = searchParams.get('category');
     if (catParam && catParam !== selectedCategory) {
       setSelectedCategory(catParam);
     }
-  }, [searchParams]);
+  }, [searchParams, division]);
 
   const isCreative = division === 'creative' || division === 'creativemustache' || division === 'crazyhair';
   const categories = isCreative ? CREATIVE_MUSTACHE_CATEGORIES : MUSTACHE_CATEGORIES;
@@ -462,7 +474,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
                 ? 'Be the first to craft and showcase your creative mustache!'
                 : 'No mustache contestant records match this filter yet.'}
             </p>
-            <button className="action-btn" onClick={onGoToBooth}>
+            <button className="action-btn" onClick={() => onGoToBooth && onGoToBooth(isCreative ? 'creative' : 'mustache')}>
               {isCreative ? 'Enter Creative Mustache Challenge' : 'Judge Your Mustache Now'}
             </button>
           </div>

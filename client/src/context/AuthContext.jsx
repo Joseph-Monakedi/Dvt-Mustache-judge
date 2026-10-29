@@ -60,7 +60,20 @@ export const AuthProvider = ({ children }) => {
           initialCheckDone: true
         };
 
-        setUser(userData);
+        setUser(prevUser => {
+          if (!prevUser) return userData;
+          const isSame = 
+            prevUser.id === userData.id &&
+            prevUser.email === userData.email &&
+            prevUser.fullName === userData.fullName &&
+            prevUser.role === userData.role &&
+            Boolean(prevUser.leaderboardPaid) === Boolean(userData.leaderboardPaid) &&
+            Boolean(prevUser.quizPaid) === Boolean(userData.quizPaid) &&
+            prevUser.amountPaid === userData.amountPaid &&
+            prevUser.cleanShaveImageUrl === userData.cleanShaveImageUrl &&
+            prevUser.preferredCompetition === userData.preferredCompetition;
+          return isSame ? prevUser : userData;
+        });
         return userData;
       } else {
         // Token invalid or expired

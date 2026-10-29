@@ -149,6 +149,19 @@ public static class DbInitializer
                 ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PasswordResetTokenExpiresAt"" timestamp with time zone;
                 ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PreferredCompetition"" character varying(50) DEFAULT 'Mustache';
                 ALTER TABLE ""MustacheEntries"" ADD COLUMN IF NOT EXISTS ""CompetitionType"" character varying(50) DEFAULT 'Mustache';
+
+                -- Ensure existing creative entries, faux mustaches, and wooden spoons are categorized correctly as CreativeMustache
+                UPDATE ""MustacheEntries"" 
+                SET ""CompetitionType"" = 'CreativeMustache' 
+                WHERE ""IsWoodenSpoon"" = true 
+                   OR ""CompetitionType"" ILIKE '%creative%' 
+                   OR ""CompetitionType"" ILIKE '%hair%';
+
+                UPDATE ""MustacheEntries"" e 
+                SET ""CompetitionType"" = 'CreativeMustache' 
+                FROM ""Users"" u 
+                WHERE e.""UserId"" = u.""Id"" 
+                  AND (u.""PreferredCompetition"" ILIKE '%creative%' OR u.""PreferredCompetition"" ILIKE '%hair%');
             ";
             await context.Database.ExecuteSqlRawAsync(schemaSql);
         }

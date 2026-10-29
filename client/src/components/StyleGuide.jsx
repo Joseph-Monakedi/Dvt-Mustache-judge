@@ -9,7 +9,9 @@ import {
   FaShieldHeart, 
   FaArrowRight,
   FaCircleQuestion,
-  FaHandsHoldingCircle
+  FaHandsHoldingCircle,
+  FaImage,
+  FaXmark
 } from 'react-icons/fa6';
 import { HiSparkles } from 'react-icons/hi2';
 import { GiMustache, GiComb, GiRazor } from 'react-icons/gi';
@@ -29,6 +31,7 @@ export const MUSTACHE_STYLES_DATA = [
     subtitle: 'The Dapper Handlebar',
     badge: 'Classic Posh',
     difficulty: 4,
+    imageSrc: '/styles/the-larnie.png',
     component: LarnieSvg,
     mzansiMeaning: '“Larnie” is classic South African slang for high-class, fancy, posh, or sophisticated. This look commands instant respect in any boardroom or braai.',
     description: 'An immaculate handlebar mustache featuring sweeping symmetrical wings that curl gracefully upward into tight, waxed spirals at each tip.',
@@ -48,6 +51,7 @@ export const MUSTACHE_STYLES_DATA = [
     subtitle: 'The Sleek Pencil',
     badge: 'Sharp Precision',
     difficulty: 3,
+    imageSrc: '/styles/the-french-cut.png',
     component: FrenchCutSvg,
     mzansiMeaning: 'Tailored continental elegance for the modern Mzansi bro who values surgical barber precision over unruly bush.',
     description: 'A razor-sharp, ultra-clean pencil-thin mustache meticulously groomed directly above the upper lip with a crisp philtrum separation.',
@@ -67,6 +71,7 @@ export const MUSTACHE_STYLES_DATA = [
     subtitle: 'The Heavyweight Chevron',
     badge: 'All-Time Icon',
     difficulty: 2,
+    imageSrc: '/styles/the-upper-lip.png',
     component: UpperLipSvg,
     mzansiMeaning: 'The undisputed King of the Philtrum. Synonymous with legendary braai masters, rugby heroes, and pure Movember heritage.',
     description: 'A dense, broad, full-bodied chevron mustache spanning generously across the entire width of the upper lip without curls or droop.',
@@ -86,6 +91,7 @@ export const MUSTACHE_STYLES_DATA = [
     subtitle: 'The African Horn Arc',
     badge: 'Big Five Power',
     difficulty: 4,
+    imageSrc: '/styles/the-buffalo.png',
     component: BuffaloSvg,
     mzansiMeaning: 'Named after the mighty African Cape Buffalo of the Big Five. Fearless, wide-reaching, and unmistakably South African.',
     description: 'A formidable wide mustache that dips slightly in the center and flares aggressively outward and upward across the cheeks like majestic buffalo horns.',
@@ -105,6 +111,7 @@ export const MUSTACHE_STYLES_DATA = [
     subtitle: 'The Horseshoe Drooper',
     badge: 'Rugged Rebel',
     difficulty: 4,
+    imageSrc: '/styles/the-chops.png',
     component: ChopsSvg,
     mzansiMeaning: 'Side-chops fused into an authoritative horseshoe framework. Pure rock-and-roll attitude engineered for high swagger.',
     description: 'An aggressive hybrid where a bold upper-lip bar turns 90 degrees downward at the corners of the mouth, descending past the jawline into vertical side-chops.',
@@ -124,6 +131,7 @@ export const MUSTACHE_STYLES_DATA = [
     subtitle: 'The Layered Fluke',
     badge: 'Architectural Sculpt',
     difficulty: 5,
+    imageSrc: '/styles/the-whale-tale.png',
     component: WhaleTaleSvg,
     mzansiMeaning: 'Inspired by the majestic southern right whales gracing Hermanus and South Africa’s coast. A multi-layered follicular sculpture.',
     description: 'A distinctive tiered chevron featuring three horizontally combed layered ridges that sweep downward and flare outward like the flukes of a breaching whale.',
@@ -144,6 +152,7 @@ export default function StyleGuide() {
   const [activeTab, setActiveTab] = useState('styles'); // 'styles' | 'rules' | 'grooming'
   const [selectedStyle, setSelectedStyle] = useState(MUSTACHE_STYLES_DATA[0]);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [showPosterModal, setShowPosterModal] = useState(false);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -153,7 +162,7 @@ export default function StyleGuide() {
 
   return (
     <div className="style-guide-page fade-in">
-      {/* Hero Poster Header matching Brovember Style Guide Poster */}
+      {/* Hero Header matching Style Guide Flyer */}
       <section className="brovember-hero-poster">
         <div className="poster-sunburst-arch">
           <svg viewBox="0 0 400 120" className="sunburst-svg" aria-hidden="true">
@@ -177,8 +186,7 @@ export default function StyleGuide() {
         </div>
 
         <div className="poster-branding-wrap">
-          <div className="poster-brovember-title">BROVEMBER™</div>
-          <div className="poster-mzansi-tag">MADE IN MZANSI</div>
+          <span className="badge-pill gold-pill" style={{ marginBottom: '12px' }}>Official Movember 2026 Guide</span>
           <h1 className="poster-main-title">MOUSTACHE STYLE GUIDE</h1>
           <p className="poster-tagline">
             “Grown and groomed. Whatever you grow will save an Mzansi bro.”
@@ -203,6 +211,14 @@ export default function StyleGuide() {
           <button 
             type="button" 
             className="btn btn-subtle"
+            onClick={() => setShowPosterModal(true)}
+            title="View original style guide document"
+          >
+            <FaImage className="btn-icon" /> View Original Document
+          </button>
+          <button 
+            type="button" 
+            className="btn btn-subtle"
             onClick={handleCopyLink}
             title="Share this style guide"
           >
@@ -211,35 +227,18 @@ export default function StyleGuide() {
           </button>
         </div>
 
-        {/* Charity & Partner Bar */}
-        <div className="poster-partners-bar">
+        {/* Clean Link to Brovember Website */}
+        <div className="poster-partners-bar" style={{ justifyContent: 'center' }}>
           <div className="partner-item">
-            <span className="partner-label">POWERED BY</span>
-            <span className="partner-name text-red-500 font-extrabold tracking-wide">Build it</span>
-          </div>
-          <div className="partner-item divider">|</div>
-          <div className="partner-item">
-            <div className="brovember-seal">
-              <GiMustache className="text-amber-400" />
-              <span>BROVEMBER MZANSI</span>
-            </div>
-          </div>
-          <div className="partner-item divider">|</div>
-          <div className="partner-item">
-            <div className="mens-foundation-seal">
-              <FaShieldHeart className="text-cyan-400" />
-              <span>MEN’S FOUNDATION <small className="text-slate-400">MENHANCING LIVES</small></span>
-            </div>
-          </div>
-          <div className="partner-item divider desktop-only">|</div>
-          <div className="partner-item desktop-only">
+            <span className="text-slate-400 text-xs">Official Men's Health Initiative:</span>
             <a 
               href="https://www.brovember.co.za" 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="partner-link"
+              className="partner-link font-bold text-cyan-400 hover:text-cyan-300 transition-colors inline-flex items-center gap-1.5"
             >
-              www.brovember.co.za ↗
+              <span>Visit www.brovember.co.za</span>
+              <span className="text-xs">↗</span>
             </a>
           </div>
         </div>
@@ -274,7 +273,7 @@ export default function StyleGuide() {
             <span className="badge-pill">Official Movember Archetypes</span>
             <h2 className="section-title">Pick Your Battle Stash</h2>
             <p className="section-desc">
-              Every contestant’s facial hair is evaluated against these six official Brovember archetypes.
+              Every contestant’s facial hair is evaluated against these six official archetypes, taken directly from the style guide document.
               Click any style to examine its grooming blueprint and what our Gemini AI Judge looks for.
             </p>
           </div>
@@ -282,7 +281,6 @@ export default function StyleGuide() {
           {/* 6 Grid Cards */}
           <div className="styles-showcase-grid">
             {MUSTACHE_STYLES_DATA.map(style => {
-              const SvgComp = style.component;
               const isSelected = selectedStyle.id === style.id;
 
               return (
@@ -298,8 +296,14 @@ export default function StyleGuide() {
                     </span>
                   </div>
 
+                  {/* Authentic Extracted Image from Document */}
                   <div className="style-silhouette-container">
-                    <SvgComp className="style-svg-art" fill="#FFFFFF" stroke="#FFFFFF" />
+                    <img 
+                      src={style.imageSrc} 
+                      alt={style.name} 
+                      className="style-svg-art" 
+                      loading="lazy" 
+                    />
                   </div>
 
                   <div className="style-card-content">
@@ -342,7 +346,12 @@ export default function StyleGuide() {
             <div className="style-inspector-card fade-in">
               <div className="inspector-header">
                 <div className="inspector-art-wrap">
-                  <selectedStyle.component className="inspector-svg" fill="#FFFFFF" stroke="#FFFFFF" />
+                  <img 
+                    src={selectedStyle.imageSrc} 
+                    alt={selectedStyle.name} 
+                    className="inspector-svg" 
+                    loading="lazy" 
+                  />
                 </div>
                 <div className="inspector-title-wrap">
                   <div className="badge-pill gold-pill">{selectedStyle.badge}</div>
@@ -438,10 +447,10 @@ export default function StyleGuide() {
               <div className="rule-card-icon cyan">
                 <FaHandsHoldingCircle />
               </div>
-              <h3 className="rule-card-title">2. R100 Charity Entry</h3>
+              <h3 className="rule-card-title">2. Free Entry & Charity Donations</h3>
               <p className="rule-card-text">
-                All entry fees go directly to Men's Health via the Men's Foundation / Brovember Movember initiative. 
-                Paying the R100 entry unlocks official Grand Prize eligibility and your permanent position on the DVT Podium.
+                Entering the contest is completely free for all participants! 
+                To qualify for the grand <strong>R1,000 Takealot Voucher</strong>, donate a minimum of R100 towards men's health and prostate cancer research.
               </p>
             </div>
 
@@ -570,6 +579,57 @@ export default function StyleGuide() {
           </div>
         </div>
       </section>
+
+      {/* Original Document Modal */}
+      {showPosterModal && (
+        <div 
+          className="modal-backdrop fade-in" 
+          onClick={() => setShowPosterModal(false)}
+          role="dialog" 
+          aria-modal="true"
+        >
+          <div 
+            className="auth-modal-card scale-in" 
+            style={{ maxWidth: '640px', padding: '24px', background: '#0a0f18', border: '1px solid rgba(0,180,216,0.3)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
+              <div className="flex items-center gap-2 text-white font-bold text-sm">
+                <GiMustache className="text-cyan-400 text-lg" />
+                <span>Original Moustache Style Guide Document</span>
+              </div>
+              <button 
+                type="button" 
+                className="text-slate-400 hover:text-white text-lg p-1"
+                onClick={() => setShowPosterModal(false)}
+                aria-label="Close"
+              >
+                <FaXmark />
+              </button>
+            </div>
+
+            <div className="rounded-xl overflow-hidden border border-white/10 bg-black flex justify-center">
+              <img 
+                src="/styles/poster.jpg" 
+                alt="Official Moustache Style Guide Document" 
+                className="w-full h-auto max-h-[75vh] object-contain"
+              />
+            </div>
+
+            <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
+              <span>All 6 official styles are extracted directly from this document.</span>
+              <a 
+                href="https://www.brovember.co.za" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-cyan-400 hover:underline font-semibold"
+              >
+                www.brovember.co.za ↗
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -440,4 +440,64 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         Assert.Equal(initialCount, afterResult?.TotalEntries ?? 0);
         Assert.DoesNotContain(afterResult?.Entries ?? new List<LeaderboardEntryDto>(), e => e.ContestantName.Contains("FlaggedVisionTest"));
     }
+
+    [Fact]
+    public async Task GetLeaderboard_CreativeDivision_SeparatesCreativeAndMustacheEntriesProperly()
+    {
+        // 1. Query mustache and creative leaderboards
+        var mustacheLb = await _client.GetAsync("/api/mustache/leaderboard?division=mustache");
+        Assert.Equal(HttpStatusCode.OK, mustacheLb.StatusCode);
+        var mustacheResult = JsonSerializer.Deserialize<LeaderboardResponseDto>(await mustacheLb.Content.ReadAsStringAsync(), _jsonOptions);
+        Assert.NotNull(mustacheResult);
+
+        var creativeLb = await _client.GetAsync("/api/mustache/leaderboard?division=creative");
+        Assert.Equal(HttpStatusCode.OK, creativeLb.StatusCode);
+        var creativeResult = JsonSerializer.Deserialize<LeaderboardResponseDto>(await creativeLb.Content.ReadAsStringAsync(), _jsonOptions);
+        Assert.NotNull(creativeResult);
+
+        // Verify none of the mustache entries are wooden spoon or tagged creative
+        foreach (var entry in mustacheResult.Entries)
+        {
+            Assert.False(entry.IsWoodenSpoon, $"Mustache division should not contain wooden spoon entry: {entry.ContestantName}");
+            Assert.NotEqual("CreativeMustache", entry.CompetitionType);
+            Assert.NotEqual("CrazyHair", entry.CompetitionType);
+        }
+
+        // 2. Register a creative contestant
+        var email = $"creative_{Guid.NewGuid():N}@example.com";
+        var reg = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "Creative Contestant", "password123", "CreativeMustache"));
+        var regDoc = JsonDocument.Parse(await reg.Content.ReadAsStringAsync());
+        var token = regDoc.RootElement.GetProperty("token").GetString()!;
+
+        // 3. Submit a creative mustache photo (no clean shave required!)
+        var formData = new MultipartFormDataContent();
+        formData.Add(new StringContent("Paper Origami Stache Master"), "Name");
+        formData.Add(new StringContent("CreativeMustache"), "CompetitionType");
+
+        var imageBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46 };
+        var imageContent = new ByteArrayContent(imageBytes);
+        imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        formData.Add(imageContent, "Image", "origami_stache.jpg");
+
+        var judgeReq = new HttpRequestMessage(HttpMethod.Post, "/api/mustache/judge") { Content = formData };
+        judgeReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var judgeRes = await _client.SendAsync(judgeReq);
+
+        Assert.Equal(HttpStatusCode.OK, judgeRes.StatusCode);
+        var judgeData = JsonSerializer.Deserialize<JudgeResponseDto>(await judgeRes.Content.ReadAsStringAsync(), _jsonOptions);
+        Assert.NotNull(judgeData);
+        Assert.Equal("CreativeMustache", judgeData.CompetitionType);
+
+        // 4. Verify the entry appears in the Creative leaderboard
+        var updatedCreativeLb = await _client.GetAsync("/api/mustache/leaderboard?division=creative");
+        var updatedCreativeResult = JsonSerializer.Deserialize<LeaderboardResponseDto>(await updatedCreativeLb.Content.ReadAsStringAsync(), _jsonOptions);
+        Assert.NotNull(updatedCreativeResult);
+        Assert.Contains(updatedCreativeResult.Entries, e => e.ContestantName == "Paper Origami Stache Master");
+
+        // 5. Verify the entry DOES NOT appear in the Natural Mustache leaderboard
+        var updatedMustacheLb = await _client.GetAsync("/api/mustache/leaderboard?division=mustache");
+        var updatedMustacheResult = JsonSerializer.Deserialize<LeaderboardResponseDto>(await updatedMustacheLb.Content.ReadAsStringAsync(), _jsonOptions);
+        Assert.NotNull(updatedMustacheResult);
+        Assert.DoesNotContain(updatedMustacheResult.Entries, e => e.ContestantName == "Paper Origami Stache Master");
+    }
 }

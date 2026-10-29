@@ -72,16 +72,28 @@ export default function VaultEntryCard({ entry, onSelectEntry }) {
           {/* Subscores Grid */}
           <div className="grid grid-cols-3 gap-2 py-2 border-y border-white/5 text-center">
             <div className="bg-[#131f33]/50 p-1.5 rounded-lg">
-              <span className="block text-[10px] text-slate-400 uppercase font-medium">Density</span>
-              <span className="text-xs font-bold text-slate-200">{entry.densityScore}/10</span>
+              <span className="block text-[10px] text-slate-400 uppercase font-medium">
+                {entry.competitionType === 'CreativeMustache' || entry.isWoodenSpoon ? 'Craft' : 'Density'}
+              </span>
+              <span className="text-xs font-bold text-slate-200">
+                {(entry.competitionType === 'CreativeMustache' || entry.isWoodenSpoon ? (entry.innovationScore || entry.densityScore) : entry.densityScore)}/10
+              </span>
             </div>
             <div className="bg-[#131f33]/50 p-1.5 rounded-lg">
-              <span className="block text-[10px] text-slate-400 uppercase font-medium">Symmetry</span>
-              <span className="text-xs font-bold text-slate-200">{entry.symmetryScore}/10</span>
+              <span className="block text-[10px] text-slate-400 uppercase font-medium">
+                {entry.competitionType === 'CreativeMustache' || entry.isWoodenSpoon ? 'Innovation' : 'Symmetry'}
+              </span>
+              <span className="text-xs font-bold text-slate-200">
+                {(entry.competitionType === 'CreativeMustache' || entry.isWoodenSpoon ? (entry.dedicationScore || entry.symmetryScore) : entry.symmetryScore)}/10
+              </span>
             </div>
             <div className="bg-[#131f33]/50 p-1.5 rounded-lg">
-              <span className="block text-[10px] text-slate-400 uppercase font-medium">Swagger</span>
-              <span className="text-xs font-bold text-slate-200">{entry.swaggerScore}/10</span>
+              <span className="block text-[10px] text-slate-400 uppercase font-medium">
+                {entry.competitionType === 'CreativeMustache' || entry.isWoodenSpoon ? 'Humor' : 'Swagger'}
+              </span>
+              <span className="text-xs font-bold text-slate-200">
+                {(entry.competitionType === 'CreativeMustache' || entry.isWoodenSpoon ? (entry.funninessScore || entry.swaggerScore) : entry.swaggerScore)}/10
+              </span>
             </div>
           </div>
 

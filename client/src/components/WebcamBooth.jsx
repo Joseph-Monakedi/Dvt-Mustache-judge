@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { GiMustache } from 'react-icons/gi';
 import { 
   FaCamera, 
@@ -22,8 +22,22 @@ import { initiatePayFastCheckout } from '../utils/payfast';
 
 export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
   const { user, token, refreshUser, openAuthModal } = useAuth();
+  const [searchParams] = useSearchParams();
   const [name, setName] = useState(user?.fullName || '');
-  const [competitionType, setCompetitionType] = useState(user?.preferredCompetition || 'Mustache');
+  
+  const getInitialCompetitionType = () => {
+    const trackParam = searchParams.get('track') || searchParams.get('division') || searchParams.get('competition');
+    if (trackParam && (trackParam.toLowerCase().includes('creative') || trackParam.toLowerCase().includes('hair'))) {
+      return 'CreativeMustache';
+    }
+    if (user?.preferredCompetition && (user.preferredCompetition.toLowerCase().includes('creative') || user.preferredCompetition.toLowerCase().includes('hair'))) {
+      return 'CreativeMustache';
+    }
+    return user?.preferredCompetition || 'Mustache';
+  };
+
+  const [competitionType, setCompetitionType] = useState(getInitialCompetitionType);
+  const hasUserManuallyToggledRef = useRef(false);
   const [capturedBlob, setCapturedBlob] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
@@ -46,15 +60,27 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     }
   };
 
-  // Sync user's name & preferred competition
+  const userFullName = user?.fullName;
+  const userPreferredComp = user?.preferredCompetition;
+  const trackParam = searchParams.get('track') || searchParams.get('division') || searchParams.get('competition');
+
+  // Sync user's name & preferred competition when user profile loads or URL query params change
   useEffect(() => {
-    if (user?.fullName && !name) {
-      setName(user.fullName);
+    if (userFullName && !name) {
+      setName(userFullName);
     }
-    if (user?.preferredCompetition && !competitionType) {
-      setCompetitionType(user.preferredCompetition);
+    if (!hasUserManuallyToggledRef.current) {
+      if (trackParam) {
+        const isParamCreative = trackParam.toLowerCase().includes('creative') || trackParam.toLowerCase().includes('hair');
+        const target = isParamCreative ? 'CreativeMustache' : 'Mustache';
+        setCompetitionType(prev => (prev !== target ? target : prev));
+      } else if (userPreferredComp) {
+        const isUserCreative = userPreferredComp.toLowerCase().includes('creative') || userPreferredComp.toLowerCase().includes('hair');
+        const target = isUserCreative ? 'CreativeMustache' : 'Mustache';
+        setCompetitionType(prev => (prev !== target ? target : prev));
+      }
     }
-  }, [user]);
+  }, [userFullName, userPreferredComp, trackParam, name]);
 
   const isCreative = competitionType === 'CreativeMustache' || competitionType === 'CrazyHair';
   const hasCleanShave = Boolean(user?.cleanShaveImageUrl);
@@ -62,6 +88,14 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
 
   // Initialize camera stream
   const startCamera = useCallback(async () => {
+    // If stream is already active and tracks are running with correct facingMode, do not restart
+    if (streamRef.current && streamRef.current.active && videoRef.current?.srcObject === streamRef.current) {
+      const videoTrack = streamRef.current.getVideoTracks()[0];
+      if (videoTrack && videoTrack.readyState === 'live') {
+        return;
+      }
+    }
+
     try {
       setCameraError(null);
       setIsCameraInitializing(true);
@@ -104,11 +138,17 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     }
   }, [facingMode]);
 
+  const isAuth = Boolean(user);
+
+  // Initialize camera when user is authenticated or camera orientation toggles
   useEffect(() => {
-    // Run camera for authenticated user (free entry for all!)
-    if (user) {
+    if (isAuth) {
       startCamera();
     }
+  }, [isAuth, facingMode, startCamera]);
+
+  // Clean up hardware media stream tracks ONLY when component unmounts
+  useEffect(() => {
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -118,7 +158,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
         videoRef.current.srcObject = null;
       }
     };
-  }, [startCamera, user]);
+  }, []);
 
   const toggleCameraFacing = () => {
     setFacingMode(prev => (prev === 'user' ? 'environment' : 'user'));
@@ -298,6 +338,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 : 'text-slate-300 hover:text-white'
             }`}
             onClick={() => {
+              hasUserManuallyToggledRef.current = true;
               setCompetitionType('Mustache');
               handleRetake();
             }}
@@ -313,6 +354,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 : 'text-slate-300 hover:text-white'
             }`}
             onClick={() => {
+              hasUserManuallyToggledRef.current = true;
               setCompetitionType('CreativeMustache');
               handleRetake();
             }}
@@ -357,7 +399,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
               </div>
               <div>
                 <div className="text-xs font-bold text-white flex items-center gap-2">
-                  <span>Brovember Movember Moustache Style Guide</span>
+                  <span>Official Moustache Style Guide</span>
                   <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
                     6 Mzansi Styles
                   </span>

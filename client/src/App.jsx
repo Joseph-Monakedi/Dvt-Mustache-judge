@@ -200,9 +200,9 @@ export default function App() {
             element={
               <Leaderboard 
                 onSelectEntry={entry => setSelectedLeaderboardEntry(entry)}
-                onGoToBooth={() => {
+                onGoToBooth={(track) => {
                   setActiveVerdict(null);
-                  navigate('/booth');
+                  navigate(track ? `/booth?track=${track}` : '/booth');
                 }}
               />
             } 
@@ -216,8 +216,11 @@ export default function App() {
                   verdict={activeVerdict}
                   onReset={handleResetBooth}
                   onViewLeaderboard={() => {
+                    const isCreativeVerdict = activeVerdict?.competitionType === 'CreativeMustache' 
+                      || activeVerdict?.competitionType === 'CrazyHair' 
+                      || activeVerdict?.isWoodenSpoon;
                     setActiveVerdict(null);
-                    navigate('/leaderboard');
+                    navigate(isCreativeVerdict ? '/leaderboard?division=creative' : '/leaderboard?division=mustache');
                   }}
                 />
               ) : (
@@ -237,7 +240,9 @@ export default function App() {
                   setActiveVerdict(null);
                   navigate('/booth');
                 }}
-                onGoToLeaderboard={() => navigate('/leaderboard')}
+                onGoToLeaderboard={(division) => {
+                  navigate(division ? `/leaderboard?division=${division}` : '/leaderboard');
+                }}
                 onGoToQuiz={() => navigate('/quiz')}
                 onSelectEntry={entry => setSelectedLeaderboardEntry(entry)}
               />
