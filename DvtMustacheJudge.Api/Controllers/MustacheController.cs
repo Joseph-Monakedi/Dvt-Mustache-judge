@@ -1114,6 +1114,74 @@ public class MustacheController : ControllerBase
     }
 
     /// <summary>
+    /// Permanently delete an entry owned by the authenticated participant.
+    /// </summary>
+    [HttpDelete("my-entry/{id:guid}")]
+    public async Task<IActionResult> DeleteMyEntry(Guid id)
+    {
+        var authHeader = Request.Headers.Authorization.ToString();
+        string? token = null;
+        if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            token = authHeader.Substring("Bearer ".Length).Trim();
+        }
+
+        var payload = _tokenService.ValidateToken(token);
+        if (payload == null)
+        {
+            return Unauthorized(new { error = "Please log in to delete your submission." });
+        }
+
+        var entry = await _dbContext.MustacheEntries.FindAsync(id);
+        if (entry == null)
+        {
+            return NotFound(new { error = "Submission not found." });
+        }
+
+        // Only the owner of the entry (or an admin) can delete it
+        if (entry.UserId != payload.UserId && !string.Equals(payload.Role, "Admin", StringComparison.OrdinalIgnoreCase))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { error = "You are not authorized to delete another contestant's submission." });
+        }
+
+        if (!string.IsNullOrWhiteSpace(entry.ImageUrl))
+        {
+            try
+            {
+                await _storageService.DeleteImageAsync(entry.ImageUrl);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete storage image for {Id}", entry.Id);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(entry.ThumbnailUrl) && entry.ThumbnailUrl != entry.ImageUrl)
+        {
+            try
+            {
+                await _storageService.DeleteImageAsync(entry.ThumbnailUrl);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete thumbnail storage image for {Id}", entry.Id);
+            }
+        }
+
+        _dbContext.MustacheEntries.Remove(entry);
+        await _dbContext.SaveChangesAsync();
+
+        _logger.LogInformation("Participant {UserId} permanently deleted submission {EntryId}.", payload.UserId, id);
+
+        return Ok(new
+        {
+            success = true,
+            message = "Submission deleted permanently.",
+            deletedEntryId = id
+        });
+    }
+
+    /// <summary>
     /// Permanently delete an entry.
     /// </summary>
     [HttpDelete("admin/entry/{id:guid}")]

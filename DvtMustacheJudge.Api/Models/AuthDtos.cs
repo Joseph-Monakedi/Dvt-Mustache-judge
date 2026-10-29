@@ -86,3 +86,17 @@ public record ConfirmPayFastReturnRequest(
     string? ItemType = null,
     string? PfPaymentId = null
 );
+
+public record ChangePasswordRequest(
+    [Required] string CurrentPassword,
+    [Required, MinLength(6)] string NewPassword
+);
+
+public record UpdateProfileRequest(
+    [MinLength(2), MaxLength(100)] string? FullName = null,
+    string? PreferredCompetition = null
+);
+
+public record DeleteAccountRequest(
+    [Required] string ConfirmPassword
+);

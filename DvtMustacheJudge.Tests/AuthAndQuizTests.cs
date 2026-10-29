@@ -582,4 +582,141 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
             Assert.False(await db.MustacheEntries.AnyAsync(e => e.UserId == userId));
         }
     }
+
+    [Fact]
+    public async Task Participant_CanChangePassword_AndLoginWithNewPassword()
+    {
+        var email = $"chg_pwd_{Guid.NewGuid()}@dvt.co.za";
+        var regRes = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "Change Pwd User", "oldPassword123", "Mustache"));
+        Assert.Equal(HttpStatusCode.OK, regRes.StatusCode);
+        var regJson = await regRes.Content.ReadFromJsonAsync<JsonElement>();
+        var token = regJson.GetProperty("token").GetString();
+
+        // 1. Attempt change password with wrong current password -> 400 BadRequest
+        var badReq = new HttpRequestMessage(HttpMethod.Post, "/api/auth/change-password");
+        badReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        badReq.Content = JsonContent.Create(new ChangePasswordRequest("wrongPassword!", "newSecurePassword456"));
+        var badRes = await _client.SendAsync(badReq);
+        Assert.Equal(HttpStatusCode.BadRequest, badRes.StatusCode);
+
+        // 2. Change password with correct current password -> 200 OK
+        var goodReq = new HttpRequestMessage(HttpMethod.Post, "/api/auth/change-password");
+        goodReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        goodReq.Content = JsonContent.Create(new ChangePasswordRequest("oldPassword123", "newSecurePassword456"));
+        var goodRes = await _client.SendAsync(goodReq);
+        Assert.Equal(HttpStatusCode.OK, goodRes.StatusCode);
+
+        // 3. Old password should fail to login
+        var oldLoginRes = await _client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, "oldPassword123"));
+        Assert.Equal(HttpStatusCode.Unauthorized, oldLoginRes.StatusCode);
+
+        // 4. New password should successfully login
+        var newLoginRes = await _client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, "newSecurePassword456"));
+        Assert.Equal(HttpStatusCode.OK, newLoginRes.StatusCode);
+    }
+
+    [Fact]
+    public async Task Participant_CanDeleteTheirOwnEntry_AndCannotDeleteOthers()
+    {
+        // 1. Register User A
+        var emailA = $"user_a_{Guid.NewGuid()}@dvt.co.za";
+        var resA = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(emailA, "User A", "password123", "Mustache"));
+        var tokenA = (await resA.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString();
+
+        // 2. Register User B
+        var emailB = $"user_b_{Guid.NewGuid()}@dvt.co.za";
+        var resB = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(emailB, "User B", "password123", "Mustache"));
+        var tokenB = (await resB.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString();
+
+        Guid entryAId = Guid.NewGuid();
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var userA = db.Users.First(u => u.Email == emailA.ToLower());
+            db.MustacheEntries.Add(new MustacheEntry
+            {
+                Id = entryAId,
+                UserId = userA.Id,
+                ContestantName = "User A",
+                ImageUrl = "/mock_a.jpg",
+                OverallScore = 85,
+                CompetitionType = "Mustache"
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // 3. User B tries to delete User A's entry -> 403 Forbidden
+        var forbiddenReq = new HttpRequestMessage(HttpMethod.Delete, $"/api/mustache/my-entry/{entryAId}");
+        forbiddenReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenB);
+        var forbiddenRes = await _client.SendAsync(forbiddenReq);
+        Assert.Equal(HttpStatusCode.Forbidden, forbiddenRes.StatusCode);
+
+        // Entry should still exist
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Assert.NotNull(await db.MustacheEntries.FindAsync(entryAId));
+        }
+
+        // 4. User A deletes their own entry -> 200 OK
+        var deleteReq = new HttpRequestMessage(HttpMethod.Delete, $"/api/mustache/my-entry/{entryAId}");
+        deleteReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenA);
+        var deleteRes = await _client.SendAsync(deleteReq);
+        Assert.Equal(HttpStatusCode.OK, deleteRes.StatusCode);
+
+        // Entry should be deleted from DB
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Assert.Null(await db.MustacheEntries.FindAsync(entryAId));
+        }
+    }
+
+    [Fact]
+    public async Task Participant_CanDeleteOwnAccount_WithPasswordVerification()
+    {
+        var email = $"self_del_{Guid.NewGuid()}@dvt.co.za";
+        var regRes = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "Self Delete User", "pass12345", "Mustache"));
+        var token = (await regRes.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString();
+
+        Guid userId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var user = db.Users.First(u => u.Email == email.ToLower());
+            userId = user.Id;
+            db.MustacheEntries.Add(new MustacheEntry
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                ContestantName = "Self Delete User",
+                ImageUrl = "/mock_entry.jpg",
+                OverallScore = 90
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // Wrong password fails
+        var badDel = new HttpRequestMessage(HttpMethod.Post, "/api/auth/delete-account");
+        badDel.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        badDel.Content = JsonContent.Create(new DeleteAccountRequest("wrongPassword!"));
+        var badDelRes = await _client.SendAsync(badDel);
+        Assert.Equal(HttpStatusCode.BadRequest, badDelRes.StatusCode);
+
+        // Correct password deletes account
+        var goodDel = new HttpRequestMessage(HttpMethod.Post, "/api/auth/delete-account");
+        goodDel.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        goodDel.Content = JsonContent.Create(new DeleteAccountRequest("pass12345"));
+        var goodDelRes = await _client.SendAsync(goodDel);
+        Assert.Equal(HttpStatusCode.OK, goodDelRes.StatusCode);
+
+        // Account and entries are wiped
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Assert.Null(await db.Users.FindAsync(userId));
+            Assert.False(await db.MustacheEntries.AnyAsync(e => e.UserId == userId));
+        }
+    }
 }
+

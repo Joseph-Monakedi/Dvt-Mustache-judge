@@ -13,7 +13,9 @@ import {
   FaUserPlus,
   FaArrowRightToBracket,
   FaRightFromBracket,
-  FaHandHoldingHeart
+  FaHandHoldingHeart,
+  FaUserGear,
+  FaTrashCan
 } from 'react-icons/fa6';
 import { HiSparkles } from 'react-icons/hi2';
 import { GiMustache } from 'react-icons/gi';
@@ -26,6 +28,8 @@ import Button from './common/Button';
 import DayOneCleanShaveModal from './dashboard/DayOneCleanShaveModal';
 import VaultEntryCard from './dashboard/VaultEntryCard';
 import CharityPaymentModal from './dashboard/CharityPaymentModal';
+import DeleteEntryModal from './dashboard/DeleteEntryModal';
+import AccountManagementModal from './dashboard/AccountManagementModal';
 
 export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQuiz, onSelectEntry }) {
   const navigate = useNavigate();
@@ -40,7 +44,10 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
   const [error, setError] = useState('');
   const [showPaymentInfo, setShowPaymentInfo] = useState(false);
   const [showCleanShaveModal, setShowCleanShaveModal] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [entryToDelete, setEntryToDelete] = useState(null);
   const [paymentBanner, setPaymentBanner] = useState(null);
+  const [actionNotice, setActionNotice] = useState(null);
 
   const fetchDashboard = async () => {
     if (!token) {
@@ -203,6 +210,35 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
         </div>
       )}
 
+      {/* Action Notification Banner */}
+      {actionNotice && (
+        <div className={`p-4 rounded-xl border flex items-center justify-between gap-4 fade-in ${
+          actionNotice.type === 'error'
+            ? 'bg-rose-950/40 border-rose-500/50 text-rose-200 shadow-lg shadow-rose-950/40'
+            : 'bg-cyan-950/40 border-cyan-500/50 text-cyan-200 shadow-lg shadow-cyan-950/40'
+        }`}>
+          <div className="flex items-center gap-3">
+            {actionNotice.type === 'error' ? (
+              <FaXmark className="text-rose-400 text-2xl shrink-0" />
+            ) : (
+              <FaCircleCheck className="text-cyan-400 text-2xl shrink-0" />
+            )}
+            <div>
+              <h4 className="font-bold text-white text-sm">{actionNotice.title}</h4>
+              <p className="text-xs text-slate-300">{actionNotice.message}</p>
+            </div>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => setActionNotice(null)} 
+            className="text-slate-400 hover:text-white p-1"
+            aria-label="Dismiss message"
+          >
+            <FaXmark />
+          </button>
+        </div>
+      )}
+
       {/* Dashboard Top Header Banner */}
       <div className="dashboard-profile-banner flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 sm:p-8 bg-[#0d1522] border border-white/10 rounded-2xl shadow-xl">
         <div className="profile-main-info flex items-center gap-5">
@@ -231,7 +267,16 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
             <p className="profile-email text-sm text-slate-400 font-mono">
               {user.email}
             </p>
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowAccountModal(true)}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 active:bg-cyan-500/35 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                title="Manage account settings, password resets, and security"
+              >
+                <FaUserGear className="text-xs text-cyan-400" /> Manage Account & Security
+              </button>
+
               <button
                 type="button"
                 onClick={handleLogout}
@@ -536,10 +581,38 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
               key={entry.id} 
               entry={entry} 
               onSelectEntry={onSelectEntry} 
+              onDeleteEntry={(entry) => setEntryToDelete(entry)}
             />
           ))}
         </div>
       )}
+
+      {/* Delete Entry Modal (Irreversible Action Warning) */}
+      <DeleteEntryModal
+        isOpen={Boolean(entryToDelete)}
+        onClose={() => setEntryToDelete(null)}
+        entry={entryToDelete}
+        onSuccess={async (deletedId) => {
+          setEntryToDelete(null);
+          await fetchDashboard();
+          await refreshUser();
+          setActionNotice({
+            type: 'info',
+            title: 'Submission Permanently Deleted',
+            message: 'Your entry, scorecard, and photos have been permanently purged from your vault.'
+          });
+        }}
+      />
+
+      {/* Manage Account & Security Modal */}
+      <AccountManagementModal
+        isOpen={showAccountModal}
+        onClose={() => setShowAccountModal(false)}
+        onAccountDeleted={() => {
+          navigate('/leaderboard');
+        }}
+        onOpenDonationModal={() => setShowPaymentInfo(true)}
+      />
 
       {/* Reusable Clean Shave Capture / Upload Modal */}
       <DayOneCleanShaveModal

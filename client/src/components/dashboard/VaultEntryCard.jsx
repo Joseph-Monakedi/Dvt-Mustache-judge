@@ -1,8 +1,8 @@
 import React from 'react';
-import { FaAward, FaArrowTrendUp, FaEye } from 'react-icons/fa6';
+import { FaAward, FaArrowTrendUp, FaEye, FaTrashCan } from 'react-icons/fa6';
 import Button from '../common/Button';
 
-export default function VaultEntryCard({ entry, onSelectEntry }) {
+export default function VaultEntryCard({ entry, onSelectEntry, onDeleteEntry }) {
   const isBest = entry.isBestEntry;
 
   return (
@@ -113,17 +113,32 @@ export default function VaultEntryCard({ entry, onSelectEntry }) {
           )}
         </div>
 
-        {/* Action Button */}
-        <div>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 pt-1">
           <Button
             variant="outline"
             size="sm"
             onClick={() => onSelectEntry(entry)}
             icon={FaEye}
-            className="w-full text-xs"
+            className="flex-1 text-xs"
           >
-            {entry.cleanShaveImageUrl ? 'View Transformation & Roast' : 'View Verdict Details'}
+            {entry.cleanShaveImageUrl ? 'Transformation' : 'View Details'}
           </Button>
+
+          {onDeleteEntry && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteEntry(entry);
+              }}
+              className="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/25 hover:border-rose-500/50 transition-all text-xs font-semibold flex items-center gap-1.5 shrink-0"
+              title="Delete this submission (irreversible)"
+            >
+              <FaTrashCan className="text-xs" />
+              <span className="hidden sm:inline">Delete</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

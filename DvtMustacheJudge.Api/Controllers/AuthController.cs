@@ -16,19 +16,22 @@ public class AuthController : ControllerBase
     private readonly IEmailService _emailService;
     private readonly IConfiguration _config;
     private readonly ILogger<AuthController> _logger;
+    private readonly IImageStorageService? _storageService;
 
     public AuthController(
         AppDbContext context,
         ITokenService tokenService,
         IEmailService emailService,
         IConfiguration config,
-        ILogger<AuthController> logger)
+        ILogger<AuthController> logger,
+        IImageStorageService? storageService = null)
     {
         _context = context;
         _tokenService = tokenService;
         _emailService = emailService;
         _config = config;
         _logger = logger;
+        _storageService = storageService;
     }
 
     [HttpPost("register")]
@@ -337,6 +340,254 @@ public class AuthController : ControllerBase
         return Ok(new
         {
             message = "Your password has been successfully reset. You can now log in with your new password."
+        });
+    }
+
+    /// <summary>
+    /// Change password for authenticated user (requires current password).
+    /// </summary>
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var authHeader = Request.Headers.Authorization.ToString();
+        string? token = null;
+        if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            token = authHeader.Substring("Bearer ".Length).Trim();
+        }
+
+        var payload = _tokenService.ValidateToken(token);
+        if (payload == null)
+        {
+            return Unauthorized(new { error = "Missing, expired, or invalid authorization token." });
+        }
+
+        var user = await _context.Users.FindAsync(payload.UserId);
+        if (user == null)
+        {
+            return NotFound(new { error = "User account not found." });
+        }
+
+        // Verify current password
+        bool valid = PasswordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash, user.Salt);
+        if (!valid)
+        {
+            // Also check admin master password for admin accounts
+            var adminPassword = _config["Admin:Password"] ?? "dvt-movember-admin-2026";
+            if (user.Role == "Admin" && request.CurrentPassword == adminPassword)
+            {
+                valid = true;
+            }
+            else
+            {
+                return BadRequest(new { error = "Current password does not match. Please verify and try again." });
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 6)
+        {
+            return BadRequest(new { error = "New password must be at least 6 characters long." });
+        }
+
+        var (hash, salt) = PasswordHasher.HashPassword(request.NewPassword);
+        user.PasswordHash = hash;
+        user.Salt = salt;
+        user.PasswordResetToken = null;
+        user.PasswordResetTokenExpiresAt = null;
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("User {UserId} ({Email}) changed their password successfully.", user.Id, user.Email);
+
+        return Ok(new
+        {
+            success = true,
+            message = "Password updated successfully."
+        });
+    }
+
+    /// <summary>
+    /// Update profile settings (Full Name and Preferred Competition Track).
+    /// </summary>
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
+    {
+        var authHeader = Request.Headers.Authorization.ToString();
+        string? token = null;
+        if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            token = authHeader.Substring("Bearer ".Length).Trim();
+        }
+
+        var payload = _tokenService.ValidateToken(token);
+        if (payload == null)
+        {
+            return Unauthorized(new { error = "Missing, expired, or invalid authorization token." });
+        }
+
+        var user = await _context.Users
+            .Include(u => u.Entries)
+            .FirstOrDefaultAsync(u => u.Id == payload.UserId);
+
+        if (user == null)
+        {
+            return NotFound(new { error = "User account not found." });
+        }
+
+        bool updated = false;
+
+        if (!string.IsNullOrWhiteSpace(request.FullName) && request.FullName.Trim() != user.FullName)
+        {
+            var oldName = user.FullName;
+            user.FullName = request.FullName.Trim();
+            // Update contestant name on their submissions as well so the leaderboard stays synced
+            foreach (var entry in user.Entries)
+            {
+                if (entry.ContestantName == oldName || string.IsNullOrWhiteSpace(entry.ContestantName))
+                {
+                    entry.ContestantName = user.FullName;
+                }
+            }
+            updated = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.PreferredCompetition))
+        {
+            var pref = (string.Equals(request.PreferredCompetition, "CreativeMustache", StringComparison.OrdinalIgnoreCase) 
+                       || string.Equals(request.PreferredCompetition, "CrazyHair", StringComparison.OrdinalIgnoreCase))
+                       ? "CreativeMustache" 
+                       : "Mustache";
+
+            if (user.PreferredCompetition != pref)
+            {
+                user.PreferredCompetition = pref;
+                updated = true;
+            }
+        }
+
+        if (updated)
+        {
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Profile updated for user {UserId} ({Email}).", user.Id, user.Email);
+        }
+
+        return Ok(new
+        {
+            success = true,
+            message = "Profile updated successfully.",
+            user = new
+            {
+                user.Id,
+                user.Email,
+                user.FullName,
+                user.Role,
+                user.LeaderboardPaid,
+                user.QuizPaid,
+                user.PreferredCompetition,
+                user.AmountPaid,
+                isPrizeEligible = user.IsEligibleToWin
+            }
+        });
+    }
+
+    /// <summary>
+    /// Permanently delete contestant account and all associated submissions (requires password verification).
+    /// </summary>
+    [HttpPost("delete-account")]
+    public async Task<IActionResult> DeleteMyAccount([FromBody] DeleteAccountRequest request)
+    {
+        return await ProcessDeleteAccount(request.ConfirmPassword);
+    }
+
+    [HttpDelete("me")]
+    public async Task<IActionResult> DeleteMe([FromQuery] string? confirmPassword = null, [FromBody] DeleteAccountRequest? body = null)
+    {
+        var password = body?.ConfirmPassword ?? confirmPassword ?? string.Empty;
+        return await ProcessDeleteAccount(password);
+    }
+
+    private async Task<IActionResult> ProcessDeleteAccount(string confirmPassword)
+    {
+        var authHeader = Request.Headers.Authorization.ToString();
+        string? token = null;
+        if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            token = authHeader.Substring("Bearer ".Length).Trim();
+        }
+
+        var payload = _tokenService.ValidateToken(token);
+        if (payload == null)
+        {
+            return Unauthorized(new { error = "Missing, expired, or invalid authorization token." });
+        }
+
+        var user = await _context.Users
+            .Include(u => u.Entries)
+            .FirstOrDefaultAsync(u => u.Id == payload.UserId);
+
+        if (user == null)
+        {
+            return NotFound(new { error = "User account not found." });
+        }
+
+        if (user.Role == "Admin")
+        {
+            return BadRequest(new { error = "Admin accounts cannot be deleted." });
+        }
+
+        // Verify password confirmation for security
+        bool valid = PasswordHasher.VerifyPassword(confirmPassword, user.PasswordHash, user.Salt);
+        if (!valid)
+        {
+            return BadRequest(new { error = "Incorrect password. Account deletion aborted." });
+        }
+
+        // Clean up storage images for entries
+        if (_storageService != null)
+        {
+            foreach (var entry in user.Entries)
+            {
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(entry.ImageUrl))
+                        await _storageService.DeleteImageAsync(entry.ImageUrl);
+                    if (!string.IsNullOrWhiteSpace(entry.ThumbnailUrl) && entry.ThumbnailUrl != entry.ImageUrl)
+                        await _storageService.DeleteImageAsync(entry.ThumbnailUrl);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete storage image for entry {EntryId}", entry.Id);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(user.CleanShaveImageUrl))
+            {
+                try
+                {
+                    await _storageService.DeleteImageAsync(user.CleanShaveImageUrl);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete clean shave image for user {UserId}", user.Id);
+                }
+            }
+        }
+
+        _context.MustacheEntries.RemoveRange(user.Entries);
+        _context.Users.Remove(user);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Contestant account {UserId} ({Email}) permanently deleted by user.", user.Id, user.Email);
+
+        return Ok(new
+        {
+            success = true,
+            message = "Your account and all submissions have been permanently deleted."
         });
     }
 }
