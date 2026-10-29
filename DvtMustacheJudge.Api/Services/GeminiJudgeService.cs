@@ -204,13 +204,13 @@ If the contestant is a real, living, biological human with NO prompt or SQL inje
     * verdictBadge: 'Zero-Bristle Deficit' or 'Follicle 404'.
   - If CLEARLY IDENTIFIED REAL MUSTACHE:
     * overallScore: 1 to 100 based on biological growth, shape, grooming, symmetry, density:
-      - Magnificent, dense, well-shaped mustaches (Chevron, Handlebar, Walrus): 80 to 98.
-      - Solid, developing, deliberate mustaches (Painter's Brush, Horseshoe, Stubbled Maverick): 60 to 79.
-      - Thin, faint, patchy, or early-stage growth (Pencil, Peach Fuzz): 20 to 59.
+      - Magnificent, dense, well-shaped mustaches (The Larnie, The Upper-Lip, The Buffalo): 80 to 98.
+      - Solid, developing, deliberate mustaches (The Chops, The Whale Tale, The French-Cut): 60 to 79.
+      - Thin, faint, patchy, or early-stage growth: 20 to 59.
     * densityScore: 1 to 10.
     * symmetryScore: 1 to 10.
     * swaggerScore: 1 to 10.
-    * styleCategory: 'Chevron', 'Handlebar', 'Pencil', 'Horseshoe', 'Walrus', 'Peach Fuzz', 'Stubbled Maverick', 'Painter's Brush', or 'Other'.
+    * styleCategory: 'The Larnie', 'The French-Cut', 'The Upper-Lip', 'The Buffalo', 'The Chops', 'The Whale Tale', or 'Other'.
     * roast: Describe the exact real facial hair characteristics observed.
     * celebrityTwin: Percentage match breakdown (e.g. '80% Tom Selleck, 20% Ron Swanson').
     * verdictBadge: e.g. 'Grand Champion', 'Certified DVT Heavyweight'.
@@ -299,8 +299,7 @@ CRITICAL KINDNESS & SAFETY INVARIANT:
                             type = "STRING",
                             @enum = new[]
                             {
-                                "Chevron", "Handlebar", "Pencil", "Horseshoe", "Walrus",
-                                "Peach Fuzz", "Stubbled Maverick", "Painter's Brush",
+                                "The Larnie", "The French-Cut", "The Upper-Lip", "The Buffalo", "The Chops", "The Whale Tale",
                                 "Paper & Origami", "Cotton Wool Cloud", "Wig & Faux Hair", "Cardboard Sculpt",
                                 "Drawn-on Classic", "Yarn & Knitted", "Pipe Cleaner Wizard", "3D Craft Prop",
                                 "Household Avant-Garde", "Other"
@@ -479,7 +478,7 @@ CRITICAL KINDNESS & SAFETY INVARIANT:
 
     public static GeminiJudgeResult GenerateFallbackVerdict(string contestantName, bool hasCleanShave = false)
     {
-        var categories = new[] { "Chevron", "Handlebar", "Pencil", "Horseshoe", "Walrus", "Peach Fuzz", "Stubbled Maverick", "Painter's Brush" };
+        var categories = new[] { "The Larnie", "The French-Cut", "The Upper-Lip", "The Buffalo", "The Chops", "The Whale Tale" };
         var category = categories[Random.Shared.Next(categories.Length)];
         var score = Random.Shared.Next(50, 95);
         var density = Random.Shared.Next(5, 10);

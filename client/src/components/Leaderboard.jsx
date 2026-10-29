@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { FaTrophy, FaCrown, FaMagnifyingGlass, FaXmark, FaArrowRight } from 'react-icons/fa6';
 import { HiSparkles } from 'react-icons/hi2';
 import { GiMustache } from 'react-icons/gi';
@@ -7,14 +7,13 @@ import { apiUrl } from '../utils/api';
 
 const MUSTACHE_CATEGORIES = [
   'All',
-  'Chevron',
-  'Handlebar',
-  'Painter\'s Brush',
-  'Walrus',
-  'Horseshoe',
-  'Pencil',
-  'Stubbled Maverick',
-  'Peach Fuzz'
+  'The Larnie',
+  'The French-Cut',
+  'The Upper-Lip',
+  'The Buffalo',
+  'The Chops',
+  'The Whale Tale',
+  'Other'
 ];
 
 const CREATIVE_MUSTACHE_CATEGORIES = [
@@ -122,9 +121,16 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
   const [division, setDivision] = useState(() => (searchParams.get('division') === 'creative' || searchParams.get('division') === 'creativemustache' || searchParams.get('division') === 'crazyhair') ? 'creative' : 'mustache');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState(() => searchParams.get('category') || 'All');
   const [searchQuery, setSearchQuery] = useState('');
   const [lastUpdated, setLastUpdated] = useState(() => new Date());
+
+  useEffect(() => {
+    const catParam = searchParams.get('category');
+    if (catParam && catParam !== selectedCategory) {
+      setSelectedCategory(catParam);
+    }
+  }, [searchParams]);
 
   const isCreative = division === 'creative' || division === 'creativemustache' || division === 'crazyhair';
   const categories = isCreative ? CREATIVE_MUSTACHE_CATEGORIES : MUSTACHE_CATEGORIES;
@@ -416,6 +422,14 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
               {cat}
             </button>
           ))}
+          <Link
+            to="/style-guide"
+            className="chip-btn style-guide-chip"
+            title="Explore the Movember Moustache Style Guide"
+          >
+            <GiMustache className="chip-guide-icon" />
+            <span>📖 Style Guide</span>
+          </Link>
         </div>
 
         <div className="search-bar">

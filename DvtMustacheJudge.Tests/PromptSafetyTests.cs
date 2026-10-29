@@ -57,8 +57,7 @@ public class PromptSafetyTests
     {
         var allowedCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "Chevron", "Handlebar", "Pencil", "Horseshoe", "Walrus",
-            "Peach Fuzz", "Stubbled Maverick", "Painter's Brush", "Other"
+            "The Larnie", "The French-Cut", "The Upper-Lip", "The Buffalo", "The Chops", "The Whale Tale", "Other"
         };
 
         for (int i = 0; i < 30; i++)

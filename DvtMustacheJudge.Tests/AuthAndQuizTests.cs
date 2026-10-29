@@ -124,7 +124,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
                 ImageUrl = "/mock1.jpg",
                 ThumbnailUrl = "/thumb1.jpg",
                 OverallScore = 60,
-                StyleCategory = "Chevron",
+                StyleCategory = "The Upper-Lip",
                 CreatedAt = DateTime.UtcNow.AddMinutes(-10),
                 IsWoodenSpoon = false,
                 IsHidden = false
@@ -138,7 +138,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
                 ImageUrl = "/mock2.jpg",
                 ThumbnailUrl = "/thumb2.jpg",
                 OverallScore = 95,
-                StyleCategory = "Chevron",
+                StyleCategory = "The Upper-Lip",
                 CreatedAt = DateTime.UtcNow,
                 IsWoodenSpoon = false,
                 IsHidden = false

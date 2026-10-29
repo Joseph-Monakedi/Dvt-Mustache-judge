@@ -55,6 +55,15 @@ export default function Navbar({ totalEntries = 0 }) {
               )}
             </NavLink>
 
+            <NavLink 
+              to="/style-guide"
+              className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
+              aria-label="Style Guide"
+            >
+              <GiMustache className="nav-icon text-cyan" />
+              <span className="nav-label">Style Guide</span>
+            </NavLink>
+
             {isAuthenticated && (
               <>
                 <NavLink 
@@ -193,6 +202,17 @@ export default function Navbar({ totalEntries = 0 }) {
             )}
           </div>
           <span className="mobile-nav-text">Leaderboard</span>
+        </NavLink>
+
+        <NavLink
+          to="/style-guide"
+          className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}
+          aria-label="Style Guide"
+        >
+          <div className="mobile-nav-icon-wrap">
+            <GiMustache className="mobile-nav-icon text-cyan" />
+          </div>
+          <span className="mobile-nav-text">Style Guide</span>
         </NavLink>
 
         {isAuthenticated ? (

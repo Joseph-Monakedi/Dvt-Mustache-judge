@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { GiMustache } from 'react-icons/gi';
 import { 
   FaCamera, 
@@ -11,7 +12,8 @@ import {
   FaHandHoldingDollar,
   FaClock,
   FaUserCheck,
-  FaBolt
+  FaBolt,
+  FaHeart
 } from 'react-icons/fa6';
 import { MdOutlineWarningAmber } from 'react-icons/md';
 import { useAuth } from '../context/AuthContext';
@@ -344,6 +346,37 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
           </div>
         )}
       </div>
+
+      {/* Participant Style Guide Quick Callout */}
+      {!isCreative && (
+        <div className="mb-6 max-w-4xl mx-auto">
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-slate-900/90 via-slate-800/80 to-slate-900/90 border border-cyan-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center flex-shrink-0">
+                <GiMustache className="text-cyan-400 text-xl" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white flex items-center gap-2">
+                  <span>Brovember Movember Moustache Style Guide</span>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    6 Mzansi Styles
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-300 mt-0.5">
+                  The Larnie • The French-Cut • The Upper-Lip • The Buffalo • The Chops • The Whale Tale
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/style-guide"
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold transition-all whitespace-nowrap self-start sm:self-auto"
+            >
+              <span>Explore Style Guide</span>
+              <FaArrowRight className="text-[10px]" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       <div className="booth-header">
         <h1 className="booth-title">

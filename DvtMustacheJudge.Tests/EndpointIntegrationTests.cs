@@ -84,7 +84,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                     {
                         Id = Guid.NewGuid(),
                         ContestantName = $"Test Contestant {i}",
-                        StyleCategory = "Chevron",
+                        StyleCategory = "The Upper-Lip",
                         MustacheTitle = $"The Champion {i}",
                         RoastCommentary = "Spectacular grooming.",
                         CelebrityTwin = "Tom Selleck",
@@ -183,7 +183,7 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
     public async Task GetLeaderboard_CategoryFilter_ReturnsFilteredResults()
     {
         // Act
-        var response = await _client.GetAsync("/api/mustache/leaderboard?category=Chevron");
+        var response = await _client.GetAsync("/api/mustache/leaderboard?category=The%20Upper-Lip");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -193,7 +193,7 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
 
         Assert.NotNull(result);
         Assert.NotEmpty(result.Entries);
-        Assert.All(result.Entries, e => Assert.Equal("Chevron", e.StyleCategory, ignoreCase: true));
+        Assert.All(result.Entries, e => Assert.Equal("The Upper-Lip", e.StyleCategory, ignoreCase: true));
     }
 
     [Fact]

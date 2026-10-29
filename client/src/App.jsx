@@ -13,6 +13,7 @@ import MustacheQuizArena from './components/MustacheQuizArena';
 import QuizLiveLeaderboard from './components/quiz/QuizLiveLeaderboard';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import AuthModal from './components/AuthModal';
+import StyleGuide from './components/StyleGuide';
 import { useAuth } from './context/AuthContext';
 import { FaTv, FaMobileScreen } from 'react-icons/fa6';
 import { apiUrl } from './utils/api';
@@ -282,6 +283,11 @@ export default function App() {
           <Route 
             path="/reset-password" 
             element={<ResetPasswordPage />} 
+          />
+
+          <Route 
+            path="/style-guide" 
+            element={<StyleGuide />} 
           />
 
           <Route path="*" element={<Navigate to="/leaderboard" replace />} />
