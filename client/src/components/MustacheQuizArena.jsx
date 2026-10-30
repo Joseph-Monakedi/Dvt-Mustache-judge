@@ -297,9 +297,10 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
   const handleAdminAction = async (endpoint, body = {}) => {
     try {
       const headers = {
-        'Content-Type': 'application/json',
-        'X-Admin-Password': sessionStorage.getItem('dvt_admin_token') || 'dvt-movember-admin-2026'
+        'Content-Type': 'application/json'
       };
+      const adminToken = sessionStorage.getItem('dvt_admin_token');
+      if (adminToken) headers['X-Admin-Password'] = adminToken;
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
       const payload = endpoint === 'reveal-round' && !body.questionId

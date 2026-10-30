@@ -17,11 +17,16 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
 {
     private readonly TestWebApplicationFactory _factory;
     private readonly HttpClient _client;
+    private readonly string _adminPassword;
 
     public AuthAndQuizTests(TestWebApplicationFactory factory)
     {
         _factory = factory;
         _client = factory.CreateClient();
+        var config = factory.Services.GetRequiredService<IConfiguration>();
+        _adminPassword = config["Admin:Password"]
+                         ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+                         ?? string.Empty;
     }
 
     [Fact]
@@ -166,7 +171,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
         {
             Content = JsonContent.Create(new SetDonationRequest(true, 100))
         };
-        adminDonationReq.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        adminDonationReq.Headers.Add("X-Admin-Password", _adminPassword);
         var donationRes = await _client.SendAsync(adminDonationReq);
         Assert.Equal(HttpStatusCode.OK, donationRes.StatusCode);
 
@@ -210,7 +215,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
 
         // 3. Admin approves R50 quiz pass
         var adminQuizToggle = new HttpRequestMessage(HttpMethod.Post, $"/api/mustache/admin/contestant/{userId}/toggle-quiz-paid");
-        adminQuizToggle.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        adminQuizToggle.Headers.Add("X-Admin-Password", _adminPassword);
         var adminRes = await _client.SendAsync(adminQuizToggle);
         Assert.Equal(HttpStatusCode.OK, adminRes.StatusCode);
 
@@ -227,7 +232,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
 
         // 4.5 Admin starts Question 1 (index 0)
         var startReq = new HttpRequestMessage(HttpMethod.Post, "/api/quiz/admin/next-question");
-        startReq.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        startReq.Headers.Add("X-Admin-Password", _adminPassword);
         startReq.Content = JsonContent.Create(new AdminNextQuestionRequest(0));
         var startRes = await _client.SendAsync(startReq);
         Assert.Equal(HttpStatusCode.OK, startRes.StatusCode);
@@ -324,7 +329,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
 
         // 3. Admin approves leaderboard fee
         var adminToggle = new HttpRequestMessage(HttpMethod.Post, $"/api/mustache/admin/contestant/{userId}/toggle-leaderboard-paid");
-        adminToggle.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        adminToggle.Headers.Add("X-Admin-Password", _adminPassword);
         await _client.SendAsync(adminToggle);
 
         // 4. Submit mustache photo for judging
@@ -377,13 +382,13 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
     {
         // 1. Reset to lobby
         var lobbyReq = new HttpRequestMessage(HttpMethod.Post, "/api/quiz/admin/start-lobby");
-        lobbyReq.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        lobbyReq.Headers.Add("X-Admin-Password", _adminPassword);
         var lobbyRes = await _client.SendAsync(lobbyReq);
         Assert.Equal(HttpStatusCode.OK, lobbyRes.StatusCode);
 
         // 2. Launch Question 1 (index 0)
         var q1Req = new HttpRequestMessage(HttpMethod.Post, "/api/quiz/admin/next-question");
-        q1Req.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        q1Req.Headers.Add("X-Admin-Password", _adminPassword);
         var q1Res = await _client.SendAsync(q1Req);
         Assert.Equal(HttpStatusCode.OK, q1Res.StatusCode);
 
@@ -395,7 +400,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
 
         // 3. Launch Question 2 (index 1) immediately BEFORE question 1's timer runs out
         var q2Req = new HttpRequestMessage(HttpMethod.Post, "/api/quiz/admin/next-question");
-        q2Req.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        q2Req.Headers.Add("X-Admin-Password", _adminPassword);
         var q2Res = await _client.SendAsync(q2Req);
         Assert.Equal(HttpStatusCode.OK, q2Res.StatusCode);
 
@@ -407,7 +412,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
 
         // 4. Simulate a stale client sending reveal-round for Question 1 (index 0 / q1Id)
         var staleRevealReq = new HttpRequestMessage(HttpMethod.Post, "/api/quiz/admin/reveal-round");
-        staleRevealReq.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        staleRevealReq.Headers.Add("X-Admin-Password", _adminPassword);
         staleRevealReq.Content = JsonContent.Create(new AdminRevealRoundRequest(QuestionIndex: 0, QuestionId: q1Id));
         var staleRevealRes = await _client.SendAsync(staleRevealReq);
         Assert.Equal(HttpStatusCode.OK, staleRevealRes.StatusCode);
@@ -570,7 +575,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
 
         // 2. Admin deletes user
         var deleteReq = new HttpRequestMessage(HttpMethod.Delete, $"/api/mustache/admin/contestant/{userId}");
-        deleteReq.Headers.Add("X-Admin-Password", "dvt-movember-admin-2026");
+        deleteReq.Headers.Add("X-Admin-Password", _adminPassword);
         var deleteRes = await _client.SendAsync(deleteReq);
         Assert.Equal(HttpStatusCode.OK, deleteRes.StatusCode);
 

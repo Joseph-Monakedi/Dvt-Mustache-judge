@@ -913,8 +913,10 @@ public class QuizController : ControllerBase
 
     private bool IsAdmin()
     {
-        var adminPassword = _config["Admin:Password"] ?? "dvt-movember-admin-2026";
-        if (Request.Headers.TryGetValue("X-Admin-Password", out var pwd) && pwd == adminPassword)
+        var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD") ?? _config["Admin:Password"];
+        if (!string.IsNullOrWhiteSpace(adminPassword) &&
+            Request.Headers.TryGetValue("X-Admin-Password", out var pwd) &&
+            pwd == adminPassword)
         {
             return true;
         }

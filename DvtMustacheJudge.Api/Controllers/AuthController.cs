@@ -101,9 +101,9 @@ public class AuthController : ControllerBase
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
         if (user == null)
         {
-            // Check if admin password fallback matches
-            var adminPassword = _config["Admin:Password"] ?? "dvt-movember-admin-2026";
-            if (normalizedEmail == "admin@dvt.co.za" && request.Password == adminPassword)
+            // Check if configured admin password matches
+            var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD") ?? _config["Admin:Password"];
+            if (!string.IsNullOrWhiteSpace(adminPassword) && normalizedEmail == "admin@dvt.co.za" && request.Password == adminPassword)
             {
                 var (hash, salt) = PasswordHasher.HashPassword(adminPassword);
                 user = new User
@@ -133,8 +133,8 @@ public class AuthController : ControllerBase
         if (!valid)
         {
             // Also check admin master password for admin accounts
-            var adminPassword = _config["Admin:Password"] ?? "dvt-movember-admin-2026";
-            if (user.Role == "Admin" && request.Password == adminPassword)
+            var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD") ?? _config["Admin:Password"];
+            if (!string.IsNullOrWhiteSpace(adminPassword) && user.Role == "Admin" && request.Password == adminPassword)
             {
                 valid = true;
             }
@@ -378,8 +378,8 @@ public class AuthController : ControllerBase
         if (!valid)
         {
             // Also check admin master password for admin accounts
-            var adminPassword = _config["Admin:Password"] ?? "dvt-movember-admin-2026";
-            if (user.Role == "Admin" && request.CurrentPassword == adminPassword)
+            var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD") ?? _config["Admin:Password"];
+            if (!string.IsNullOrWhiteSpace(adminPassword) && user.Role == "Admin" && request.CurrentPassword == adminPassword)
             {
                 valid = true;
             }

@@ -182,22 +182,25 @@ public static class DbInitializer
             var existingAdmin = await context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == adminEmail);
             if (existingAdmin == null)
             {
-                var adminPassword = config?["Admin:Password"] ?? "dvt-movember-admin-2026";
-                var (hash, salt) = PasswordHasher.HashPassword(adminPassword);
-                var adminUser = new User
+                var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD") ?? config?["Admin:Password"];
+                if (!string.IsNullOrWhiteSpace(adminPassword))
                 {
-                    Id = Guid.NewGuid(),
-                    Email = adminEmail,
-                    FullName = "Movember Admin",
-                    PasswordHash = hash,
-                    Salt = salt,
-                    Role = "Admin",
-                    LeaderboardPaid = true,
-                    QuizPaid = true,
-                    CreatedAt = DateTime.UtcNow
-                };
-                context.Users.Add(adminUser);
-                await context.SaveChangesAsync();
+                    var (hash, salt) = PasswordHasher.HashPassword(adminPassword);
+                    var adminUser = new User
+                    {
+                        Id = Guid.NewGuid(),
+                        Email = adminEmail,
+                        FullName = "Movember Admin",
+                        PasswordHash = hash,
+                        Salt = salt,
+                        Role = "Admin",
+                        LeaderboardPaid = true,
+                        QuizPaid = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    context.Users.Add(adminUser);
+                    await context.SaveChangesAsync();
+                }
             }
         }
         catch (Exception ex)

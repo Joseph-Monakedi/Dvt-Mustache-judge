@@ -53,10 +53,12 @@ export default function QuizManager({ adminPassword, onQuizChanged }) {
   const [newQuizPin, setNewQuizPin] = useState('');
   const [creatingQuiz, setCreatingQuiz] = useState(false);
 
-  const getHeaders = () => ({
-    'Content-Type': 'application/json',
-    'X-Admin-Password': adminPassword || sessionStorage.getItem('dvt_admin_token') || 'dvt-movember-admin-2026'
-  });
+  const getHeaders = () => {
+    const headers = { 'Content-Type': 'application/json' };
+    const token = adminPassword || sessionStorage.getItem('dvt_admin_token');
+    if (token) headers['X-Admin-Password'] = token;
+    return headers;
+  };
 
   // Fetch all quizzes
   const fetchQuizzes = async () => {
