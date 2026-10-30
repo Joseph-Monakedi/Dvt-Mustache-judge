@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import WebcamBooth from './components/WebcamBooth';
@@ -15,7 +15,7 @@ import ResetPasswordPage from './components/ResetPasswordPage';
 import AuthModal from './components/AuthModal';
 import StyleGuide from './components/StyleGuide';
 import { useAuth } from './context/AuthContext';
-import { FaTv, FaMobileScreen } from 'react-icons/fa6';
+import { FaTv, FaMobileScreen, FaXmark } from 'react-icons/fa6';
 import { apiUrl } from './utils/api';
 import { useIsMobile } from './utils/useIsMobile';
 import { confirmPayFastReturn } from './utils/payfast';
@@ -33,7 +33,8 @@ export default function App() {
   const [activeVerdict, setActiveVerdict] = useState(null);
   const [selectedLeaderboardEntry, setSelectedLeaderboardEntry] = useState(null);
   const [totalEntries, setTotalEntries] = useState(0);
-  const [toastMessage, setToastMessage] = useState(null);
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
 
   // Fetch initial entry count
   useEffect(() => {
@@ -47,9 +48,12 @@ export default function App() {
       .catch(err => console.warn('Count fetch error:', err));
   }, []);
 
-  const showToast = msg => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 5000);
+  const showToast = (msg, type = 'info') => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    setToast({ message: msg, type });
+    toastTimerRef.current = setTimeout(() => setToast(null), 5500);
   };
 
   // Real-time payment approval notification listener
@@ -86,9 +90,11 @@ export default function App() {
       confirmPayFastReturn({ reference: ref, itemType: item, token })
         .then(async () => {
           await refreshUser();
-          showToast(`🎉 Payment Confirmed! Your ${item} Pass has been activated.`);
+          showToast(`🎉 Payment Confirmed! Your ${item} Pass has been activated.`, 'success');
           try {
-            confetti({ particleCount: 150, spread: 90, origin: { y: 0.3 } });
+            if (!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
+              confetti({ particleCount: 150, spread: 90, origin: { y: 0.3 } });
+            }
           } catch {}
         })
         .catch(async () => {
@@ -96,7 +102,7 @@ export default function App() {
         });
     } else if (paymentStatus === 'cancelled') {
       window.history.replaceState({}, document.title, window.location.pathname);
-      showToast('PayFast checkout was cancelled. You can retry at any time.');
+      showToast('Your account is active! PayFast checkout was cancelled — you can unlock passes anytime from your Dashboard.', 'warning');
     }
   }, [token, location.search]);
 
@@ -181,9 +187,21 @@ export default function App() {
   return (
     <div className="app-layout">
       {/* Toast Notification */}
-      {toastMessage && (
-        <div className="toast-banner fade-in">
-          <span>{toastMessage}</span>
+      {toast && (
+        <div
+          className={`toast-banner toast-${toast.type || 'info'} fade-in`}
+          role="status"
+          aria-live="polite"
+        >
+          <span>{toast.message}</span>
+          <button
+            type="button"
+            className="toast-close-btn"
+            onClick={() => setToast(null)}
+            aria-label="Dismiss notification"
+          >
+            <FaXmark />
+          </button>
         </div>
       )}
 

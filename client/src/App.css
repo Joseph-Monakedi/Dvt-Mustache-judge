@@ -27,16 +27,48 @@
   position: fixed;
   top: 80px;
   right: 24px;
+  max-width: min(460px, calc(100vw - 32px));
+  display: flex;
+  align-items: center;
+  gap: 12px;
   background: rgba(0, 127, 186, 0.95);
   backdrop-filter: blur(10px);
   color: #ffffff;
-  padding: 12px 24px;
+  padding: 12px 18px 12px 22px;
   border-radius: var(--radius-md);
   font-weight: 600;
   font-size: 14px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
   z-index: 1000;
   border: 1px solid var(--accent-cyan);
+}
+
+.toast-banner.toast-success {
+  background: rgba(5, 150, 105, 0.95);
+  border-color: #34d399;
+}
+
+.toast-banner.toast-warning {
+  background: rgba(180, 83, 9, 0.95);
+  border-color: #fbbf24;
+}
+
+.toast-close-btn {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.toast-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* ---------------- Navbar ---------------- */

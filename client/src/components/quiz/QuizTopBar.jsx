@@ -13,6 +13,7 @@ export default function QuizTopBar({
 }) {
   const streak = joinedPlayer?.streak || 0;
   const [isBusy, setIsBusy] = useState(false);
+  const [confirmEndGame, setConfirmEndGame] = useState(false);
 
   const handleAction = async (endpoint, payload) => {
     setIsBusy(true);
@@ -24,14 +25,14 @@ export default function QuizTopBar({
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-[#0d1522] border border-white/10 rounded-2xl shadow-xl">
+    <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-4 p-3 sm:p-4 bg-[#0d1522] border border-white/10 rounded-2xl shadow-xl">
       {/* Player info */}
-      <div className="flex items-center gap-3.5">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#007FBA] to-[#00b4d8] flex items-center justify-center text-white text-2xl shadow-md shadow-cyan-500/20 border border-cyan-300/30 shrink-0">
+      <div className="flex items-center gap-2.5 sm:gap-3.5">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-tr from-[#007FBA] to-[#00b4d8] flex items-center justify-center text-white text-xl sm:text-2xl shadow-md shadow-cyan-500/20 border border-cyan-300/30 shrink-0">
           <GiMustache />
         </div>
         <div>
-          <span className="block text-sm font-bold text-white">
+          <span className="block text-xs sm:text-sm font-bold text-white">
             {joinedPlayer?.contestantName || user?.fullName || 'Contestant'}
           </span>
           <span className="block text-xs font-mono font-semibold text-cyan-400">
@@ -42,14 +43,14 @@ export default function QuizTopBar({
 
       {/* Center: Streak Indicator */}
       {streak > 1 && (
-        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-black shadow-lg shadow-amber-500/10 animate-bounce">
+        <div className="flex items-center gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-black shadow-lg shadow-amber-500/10 animate-bounce">
           <FaFire className="text-amber-400 text-sm" />
           <span>{streak} IN A ROW! 🔥</span>
         </div>
       )}
 
       {/* Right Action Bar: Live Standings + Host Toolbar */}
-      <div className="flex items-center gap-2.5 flex-wrap justify-center sm:justify-end">
+      <div className="flex items-center gap-2 flex-wrap justify-end">
         {onOpenLeaderboard && (
           <button
             type="button"
@@ -69,60 +70,78 @@ export default function QuizTopBar({
         {/* Admin Host Floating Toolbar */}
         {isAdmin && (
           <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-            Host Controls
-          </span>
+            <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              Host Controls
+            </span>
 
-          {gameState?.status === 'Lobby' && (
-            <Button
-              variant="primary"
-              size="sm"
-              icon={FaPlay}
-              disabled={isBusy}
-              onClick={() => handleAction('next-question', { questionIndex: 0 })}
-            >
-              {isBusy ? 'Starting 3-2-1...' : 'Start Question 1'}
-            </Button>
-          )}
+            {gameState?.status === 'Lobby' && (
+              <Button
+                variant="primary"
+                size="sm"
+                icon={FaPlay}
+                disabled={isBusy}
+                onClick={() => handleAction('next-question', { questionIndex: 0 })}
+              >
+                {isBusy ? 'Starting 3-2-1...' : 'Start Question 1'}
+              </Button>
+            )}
 
-          {gameState?.status === 'Question' && (
-            <Button
-              variant="accent"
-              size="sm"
-              disabled={isBusy}
-              onClick={() => handleAction('reveal-round', {
-                questionIndex: gameState?.currentQuestionIndex,
-                questionId: gameState?.currentQuestion?.id
-              })}
-            >
-              Reveal Answer
-            </Button>
-          )}
+            {gameState?.status === 'Question' && (
+              <Button
+                variant="accent"
+                size="sm"
+                disabled={isBusy}
+                onClick={() => handleAction('reveal-round', {
+                  questionIndex: gameState?.currentQuestionIndex,
+                  questionId: gameState?.currentQuestion?.id
+                })}
+              >
+                Reveal Answer
+              </Button>
+            )}
 
-          {gameState?.status === 'AnswerReveal' && (
-            <Button
-              variant="primary"
-              size="sm"
-              icon={FaArrowRight}
-              iconPosition="right"
-              disabled={isBusy}
-              onClick={() => handleAction('next-question')}
-            >
-              {isBusy ? 'Starting 3-2-1...' : 'Next Question'}
-            </Button>
-          )}
+            {gameState?.status === 'AnswerReveal' && (
+              <Button
+                variant="primary"
+                size="sm"
+                icon={FaArrowRight}
+                iconPosition="right"
+                disabled={isBusy}
+                onClick={() => handleAction('next-question')}
+              >
+                {isBusy ? 'Starting 3-2-1...' : 'Next Question'}
+              </Button>
+            )}
 
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={FaTrophy}
-            onClick={() => onAdminAction('end')}
-            title="End Game and show final podium"
-          >
-            End Game
-          </Button>
-        </div>
-      )}
+            {confirmEndGame ? (
+              <Button
+                variant="danger"
+                size="sm"
+                icon={FaTrophy}
+                onClick={() => {
+                  setConfirmEndGame(false);
+                  onAdminAction('end');
+                }}
+                title="Confirm ending the tournament and displaying the final podium"
+              >
+                Confirm End?
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={FaTrophy}
+                onClick={() => {
+                  setConfirmEndGame(true);
+                  setTimeout(() => setConfirmEndGame(false), 3500);
+                }}
+                title="End Game and show final podium"
+              >
+                End Game
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

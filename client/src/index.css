@@ -78,9 +78,22 @@ button {
   transition: all 0.2s ease-in-out;
 }
 
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+
 input, select, textarea {
   font-family: var(--font-family);
   outline: none;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 1px;
 }
 
 /* Common Animations */
@@ -125,4 +138,13 @@ input, select, textarea {
 
 .fade-in {
   animation: fadeIn 0.35s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

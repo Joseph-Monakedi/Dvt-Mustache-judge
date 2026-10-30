@@ -320,6 +320,8 @@ export default function AdminPortal({ onBackToApp }) {
         return {
           ...prev,
           championshipCount: mustacheCount,
+          mustacheCount: mustacheCount,
+          creativeMustacheCount: creativeCount,
           mustacheEntriesCount: mustacheCount,
           creativeMustacheEntriesCount: creativeCount,
           entries: updatedEntries
@@ -564,6 +566,8 @@ export default function AdminPortal({ onBackToApp }) {
         visibleCount: 0,
         hiddenCount: 0,
         championshipCount: 0,
+        mustacheCount: 0,
+        creativeMustacheCount: 0,
         mustacheEntriesCount: 0,
         creativeMustacheEntriesCount: 0,
         averageScore: 0,
@@ -756,7 +760,7 @@ export default function AdminPortal({ onBackToApp }) {
           <span>Contestants, Donations & Prize Eligibility</span>
           {contestantData && (
             <span className="admin-tab-count-badge">
-              {contestantData.prizeEligibleCount ?? contestantData.leaderboardPaidCount}/{contestantData.totalContestants}
+              {contestantData.eligibleContestantsCount ?? contestantData.prizeEligibleCount ?? contestantData.leaderboardPaidCount ?? 0}/{contestantData.totalContestants}
             </span>
           )}
         </button>
@@ -793,7 +797,7 @@ export default function AdminPortal({ onBackToApp }) {
                 <FaTrophy className="inline-icon text-gold" /> R1,000 Voucher Eligible (Donated)
               </div>
               <div className="stat-val text-gold">
-                {contestantData?.prizeEligibleCount ?? contestantData?.leaderboardPaidCount ?? 0}
+                {contestantData?.eligibleContestantsCount ?? contestantData?.prizeEligibleCount ?? contestantData?.leaderboardPaidCount ?? 0}
               </div>
             </div>
             <div className="admin-stat-card">
@@ -837,14 +841,14 @@ export default function AdminPortal({ onBackToApp }) {
                 className={`chip-btn ${contestantFilter === 'eligible' ? 'active' : ''}`}
                 onClick={() => setContestantFilter('eligible')}
               >
-                <FaTrophy className="inline-icon text-gold" /> Prize Eligible ({contestantData?.prizeEligibleCount ?? contestantData?.leaderboardPaidCount ?? 0})
+                <FaTrophy className="inline-icon text-gold" /> Prize Eligible ({contestantData?.eligibleContestantsCount ?? contestantData?.prizeEligibleCount ?? contestantData?.leaderboardPaidCount ?? 0})
               </button>
               <button
                 type="button"
                 className={`chip-btn ${contestantFilter === 'community' ? 'active' : ''}`}
                 onClick={() => setContestantFilter('community')}
               >
-                <FaClock className="inline-icon text-orange" /> Community / No Donation ({contestantData ? Math.max(0, contestantData.totalContestants - (contestantData.prizeEligibleCount ?? contestantData.leaderboardPaidCount ?? 0)) : 0})
+                <FaClock className="inline-icon text-orange" /> Community / No Donation ({contestantData ? Math.max(0, contestantData.totalContestants - (contestantData.eligibleContestantsCount ?? contestantData.prizeEligibleCount ?? contestantData.leaderboardPaidCount ?? 0)) : 0})
               </button>
               <button
                 type="button"
@@ -932,9 +936,9 @@ export default function AdminPortal({ onBackToApp }) {
                           </td>
                           <td>
                             <div className="entry-count-meta">
-                              <span className="entry-count-num">{c.entryCount} submissions</span>
+                              <span className="entry-count-num">{c.totalSubmissions ?? c.entryCount ?? 0} submissions</span>
                               {c.highestScore > 0 ? (
-                                <span className="best-score-badge">Top: {c.highestScore.toFixed(1)}/100</span>
+                                <span className="best-score-badge">Top: {Number(c.highestScore).toFixed(1)}/100</span>
                               ) : (
                                 <span className="no-score-text">No uploads yet</span>
                               )}
@@ -963,7 +967,7 @@ export default function AdminPortal({ onBackToApp }) {
                           </td>
                           <td>
                             <span className="joined-date-text">
-                              {new Date(c.createdAt).toLocaleDateString()}
+                              {(c.joinedAt || c.createdAt) ? new Date(c.joinedAt || c.createdAt).toLocaleDateString() : '—'}
                             </span>
                           </td>
                           <td style={{ textAlign: 'center' }}>

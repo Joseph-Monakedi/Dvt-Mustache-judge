@@ -191,12 +191,12 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
                   <div className="subscore-item">
                     <div className="subscore-labels">
                       <span>Craftsmanship & Texture</span>
-                      <span className="subscore-val text-purple-400">{verdict.densityScore || 0}/10</span>
+                      <span className="subscore-val text-purple-400">{verdict.densityScore || verdict.dedicationScore || 0}/10</span>
                     </div>
                     <div className="subscore-bar">
                       <div 
                         className="subscore-fill" 
-                        style={{ width: `${(verdict.densityScore || 0) * 10}%`, background: 'linear-gradient(90deg, #a855f7, #9333ea)' }}
+                        style={{ width: `${(verdict.densityScore || verdict.dedicationScore || 0) * 10}%`, background: 'linear-gradient(90deg, #a855f7, #9333ea)' }}
                       />
                     </div>
                   </div>
@@ -204,12 +204,12 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
                   <div className="subscore-item">
                     <div className="subscore-labels">
                       <span>Design & Innovation</span>
-                      <span className="subscore-val text-purple-400">{verdict.symmetryScore || 0}/10</span>
+                      <span className="subscore-val text-purple-400">{verdict.symmetryScore || verdict.innovationScore || 0}/10</span>
                     </div>
                     <div className="subscore-bar">
                       <div 
                         className="subscore-fill" 
-                        style={{ width: `${(verdict.symmetryScore || 0) * 10}%`, background: 'linear-gradient(90deg, #ec4899, #db2777)' }}
+                        style={{ width: `${(verdict.symmetryScore || verdict.innovationScore || 0) * 10}%`, background: 'linear-gradient(90deg, #ec4899, #db2777)' }}
                       />
                     </div>
                   </div>
@@ -217,12 +217,12 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
                   <div className="subscore-item">
                     <div className="subscore-labels">
                       <span>Audacity & Humor</span>
-                      <span className="subscore-val text-purple-400">{verdict.swaggerScore || 0}/10</span>
+                      <span className="subscore-val text-purple-400">{verdict.swaggerScore || verdict.funninessScore || 0}/10</span>
                     </div>
                     <div className="subscore-bar">
                       <div 
                         className="subscore-fill" 
-                        style={{ width: `${(verdict.swaggerScore || 0) * 10}%`, background: 'linear-gradient(90deg, #f43f5e, #e11d48)' }}
+                        style={{ width: `${(verdict.swaggerScore || verdict.funninessScore || 0) * 10}%`, background: 'linear-gradient(90deg, #f43f5e, #e11d48)' }}
                       />
                     </div>
                   </div>

@@ -87,7 +87,7 @@ export default function QuizLobby({
               }}
               className="shadow-xl shadow-cyan-500/30"
             >
-              {isLaunching ? 'Starting 3-2-1 Countdown...' : `Launch Game Now (${gameState?.totalQuestions || 8} Questions)`}
+              {isLaunching ? 'Starting 3-2-1 Countdown...' : `Launch Game Now (${gameState?.totalQuestions || 12} Questions)`}
             </Button>
           </div>
         )}

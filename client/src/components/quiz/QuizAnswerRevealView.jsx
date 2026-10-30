@@ -17,10 +17,10 @@ export default function QuizAnswerRevealView({
   const stats = gameState?.answerStats || {};
 
   const barData = [
-    { label: '▲ Red', count: stats.countA ?? 0, isCorrect: question.correctOption === 0, color: 'bg-rose-500' },
-    { label: '◆ Blue', count: stats.countB ?? 0, isCorrect: question.correctOption === 1, color: 'bg-blue-500' },
-    { label: '● Yellow', count: stats.countC ?? 0, isCorrect: question.correctOption === 2, color: 'bg-amber-400' },
-    { label: '■ Green', count: stats.countD ?? 0, isCorrect: question.correctOption === 3, color: 'bg-emerald-500' }
+    { label: '▲ Red', count: stats.countA ?? 0, isCorrect: question.correctOption === 0, color: 'bg-rose-500', textColor: 'text-white' },
+    { label: '◆ Blue', count: stats.countB ?? 0, isCorrect: question.correctOption === 1, color: 'bg-blue-500', textColor: 'text-white' },
+    { label: '● Yellow', count: stats.countC ?? 0, isCorrect: question.correctOption === 2, color: 'bg-amber-400', textColor: 'text-slate-950' },
+    { label: '■ Green', count: stats.countD ?? 0, isCorrect: question.correctOption === 3, color: 'bg-emerald-500', textColor: 'text-white' }
   ];
 
   const maxCount = Math.max(1, ...barData.map(b => b.count));
@@ -75,7 +75,7 @@ export default function QuizAnswerRevealView({
                   }`}
                   style={{ height: `${heightPercent}%` }}
                 >
-                  <span className="text-slate-950 font-black">{bar.count}</span>
+                  <span className={`${bar.textColor} font-black drop-shadow-sm`}>{bar.count}</span>
                   {bar.isCorrect && (
                     <span className="absolute -top-3 w-5 h-5 rounded-full bg-white text-emerald-600 flex items-center justify-center text-[10px] font-black shadow-md">
                       ✓

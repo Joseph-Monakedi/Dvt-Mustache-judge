@@ -51,12 +51,12 @@ export default function QuizQuestionView({
   ];
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto py-4 animate-in fade-in">
+    <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto py-2 sm:py-4 animate-in fade-in">
       {/* Question Header & Timer Card */}
-      <div className="p-6 sm:p-8 bg-[#0d1522] border border-white/10 rounded-2xl shadow-xl space-y-4">
+      <div className="p-4 sm:p-8 bg-[#0d1522] border border-white/10 rounded-2xl shadow-xl space-y-3 sm:space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-[#131f33] text-cyan-300 border border-cyan-500/30">
-            Question {(gameState?.currentQuestionIndex ?? 0) + 1} of {gameState?.totalQuestions || 8}
+            Question {(gameState?.currentQuestionIndex ?? 0) + 1} of {gameState?.totalQuestions || 12}
           </span>
 
           {/* Countdown timer badge */}
@@ -71,17 +71,17 @@ export default function QuizQuestionView({
         </div>
 
         {/* Question Prompt */}
-        <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white leading-snug">
+        <h2 className="text-lg sm:text-2xl lg:text-3xl font-extrabold text-white leading-snug">
           {question.questionText}
         </h2>
 
         {/* Clue Image if present */}
         {question.imageUrl && (
-          <div className="rounded-xl overflow-hidden max-h-64 bg-slate-950 flex items-center justify-center border border-white/10">
+          <div className="rounded-xl overflow-hidden max-h-40 sm:max-h-64 bg-slate-950 flex items-center justify-center border border-white/10">
             <img 
               src={question.imageUrl} 
               alt="Question Clue" 
-              className="max-h-64 object-contain"
+              className="max-h-40 sm:max-h-64 object-contain"
             />
           </div>
         )}

@@ -5,7 +5,7 @@ import { FaBolt, FaClock } from 'react-icons/fa6';
 export default function QuizCountdownOverlay({
   countdown,
   currentQuestionIndex = 0,
-  totalQuestions = 8,
+  totalQuestions = 12,
   quizTitle = 'Mustache Quiz Arena'
 }) {
   if (!countdown) return null;
