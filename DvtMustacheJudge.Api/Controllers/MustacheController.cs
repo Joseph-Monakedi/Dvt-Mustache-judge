@@ -1230,7 +1230,9 @@ public class MustacheController : ControllerBase
             return Unauthorized(new { error = "Admin authorization required." });
         }
 
-        var entry = await _dbContext.MustacheEntries.FindAsync(id);
+        var entry = await _dbContext.MustacheEntries
+            .Include(e => e.User)
+            .FirstOrDefaultAsync(e => e.Id == id);
         if (entry == null)
         {
             return NotFound(new { error = "Entry not found." });
@@ -1715,7 +1717,8 @@ public class MustacheController : ControllerBase
 
     /// <summary>
     /// Helper to identify whether an entry belongs to the Creative Mustache Challenge division.
-    /// Includes faux mustaches, craft props, or entries tagged with Creative/Hair division.
+    /// Uses the entry's explicit CompetitionType first (so admin track toggles are respected),
+    /// falling back to the user's PreferredCompetition only when CompetitionType is unset.
     /// </summary>
     private static bool IsCreativeEntry(MustacheEntry e)
     {
@@ -1729,6 +1732,11 @@ public class MustacheController : ControllerBase
                 ct.Contains("hair", StringComparison.OrdinalIgnoreCase))
             {
                 return true;
+            }
+
+            if (ct.Equals("Mustache", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
             }
         }
         if (e.User != null && !string.IsNullOrWhiteSpace(e.User.PreferredCompetition))
