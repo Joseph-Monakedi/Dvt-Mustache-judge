@@ -46,14 +46,15 @@ export default function Navbar({ totalEntries = 0 }) {
             </div>
             <div className="brand-text">
               <div className="brand-title">
-                <span className="brand-dvt">DVT</span> Mustache Judge
+                <span className="brand-dvt">DVT</span>
+                <span className="brand-sep" aria-hidden="true">|</span>
+                <span className="brand-app-name">Mustache Judge</span>
               </div>
-              <div className="brand-tagline">Movember 2026 Mustache Contest</div>
             </div>
           </Link>
 
-          {/* Desktop Navigation Links */}
-          <nav className="navbar-nav desktop-nav">
+          {/* Desktop Primary Navigation Links (DVT 2026 Specification) */}
+          <nav className="navbar-nav desktop-nav" aria-label="Main Navigation">
             <NavLink 
               to="/leaderboard"
               className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
@@ -71,7 +72,7 @@ export default function Navbar({ totalEntries = 0 }) {
               className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
               aria-label="Style Guide"
             >
-              <GiMustache className="nav-icon text-cyan" />
+              <GiMustache className="nav-icon" />
               <span className="nav-label">Style Guide</span>
             </NavLink>
 
@@ -91,22 +92,10 @@ export default function Navbar({ totalEntries = 0 }) {
                   className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
                   aria-label="Dashboard"
                 >
-                  <FaAward className="nav-icon text-gold" />
+                  <FaAward className="nav-icon" />
                   <span className="nav-label">Dashboard</span>
                 </NavLink>
               </>
-            )}
-
-            {/* Kiosk Mode is disabled/hidden on mobile devices */}
-            {!isMobile && (
-              <NavLink 
-                to="/kiosk"
-                className={({ isActive }) => `nav-btn kiosk-nav-btn ${isActive ? 'active' : ''}`}
-                aria-label="TV Kiosk"
-              >
-                <FaTv className="nav-icon" />
-                <span className="nav-label">TV Kiosk</span>
-              </NavLink>
             )}
 
             {isAuthenticated && user?.role === 'Admin' && (
@@ -122,24 +111,34 @@ export default function Navbar({ totalEntries = 0 }) {
             )}
           </nav>
 
-          {/* Desktop Right User Profile / Sign In Pill */}
+          {/* Desktop Right Utility Cluster (Uniform 36px Height) */}
           <div className="navbar-auth-section desktop-only">
+            {!isMobile && (
+              <NavLink
+                to="/kiosk"
+                className={({ isActive }) => `nav-utility-icon-btn ${isActive ? 'active' : ''}`}
+                title="Launch TV Kiosk Mode"
+                aria-label="TV Kiosk Mode"
+              >
+                <FaTv className="nav-utility-icon" />
+              </NavLink>
+            )}
+
             <button
               type="button"
-              className="theme-toggle-btn"
+              className="nav-utility-icon-btn theme-toggle-btn"
               onClick={toggleTheme}
               title={`Theme: ${themePreference === 'system' ? `System (${resolvedTheme})` : themePreference} — Click to switch to ${resolvedTheme === 'dark' ? 'Light' : 'Dark'} mode`}
               aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
             >
               {resolvedTheme === 'dark' ? (
-                <FaSun className="theme-toggle-icon text-amber-400" />
+                <FaSun className="nav-utility-icon text-amber-400" />
               ) : (
-                <FaMoon className="theme-toggle-icon text-[#007FBA]" />
+                <FaMoon className="nav-utility-icon text-[#007FBA]" />
               )}
-              <span className="theme-toggle-label">
-                {resolvedTheme === 'dark' ? 'Light' : 'Dark'}
-              </span>
             </button>
+
+            <span className="nav-utility-divider" aria-hidden="true" />
 
             {isAuthenticated ? (
               <div className="user-profile-nav-pill">
@@ -152,15 +151,16 @@ export default function Navbar({ totalEntries = 0 }) {
                   <div className="user-nav-avatar">
                     {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
                   </div>
-                  <div className="user-nav-info">
-                    <span className="user-nav-name">{user?.fullName || 'Contestant'}</span>
-                  </div>
+                  <span className="user-nav-name">
+                    {user?.fullName ? user.fullName.split(' ')[0] : 'Contestant'}
+                  </span>
                 </button>
                 <button 
                   type="button" 
                   className="user-nav-logout-btn"
                   onClick={handleLogout}
                   title="Sign Out"
+                  aria-label="Sign Out"
                 >
                   <FaRightFromBracket />
                 </button>
@@ -172,7 +172,7 @@ export default function Navbar({ totalEntries = 0 }) {
                 onClick={() => openAuthModal('login')}
               >
                 <FaRightToBracket className="btn-icon" />
-                <span>Sign In / Register</span>
+                <span>Sign In</span>
               </button>
             )}
           </div>
