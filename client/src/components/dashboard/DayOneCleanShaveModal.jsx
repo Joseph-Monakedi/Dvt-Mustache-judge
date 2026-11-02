@@ -34,6 +34,18 @@ export default function DayOneCleanShaveModal({
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
+  const handleVideoRef = useCallback(node => {
+    videoRef.current = node;
+    if (node && streamRef.current && streamRef.current.active) {
+      if (node.srcObject !== streamRef.current) {
+        node.srcObject = streamRef.current;
+      }
+      node.play().catch(e => {
+        if (e.name !== 'AbortError') console.warn('Autoplay prevented:', e);
+      });
+    }
+  }, []);
+
   // Stop camera tracks helper
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -148,7 +160,6 @@ export default function DayOneCleanShaveModal({
     setPreviewUrl(null);
     setCapturedBlob(null);
     setErrorMessage('');
-    startCamera();
   };
 
   const handleConfirmBaseline = async () => {
@@ -277,7 +288,7 @@ export default function DayOneCleanShaveModal({
               ) : (
                 <>
                   <video
-                    ref={videoRef}
+                    ref={handleVideoRef}
                     autoPlay
                     playsInline
                     muted

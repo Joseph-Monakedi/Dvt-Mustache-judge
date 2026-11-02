@@ -51,7 +51,36 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const activeFacingModeRef = useRef(null);
   const detailsCardRef = useRef(null);
+
+  const attachStreamToVideo = useCallback((videoNode, stream) => {
+    if (!videoNode || !stream) return;
+    if (videoNode.srcObject !== stream) {
+      videoNode.srcObject = stream;
+    }
+    const playPromise = videoNode.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(err => {
+        if (err.name !== 'AbortError') {
+          console.warn('Auto-play prevented:', err);
+        }
+      });
+    }
+  }, []);
+
+  const handleVideoRef = useCallback(
+    node => {
+      videoRef.current = node;
+      if (node && streamRef.current && streamRef.current.active) {
+        const videoTrack = streamRef.current.getVideoTracks()[0];
+        if (videoTrack && videoTrack.readyState === 'live') {
+          attachStreamToVideo(node, streamRef.current);
+        }
+      }
+    },
+    [attachStreamToVideo]
+  );
 
   const scrollToDetails = () => {
     if (detailsCardRef.current && window.innerWidth <= 768) {
@@ -80,11 +109,22 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
   const needsCleanShave = !isCreative && !hasCleanShave;
 
   // Initialize camera stream
-  const startCamera = useCallback(async () => {
-    // If stream is already active and tracks are running with correct facingMode, do not restart
-    if (streamRef.current && streamRef.current.active && videoRef.current?.srcObject === streamRef.current) {
+  const startCamera = useCallback(async (forceRestart = false) => {
+    // If stream is already active and tracks are running with correct facingMode, re-bind to video element without restarting hardware
+    if (
+      !forceRestart &&
+      streamRef.current &&
+      streamRef.current.active &&
+      activeFacingModeRef.current === facingMode
+    ) {
       const videoTrack = streamRef.current.getVideoTracks()[0];
       if (videoTrack && videoTrack.readyState === 'live') {
+        if (videoRef.current) {
+          attachStreamToVideo(videoRef.current, streamRef.current);
+        }
+        setCameraActive(true);
+        setCameraError(null);
+        setIsCameraInitializing(false);
         return;
       }
     }
@@ -110,16 +150,9 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
       });
 
       streamRef.current = stream;
+      activeFacingModeRef.current = facingMode;
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        const playPromise = videoRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(err => {
-            if (err.name !== 'AbortError') {
-              console.warn('Auto-play prevented:', err);
-            }
-          });
-        }
+        attachStreamToVideo(videoRef.current, stream);
       }
       setCameraActive(true);
     } catch (err) {
@@ -129,16 +162,16 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     } finally {
       setIsCameraInitializing(false);
     }
-  }, [facingMode]);
+  }, [facingMode, attachStreamToVideo]);
 
   const isAuth = Boolean(user);
 
-  // Initialize camera when user is authenticated or camera orientation toggles
+  // Initialize or re-bind camera when user is authenticated, preview is cleared (retake / baseline saved), or orientation toggles
   useEffect(() => {
-    if (isAuth) {
+    if (isAuth && !previewUrl) {
       startCamera();
     }
-  }, [isAuth, facingMode, startCamera]);
+  }, [isAuth, previewUrl, facingMode, startCamera]);
 
   // Clean up hardware media stream tracks ONLY when component unmounts
   useEffect(() => {
@@ -206,9 +239,6 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     setCapturedBlob(null);
     setPreviewUrl(null);
     setValidationError('');
-    if (!cameraActive) {
-      startCamera();
-    }
   };
 
   // Step 1: Save Clean Shave Baseline (only for Mustache growers)
@@ -476,7 +506,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 <button 
                   type="button" 
                   className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-cyan-500 hover:brightness-110 text-white text-xs font-bold transition-all flex items-center gap-2 shadow-lg shadow-cyan-600/30"
-                  onClick={startCamera}
+                  onClick={() => startCamera(true)}
                 >
                   <FaRotate /> Try Camera Again
                 </button>
@@ -498,7 +528,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                 )}
 
                 <video 
-                  ref={videoRef} 
+                  ref={handleVideoRef} 
                   autoPlay 
                   playsInline 
                   muted 
