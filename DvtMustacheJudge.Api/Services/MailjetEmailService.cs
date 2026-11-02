@@ -105,9 +105,6 @@ public class MailjetEmailService : IEmailService
         var senderName = _config["Mailjet:SenderName"]
             ?? Environment.GetEnvironmentVariable("MAILJET_SENDER_NAME")
             ?? "DVT Movember 2026";
-        var replyToEmail = _config["Mailjet:ReplyToEmail"]
-            ?? Environment.GetEnvironmentVariable("MAILJET_REPLY_TO_EMAIL")
-            ?? senderEmail;
 
         var isPlaceholderKey = string.IsNullOrWhiteSpace(apiKey)
             || string.IsNullOrWhiteSpace(secretKey)
@@ -141,11 +138,6 @@ public class MailjetEmailService : IEmailService
                         Email = senderEmail,
                         Name = senderName
                     },
-                    ReplyTo = new
-                    {
-                        Email = replyToEmail,
-                        Name = senderName
-                    },
                     To = new[]
                     {
                         new
@@ -157,8 +149,8 @@ public class MailjetEmailService : IEmailService
                     Subject = subject,
                     TextPart = textContent,
                     HTMLPart = htmlContent,
-                    CustomCampaign = "dvt-movember-password-reset",
-                    DeduplicateCampaign = false
+                    TrackClicks = "disabled",
+                    TrackOpens = "disabled"
                 }
             }
         };
@@ -166,7 +158,7 @@ public class MailjetEmailService : IEmailService
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.mailjet.com/v3.1/send");
-            var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{apiKey}:{secretKey}"));
+            var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{apiKey}:{secretKey}"));
             request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
             request.Content = new StringContent(
                 JsonSerializer.Serialize(payload),
@@ -305,7 +297,7 @@ public class MailjetEmailService : IEmailService
                           </div>
                           <p style="margin: 0 0 16px; font-size: 12px; line-height: 1.6; color: #64748b; word-break: break-all;">
                             Or copy and paste this link into your browser:<br />
-                            <a href="{encodedUrl}" style="color: #007fba; text-decoration: underline;">{encodedUrl}</a>
+                            <span style="color: #007fba;">{encodedUrl}</span>
                           </p>
                           <p style="margin: 20px 0 0; font-size: 13px; line-height: 1.6; color: #64748b;">
                             This link is valid for <strong>30 minutes</strong>. If you did not request a password reset, no action is needed and your account remains secure.

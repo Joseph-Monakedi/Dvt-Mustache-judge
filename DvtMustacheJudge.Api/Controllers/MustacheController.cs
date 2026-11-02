@@ -10,6 +10,20 @@ namespace DvtMustacheJudge.Api.Controllers;
 [Route("api/[controller]")]
 public class MustacheController : ControllerBase
 {
+    private static readonly object _leaderboardCacheLock = new();
+    private static List<MustacheEntry>? _cachedVisibleEntries;
+    private static decimal _cachedTotalFundsRaisedZar;
+    private static DateTime _leaderboardCacheExpiresAtUtc = DateTime.MinValue;
+
+    public static void InvalidateLeaderboardCache()
+    {
+        lock (_leaderboardCacheLock)
+        {
+            _cachedVisibleEntries = null;
+            _leaderboardCacheExpiresAtUtc = DateTime.MinValue;
+        }
+    }
+
     private readonly AppDbContext _dbContext;
     private readonly IImageStorageService _storageService;
     private readonly IGeminiJudgeService _geminiService;
@@ -300,6 +314,7 @@ public class MustacheController : ControllerBase
 
                 _dbContext.MustacheEntries.Add(entry);
                 await _dbContext.SaveChangesAsync();
+                InvalidateLeaderboardCache();
 
                 var higherScoreExists = await _dbContext.MustacheEntries
                     .AnyAsync(e => e.UserId == authenticatedUserId.Value && e.Id != entry.Id && !e.IsHidden && e.CompetitionType == finalCompetitionType && e.OverallScore > entry.OverallScore);
@@ -441,11 +456,51 @@ public class MustacheController : ControllerBase
                       || string.Equals(division, "crazyhair", StringComparison.OrdinalIgnoreCase)
                       || string.Equals(division, "hair", StringComparison.OrdinalIgnoreCase);
 
-        var allVisible = await _dbContext.MustacheEntries
-            .Include(e => e.User)
-            .AsNoTracking()
-            .Where(e => !e.IsHidden)
-            .ToListAsync();
+        List<MustacheEntry>? allVisible = null;
+        decimal totalFundsRaisedZar = 0m;
+
+        lock (_leaderboardCacheLock)
+        {
+            if (_cachedVisibleEntries != null && DateTime.UtcNow < _leaderboardCacheExpiresAtUtc)
+            {
+                allVisible = _cachedVisibleEntries;
+                totalFundsRaisedZar = _cachedTotalFundsRaisedZar;
+            }
+        }
+
+        if (allVisible == null)
+        {
+            allVisible = await _dbContext.MustacheEntries
+                .Include(e => e.User)
+                .AsNoTracking()
+                .Where(e => !e.IsHidden)
+                .ToListAsync();
+
+            try
+            {
+                var participantDonations = await _dbContext.Users
+                    .Where(u => u.Role != "Admin"
+                             && u.Email.ToLower() != "admin@dvt.co.za"
+                             && u.FullName.ToLower() != "movember admin"
+                             && !u.FullName.ToLower().Contains("alex movember")
+                             && u.Email.ToLower() != "testparticipant@gmail.com")
+                    .SumAsync(u => u.AmountPaid ?? 0m);
+                var externalDonations = await _dbContext.ExternalDonations
+                    .SumAsync(d => (decimal?)d.Amount) ?? 0m;
+                totalFundsRaisedZar = participantDonations + externalDonations;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not calculate totalFundsRaisedZar for leaderboard.");
+            }
+
+            lock (_leaderboardCacheLock)
+            {
+                _cachedVisibleEntries = allVisible;
+                _cachedTotalFundsRaisedZar = totalFundsRaisedZar;
+                _leaderboardCacheExpiresAtUtc = DateTime.UtcNow.AddSeconds(10);
+            }
+        }
 
         // Calculate competition division counts (deduplicated by contestant: top scoring entry per contestant)
         var mustacheCount = allVisible
@@ -478,25 +533,6 @@ public class MustacheController : ControllerBase
             .ToList();
 
         var totalEntries = topPerContestant.Count;
-
-        decimal totalFundsRaisedZar = 0m;
-        try
-        {
-            var participantDonations = await _dbContext.Users
-                .Where(u => u.Role != "Admin"
-                         && u.Email.ToLower() != "admin@dvt.co.za"
-                         && u.FullName.ToLower() != "movember admin"
-                         && !u.FullName.ToLower().Contains("alex movember")
-                         && u.Email.ToLower() != "testparticipant@gmail.com")
-                .SumAsync(u => u.AmountPaid ?? 0m);
-            var externalDonations = await _dbContext.ExternalDonations
-                .SumAsync(d => (decimal?)d.Amount) ?? 0m;
-            totalFundsRaisedZar = participantDonations + externalDonations;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Could not calculate totalFundsRaisedZar for leaderboard.");
-        }
 
         var entries = topPerContestant
             .Take(limit)
@@ -969,6 +1005,7 @@ public class MustacheController : ControllerBase
         }
 
         await _dbContext.SaveChangesAsync();
+        InvalidateLeaderboardCache();
 
         var statusLabel = user.IsEligibleToWin
             ? "Grand Prize Eligible (R100+)"
@@ -1017,6 +1054,7 @@ public class MustacheController : ControllerBase
 
         _dbContext.ExternalDonations.Add(donation);
         await _dbContext.SaveChangesAsync();
+        InvalidateLeaderboardCache();
 
         return Ok(new
         {
@@ -1044,6 +1082,7 @@ public class MustacheController : ControllerBase
 
         _dbContext.ExternalDonations.Remove(donation);
         await _dbContext.SaveChangesAsync();
+        InvalidateLeaderboardCache();
 
         return Ok(new
         {
@@ -1109,6 +1148,7 @@ public class MustacheController : ControllerBase
         _dbContext.MustacheEntries.RemoveRange(user.Entries);
         _dbContext.Users.Remove(user);
         await _dbContext.SaveChangesAsync();
+        InvalidateLeaderboardCache();
 
         _logger.LogInformation("Admin permanently deleted contestant account {UserId} ({Email}).", user.Id, user.Email);
 
@@ -1144,6 +1184,7 @@ public class MustacheController : ControllerBase
         }
 
         await _dbContext.SaveChangesAsync();
+        InvalidateLeaderboardCache();
 
         return Ok(new
         {
@@ -1214,6 +1255,7 @@ public class MustacheController : ControllerBase
 
         entry.IsHidden = !entry.IsHidden;
         await _dbContext.SaveChangesAsync();
+        InvalidateLeaderboardCache();
 
         return Ok(new { id = entry.Id, isHidden = entry.IsHidden });
     }
@@ -1243,6 +1285,7 @@ public class MustacheController : ControllerBase
         entry.IsWoodenSpoon = false;
         entry.WoodenSpoonReason = null;
         await _dbContext.SaveChangesAsync();
+        InvalidateLeaderboardCache();
 
         return Ok(new { id = entry.Id, isWoodenSpoon = false, competitionType = entry.CompetitionType, woodenSpoonReason = (string?)null });
     }
@@ -1304,6 +1347,7 @@ public class MustacheController : ControllerBase
 
         _dbContext.MustacheEntries.Remove(entry);
         await _dbContext.SaveChangesAsync();
+        InvalidateLeaderboardCache();
 
         _logger.LogInformation("Participant {UserId} permanently deleted submission {EntryId}.", payload.UserId, id);
 
@@ -1346,6 +1390,7 @@ public class MustacheController : ControllerBase
 
         _dbContext.MustacheEntries.Remove(entry);
         await _dbContext.SaveChangesAsync();
+        InvalidateLeaderboardCache();
 
         return Ok(new { success = true, message = "Entry deleted permanently." });
     }
@@ -1392,6 +1437,7 @@ public class MustacheController : ControllerBase
 
         _dbContext.MustacheEntries.RemoveRange(entries);
         await _dbContext.SaveChangesAsync();
+        InvalidateLeaderboardCache();
 
         return Ok(new { success = true, deletedCount = entries.Count, message = $"Successfully deleted {entries.Count} selected entries." });
     }
@@ -1432,6 +1478,7 @@ public class MustacheController : ControllerBase
 
         _dbContext.MustacheEntries.RemoveRange(allEntries);
         await _dbContext.SaveChangesAsync();
+        InvalidateLeaderboardCache();
 
         return Ok(new { success = true, deletedCount = count, message = $"All {count} entries have been permanently deleted." });
     }
@@ -1673,6 +1720,7 @@ public class MustacheController : ControllerBase
         if (reanalysedCount > 0)
         {
             await _dbContext.SaveChangesAsync();
+            InvalidateLeaderboardCache();
         }
 
         var remainingSeconds = (int)Math.Ceiling(_rateLimiter.GetTimeUntilNextWindow().TotalSeconds);

@@ -5,6 +5,7 @@ namespace DvtMustacheJudge.Api.Services;
 
 public class CloudinaryStorageService : IImageStorageService
 {
+    private static bool _hasLoggedInitialization;
     private readonly Cloudinary? _cloudinary;
     private readonly LocalStorageService _fallbackStorage;
     private readonly ILogger<CloudinaryStorageService> _logger;
@@ -33,12 +34,20 @@ public class CloudinaryStorageService : IImageStorageService
             _cloudinary = new Cloudinary(account);
             _cloudinary.Api.Secure = true;
             _isConfigured = true;
-            _logger.LogInformation("Cloudinary storage initialized for cloud: {CloudName}", cloudName);
+            if (!_hasLoggedInitialization)
+            {
+                _hasLoggedInitialization = true;
+                _logger.LogInformation("Cloudinary storage initialized for cloud: {CloudName}", cloudName);
+            }
         }
         else
         {
             _isConfigured = false;
-            _logger.LogInformation("Cloudinary credentials not configured or using placeholders. Using LocalStorageService fallback.");
+            if (!_hasLoggedInitialization)
+            {
+                _hasLoggedInitialization = true;
+                _logger.LogInformation("Cloudinary credentials not configured or using placeholders. Using LocalStorageService fallback.");
+            }
         }
     }
 

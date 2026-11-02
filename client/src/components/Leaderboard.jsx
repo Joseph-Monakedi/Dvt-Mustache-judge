@@ -180,11 +180,28 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
   }, [selectedCategory, division]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchLeaderboard();
-    }, 10000);
+    let lastFetchTime = Date.now();
 
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        lastFetchTime = Date.now();
+        fetchLeaderboard();
+      }
+    }, 30000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastFetchTime >= 15000) {
+        lastFetchTime = Date.now();
+        fetchLeaderboard();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [selectedCategory, division]);
 
   const filteredEntries = entries.filter(e => {

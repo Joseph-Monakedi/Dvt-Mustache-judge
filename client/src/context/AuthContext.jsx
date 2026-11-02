@@ -11,8 +11,9 @@ export const AuthProvider = ({ children }) => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalInitialMode, setAuthModalInitialMode] = useState('login'); // 'login' | 'register'
 
-  // Ref to track payment state transitions
+  // Ref to track payment state transitions and throttle background/focus polls
   const prevPaymentRef = useRef({ leaderboardPaid: null, quizPaid: null, initialCheckDone: false });
+  const lastFetchTimeRef = useRef(0);
 
   // Fetch current user from /api/auth/me if token exists
   const fetchCurrentUser = useCallback(async (authToken = token, isPolling = false) => {
@@ -22,6 +23,12 @@ export const AuthProvider = ({ children }) => {
       prevPaymentRef.current = { leaderboardPaid: null, quizPaid: null, initialCheckDone: false };
       return null;
     }
+
+    const now = Date.now();
+    if (isPolling && now - lastFetchTimeRef.current < 15000) {
+      return null;
+    }
+    lastFetchTimeRef.current = now;
 
     try {
       const res = await fetch(apiUrl('/api/auth/me'), {
@@ -102,7 +109,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (!token) return;
 
-    const pollInterval = (user && !user.leaderboardPaid) ? 3000 : 12000;
+    const pollInterval = 60000;
 
     const intervalId = setInterval(() => {
       if (document.visibilityState === 'visible') {
@@ -110,7 +117,7 @@ export const AuthProvider = ({ children }) => {
       }
     }, pollInterval);
 
-    // Also immediately refresh whenever user switches back to this browser tab
+    // Refresh when user switches back to this browser tab (throttled by 15s cooldown in fetchCurrentUser)
     const handleVisibilityOrFocus = () => {
       if (document.visibilityState === 'visible') {
         fetchCurrentUser(token, true);
@@ -125,7 +132,7 @@ export const AuthProvider = ({ children }) => {
       window.removeEventListener('visibilitychange', handleVisibilityOrFocus);
       window.removeEventListener('focus', handleVisibilityOrFocus);
     };
-  }, [token, user?.leaderboardPaid, fetchCurrentUser]);
+  }, [token, fetchCurrentUser]);
 
   // Login
   const login = async (email, password) => {

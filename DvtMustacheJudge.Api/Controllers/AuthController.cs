@@ -181,6 +181,7 @@ public class AuthController : ControllerBase
 
         var user = await _context.Users
             .Include(u => u.Entries)
+            .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == payload.UserId);
 
         if (user == null)
@@ -473,6 +474,7 @@ public class AuthController : ControllerBase
         if (updated)
         {
             await _context.SaveChangesAsync();
+            MustacheController.InvalidateLeaderboardCache();
             _logger.LogInformation("Profile updated for user {UserId} ({Email}).", user.Id, user.Email);
         }
 
@@ -581,6 +583,7 @@ public class AuthController : ControllerBase
         _context.MustacheEntries.RemoveRange(user.Entries);
         _context.Users.Remove(user);
         await _context.SaveChangesAsync();
+        MustacheController.InvalidateLeaderboardCache();
 
         _logger.LogInformation("Contestant account {UserId} ({Email}) permanently deleted by user.", user.Id, user.Email);
 
