@@ -58,6 +58,7 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
   };
 
   const isCreative = verdict.competitionType === 'CreativeMustache' || verdict.competitionType === 'CrazyHair';
+  const showBeforeComparison = !isCreative && Boolean(verdict.cleanShaveImageUrl);
 
   return (
     <div className="verdict-container fade-in">
@@ -93,9 +94,9 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
         </div>
 
         {/* Main Grid: Photo(s) + Gauge + Subscores */}
-        <div className={`verdict-main-grid ${verdict.cleanShaveImageUrl ? 'has-comparison' : ''}`}>
-          {/* Photos: Side-by-side Before & After comparison when clean shave exists */}
-          {verdict.cleanShaveImageUrl ? (
+        <div className={`verdict-main-grid ${showBeforeComparison ? 'has-comparison' : ''}`}>
+          {/* Photos: Side-by-side Before & After comparison when clean shave exists on natural Mustache track */}
+          {showBeforeComparison ? (
             <div className="transformation-comparison-wrapper">
               {/* Before: Day 1 Clean Shave */}
               <div className="comparison-card before-card">
@@ -273,8 +274,8 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
           </div>
         </div>
 
-        {/* Follicle Growth & Transformation Analysis */}
-        {(verdict.cleanShaveImageUrl || verdict.growthScore > 0 || verdict.growthAnalysis) && (
+        {/* Follicle Growth & Transformation Analysis (Main Mustache Challenge only) */}
+        {!isCreative && (verdict.cleanShaveImageUrl || verdict.growthScore > 0 || verdict.growthAnalysis) && (
           <div className="follicle-growth-card">
             <div className="follicle-growth-header">
               <div className="growth-header-left">

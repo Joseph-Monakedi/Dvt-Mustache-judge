@@ -84,8 +84,10 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
         }
 
         ctx.fillStyle = '#00b4d8';
-        ctx.font = '500 20px Poppins, system-ui, sans-serif';
-        ctx.fillText(headerTitle, width - 480, 80);
+        ctx.font = '600 18px Poppins, system-ui, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(headerTitle, width - 60, 80);
+        ctx.textAlign = 'left';
 
         // Divider line
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
@@ -118,54 +120,61 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
 
         // 4. Right side: Verdict details
         const contentX = 520;
+        const maxRightWidth = 600;
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 44px Poppins, system-ui, sans-serif';
-        ctx.fillText(verdict.contestantName, contentX, 190);
+        ctx.font = 'bold 42px Poppins, system-ui, sans-serif';
+        ctx.fillText(truncateText(ctx, verdict.contestantName || 'Contestant', 460), contentX, 188);
 
         ctx.fillStyle = '#94a3b8';
-        ctx.font = '500 22px Poppins, system-ui, sans-serif';
+        ctx.font = '500 20px Poppins, system-ui, sans-serif';
         const cohortText = isCreative ? 'Creative Mustache Contestant' : 'Movember 2026 Contestant';
-        ctx.fillText(cohortText, contentX, 225);
+        ctx.fillText(cohortText, contentX, 222);
 
         ctx.fillStyle = '#00b4d8';
-        ctx.font = 'bold 28px Poppins, system-ui, sans-serif';
-        ctx.fillText(`"${verdict.mustacheTitle}"`, contentX, 280);
+        ctx.font = 'bold 26px Poppins, system-ui, sans-serif';
+        ctx.fillText(truncateText(ctx, `"${verdict.mustacheTitle || ''}"`, 460), contentX, 272);
 
-        // Style Category pill
+        // Style Category pill (dynamically sized to fit any style label without overflow)
+        const styleLabel = `Style: ${verdict.styleCategory || 'Other'}`;
+        ctx.font = '600 16px Poppins, system-ui, sans-serif';
+        const measuredStyleWidth = ctx.measureText(styleLabel).width;
+        const pillWidth = Math.min(maxRightWidth, Math.max(150, Math.ceil(measuredStyleWidth + 36)));
+
         ctx.fillStyle = 'rgba(0, 127, 186, 0.4)';
-        ctx.fillRect(contentX, 305, 180, 36);
+        ctx.fillRect(contentX, 296, pillWidth, 36);
         ctx.strokeStyle = '#007FBA';
         ctx.lineWidth = 1.5;
-        ctx.strokeRect(contentX, 305, 180, 36);
+        ctx.strokeRect(contentX, 296, pillWidth, 36);
 
         ctx.fillStyle = '#f0f4f8';
-        ctx.font = '600 16px Poppins, system-ui, sans-serif';
-        ctx.fillText(`Style: ${verdict.styleCategory}`, contentX + 16, 329);
+        ctx.fillText(truncateText(ctx, styleLabel, pillWidth - 24), contentX + 16, 320);
 
         // Subscores
-        const scoreY = 375;
+        const scoreY = 366;
         ctx.fillStyle = '#94a3b8';
-        ctx.font = '500 18px Poppins';
+        ctx.font = '500 18px Poppins, system-ui, sans-serif';
         const subscoresText = isCreative
           ? `Craft: ${verdict.densityScore || 0}/10   •   Innovation: ${verdict.symmetryScore || 0}/10   •   Humor: ${verdict.swaggerScore || 0}/10`
           : `Density: ${verdict.densityScore}/10   •   Symmetry: ${verdict.symmetryScore}/10   •   Swagger: ${verdict.swaggerScore}/10`;
         ctx.fillText(subscoresText, contentX, scoreY);
 
-        // Official Roast Box
+        // Official Roast Box (height 140px from Y=388 to Y=528 so 4 wrapped lines fit comfortably inside)
+        const roastBoxY = 388;
+        const roastBoxHeight = 140;
         ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.fillRect(contentX, 405, 600, 110);
+        ctx.fillRect(contentX, roastBoxY, maxRightWidth, roastBoxHeight);
         ctx.strokeStyle = 'rgba(0, 180, 216, 0.25)';
-        ctx.strokeRect(contentX, 405, 600, 110);
+        ctx.strokeRect(contentX, roastBoxY, maxRightWidth, roastBoxHeight);
 
         ctx.fillStyle = '#f0f4f8';
-        ctx.font = 'italic 18px Poppins, system-ui, sans-serif';
-        wrapText(ctx, `"${verdict.roast}"`, contentX + 20, 440, 560, 26);
+        ctx.font = 'italic 17px Poppins, system-ui, sans-serif';
+        wrapText(ctx, `"${verdict.roast || ''}"`, contentX + 20, roastBoxY + 32, maxRightWidth - 40, 26, 4);
 
-        // Celebrity Twin
+        // Celebrity Twin (placed cleanly below the Roast Box at Y=560)
         ctx.fillStyle = '#F59E0B';
         ctx.font = '600 18px Poppins, system-ui, sans-serif';
-        ctx.fillText(`Celebrity Match: ${verdict.celebrityTwin}`, contentX, 550);
+        ctx.fillText(truncateText(ctx, `Celebrity Match: ${verdict.celebrityTwin || 'N/A'}`, maxRightWidth), contentX, 560);
 
         // Circular Overall Score Ring
         const ringX = width - 130;
@@ -210,28 +219,42 @@ export default function ShareableCanvasCard({ verdict, onClose }) {
     });
   };
 
-  const wrapText = (ctx, text, x, y, maxWidth, lineHeight) => {
-    const words = text.split(' ');
+  const truncateText = (ctx, text, maxWidth) => {
+    if (!text) return '';
+    if (ctx.measureText(text).width <= maxWidth) return text;
+    let truncated = text;
+    while (truncated.length > 0 && ctx.measureText(truncated + '...').width > maxWidth) {
+      truncated = truncated.slice(0, -1).trimEnd();
+    }
+    return truncated + '...';
+  };
+
+  const wrapText = (ctx, text, x, y, maxWidth, lineHeight, maxLines = 4) => {
+    const words = String(text || '').split(/\s+/).filter(Boolean);
     let line = '';
-    let currentY = y;
+    let lineIndex = 0;
 
     for (let n = 0; n < words.length; n++) {
-      const testLine = line + words[n] + ' ';
-      const metrics = ctx.measureText(testLine);
-      const testWidth = metrics.width;
-      if (testWidth > maxWidth && n > 0) {
-        ctx.fillText(line, x, currentY);
-        line = words[n] + ' ';
-        currentY += lineHeight;
-        if (currentY > y + 60) {
-          ctx.fillText(line + '...', x, currentY);
+      const testLine = line ? `${line} ${words[n]}` : words[n];
+      const testWidth = ctx.measureText(testLine).width;
+
+      if (testWidth > maxWidth && line) {
+        if (lineIndex === maxLines - 1) {
+          const remaining = `${line} ${words.slice(n).join(' ')}`;
+          ctx.fillText(truncateText(ctx, remaining, maxWidth), x, y + lineIndex * lineHeight);
           return;
         }
+        ctx.fillText(line, x, y + lineIndex * lineHeight);
+        line = words[n];
+        lineIndex++;
       } else {
         line = testLine;
       }
     }
-    ctx.fillText(line, x, currentY);
+
+    if (line && lineIndex < maxLines) {
+      ctx.fillText(truncateText(ctx, line, maxWidth), x, y + lineIndex * lineHeight);
+    }
   };
 
   const handleDownload = async () => {
