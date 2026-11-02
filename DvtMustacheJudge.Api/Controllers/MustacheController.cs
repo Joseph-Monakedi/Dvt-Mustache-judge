@@ -451,6 +451,7 @@ public class MustacheController : ControllerBase
         if (limit <= 0) limit = 50;
         if (limit > 200) limit = 200;
 
+        var isAllDivisions = string.Equals(division, "all", StringComparison.OrdinalIgnoreCase);
         var isCreative = string.Equals(division, "creative", StringComparison.OrdinalIgnoreCase)
                       || string.Equals(division, "creativemustache", StringComparison.OrdinalIgnoreCase)
                       || string.Equals(division, "crazyhair", StringComparison.OrdinalIgnoreCase)
@@ -513,9 +514,11 @@ public class MustacheController : ControllerBase
             .GroupBy(e => e.UserId.HasValue ? e.UserId.Value.ToString() : e.Id.ToString())
             .Count();
 
-        var divisionEntries = isCreative
-            ? allVisible.Where(e => IsCreativeEntry(e)).ToList()
-            : allVisible.Where(e => !IsCreativeEntry(e)).ToList();
+        var divisionEntries = isAllDivisions
+            ? allVisible.ToList()
+            : isCreative
+                ? allVisible.Where(e => IsCreativeEntry(e)).ToList()
+                : allVisible.Where(e => !IsCreativeEntry(e)).ToList();
 
         if (!string.IsNullOrWhiteSpace(category) && !category.Equals("All", StringComparison.OrdinalIgnoreCase))
         {

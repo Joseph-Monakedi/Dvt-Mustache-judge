@@ -9,6 +9,7 @@ import { useIsMobile } from '../utils/useIsMobile';
 export default function KioskMode({ onExit }) {
   const isMobile = useIsMobile();
   const [entries, setEntries] = useState([]);
+  const [divisionFilter, setDivisionFilter] = useState('all'); // 'all' | 'mustache' | 'creative'
   const [currentIndex, setCurrentIndex] = useState(0);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -29,16 +30,38 @@ export default function KioskMode({ onExit }) {
       .catch(err => console.warn('QR code generation error:', err));
   }, []);
 
-  // Fetch entries
+  // Fetch entries from both Mustache Challenge and Creative Mustache Challenge
   const fetchEntries = async () => {
     try {
-      const res = await fetch(apiUrl('/api/mustache/leaderboard?limit=30'));
-      if (res.ok) {
-        const data = await res.json();
-        if (data.entries && data.entries.length > 0) {
-          setEntries(data.entries);
-        }
+      const [mustacheRes, creativeRes] = await Promise.all([
+        fetch(apiUrl('/api/mustache/leaderboard?limit=30&division=mustache')),
+        fetch(apiUrl('/api/mustache/leaderboard?limit=30&division=creative'))
+      ]);
+
+      const mustacheData = mustacheRes.ok ? await mustacheRes.json() : { entries: [] };
+      const creativeData = creativeRes.ok ? await creativeRes.json() : { entries: [] };
+
+      const mustacheList = (mustacheData.entries || []).map(e => ({
+        ...e,
+        isCreativeTrack: false,
+        divisionTotal: (mustacheData.entries || []).length
+      }));
+
+      const creativeList = (creativeData.entries || []).map(e => ({
+        ...e,
+        isCreativeTrack: true,
+        divisionTotal: (creativeData.entries || []).length
+      }));
+
+      // Interleave Mustache & Creative entries so both challenges get equal spotlight on the TV
+      const combined = [];
+      const maxLen = Math.max(mustacheList.length, creativeList.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (i < mustacheList.length) combined.push(mustacheList[i]);
+        if (i < creativeList.length) combined.push(creativeList[i]);
       }
+
+      setEntries(combined);
     } catch (err) {
       console.warn('Kiosk fetch error:', err);
     } finally {
@@ -48,20 +71,34 @@ export default function KioskMode({ onExit }) {
 
   useEffect(() => {
     fetchEntries();
-    const pollInterval = setInterval(fetchEntries, 10000);
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchEntries();
+      }
+    }, 30000);
     return () => clearInterval(pollInterval);
   }, []);
 
+  const displayedEntries = entries.filter(e => {
+    if (divisionFilter === 'mustache') return !e.isCreativeTrack;
+    if (divisionFilter === 'creative') return e.isCreativeTrack;
+    return true;
+  });
+
   // Auto-rotate submissions every 6 seconds
   useEffect(() => {
-    if (entries.length <= 1) return;
+    if (displayedEntries.length <= 1) return;
 
     const rotateInterval = setInterval(() => {
-      setCurrentIndex(prev => (prev + 1) % entries.length);
+      setCurrentIndex(prev => (prev + 1) % displayedEntries.length);
     }, 6000);
 
     return () => clearInterval(rotateInterval);
-  }, [entries.length]);
+  }, [displayedEntries.length]);
+
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [divisionFilter]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -77,7 +114,14 @@ export default function KioskMode({ onExit }) {
     }
   };
 
-  const currentEntry = entries[currentIndex] || null;
+  const currentEntry = displayedEntries[currentIndex % Math.max(1, displayedEntries.length)] || null;
+  const isCurrentCreative = Boolean(
+    currentEntry?.isCreativeTrack ||
+    (currentEntry?.competitionType && (
+      currentEntry.competitionType.toLowerCase().includes('creative') ||
+      currentEntry.competitionType.toLowerCase().includes('hair')
+    ))
+  );
 
   // If viewed on mobile, render mobile notice
   if (isMobile) {
@@ -111,6 +155,41 @@ export default function KioskMode({ onExit }) {
         </div>
 
         <div className="kiosk-controls">
+          <div className="flex items-center gap-1.5 mr-2 bg-slate-900/90 p-1 rounded-xl border border-white/10">
+            <button
+              type="button"
+              onClick={() => setDivisionFilter('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                divisionFilter === 'all'
+                  ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/50'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              All Tracks ({entries.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setDivisionFilter('mustache')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                divisionFilter === 'mustache'
+                  ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/50'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <GiMustache className="text-cyan-400" /> Mustache ({entries.filter(e => !e.isCreativeTrack).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setDivisionFilter('creative')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                divisionFilter === 'creative'
+                  ? 'bg-purple-500/25 text-purple-300 border border-purple-400/50'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <HiSparkles className="text-purple-400" /> Creative ({entries.filter(e => e.isCreativeTrack).length})
+            </button>
+          </div>
           <button className="kiosk-btn" onClick={toggleFullscreen}>
             {isFullscreen ? (
               <>
@@ -135,11 +214,30 @@ export default function KioskMode({ onExit }) {
           {currentEntry ? (
             <div className="featured-inner fade-in" key={currentEntry.id}>
               <div className="featured-badge-bar">
-                <span className="featured-rank-chip">
-                  Rank #{currentEntry.rank} of {entries.length}
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="featured-rank-chip">
+                    Rank #{currentEntry.rank} of {currentEntry.divisionTotal || displayedEntries.length}
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider border ${
+                      isCurrentCreative
+                        ? 'bg-purple-500/20 text-purple-300 border-purple-400/50'
+                        : 'bg-cyan-500/20 text-cyan-300 border-cyan-400/50'
+                    }`}
+                  >
+                    {isCurrentCreative ? (
+                      <>
+                        <HiSparkles className="text-purple-400" /> Creative Mustache Challenge
+                      </>
+                    ) : (
+                      <>
+                        <GiMustache className="text-cyan-400" /> Mustache Challenge
+                      </>
+                    )}
+                  </span>
+                </div>
                 <span className="featured-badge-pill">
-                  {currentEntry.verdictBadge || 'Movember Legend'}
+                  {currentEntry.verdictBadge || (isCurrentCreative ? 'Creative Legend' : 'Movember Legend')}
                 </span>
               </div>
 
@@ -165,7 +263,15 @@ export default function KioskMode({ onExit }) {
                     <div>
                       <h2 className="featured-contestant-name">{currentEntry.contestantName}</h2>
                       <div className="featured-office-tag">
-                        <GiMustache className="pin-icon" /> Movember Contestant
+                        {isCurrentCreative ? (
+                          <>
+                            <HiSparkles className="pin-icon text-purple-400" /> Creative Mustache Contestant
+                          </>
+                        ) : (
+                          <>
+                            <GiMustache className="pin-icon text-cyan-400" /> Movember Contestant
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -175,21 +281,21 @@ export default function KioskMode({ onExit }) {
                   {/* Subscore bars */}
                   <div className="kiosk-subscores">
                     <div className="kiosk-subscore">
-                      <span>Density</span>
+                      <span>{isCurrentCreative ? 'Craftsmanship' : 'Density'}</span>
                       <span className="kiosk-val">{currentEntry.densityScore}/10</span>
                       <div className="kiosk-bar-bg">
                         <div className="kiosk-bar-fill" style={{ width: `${currentEntry.densityScore * 10}%` }}></div>
                       </div>
                     </div>
                     <div className="kiosk-subscore">
-                      <span>Symmetry</span>
+                      <span>{isCurrentCreative ? 'Innovation' : 'Symmetry'}</span>
                       <span className="kiosk-val">{currentEntry.symmetryScore}/10</span>
                       <div className="kiosk-bar-bg">
                         <div className="kiosk-bar-fill" style={{ width: `${currentEntry.symmetryScore * 10}%` }}></div>
                       </div>
                     </div>
                     <div className="kiosk-subscore">
-                      <span>Swagger</span>
+                      <span>{isCurrentCreative ? 'Audacity & Humor' : 'Swagger'}</span>
                       <span className="kiosk-val">{currentEntry.swaggerScore}/10</span>
                       <div className="kiosk-bar-bg">
                         <div className="kiosk-bar-fill" style={{ width: `${currentEntry.swaggerScore * 10}%` }}></div>

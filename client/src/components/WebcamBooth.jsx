@@ -140,11 +140,12 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
         throw new Error('Camera API is not supported on this browser/device.');
       }
 
+      const isPortraitMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: facingMode,
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          width: { ideal: isPortraitMobile ? 1080 : 1280 },
+          height: { ideal: isPortraitMobile ? 1440 : 720 }
         },
         audio: false
       });
@@ -350,104 +351,118 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
   // 2. MAIN BOOTH: Completely free access for all registered contestants!
   return (
     <div className="booth-container fade-in">
-      {/* Registered Contestant Track Banner (One enters the track signed up for at registration) */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 mb-6 rounded-2xl bg-slate-900/90 border border-slate-700/70 shadow-lg max-w-4xl mx-auto">
-        <div className="flex items-center gap-3.5">
-          <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 ${
-            isCreative 
-              ? 'bg-purple-950/80 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-900/40' 
-              : 'bg-amber-950/80 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-900/40'
-          }`}>
-            {isCreative ? <span>🎨</span> : <GiMustache className="text-2xl" />}
-          </div>
-          <div className="text-left">
-            <div className="flex items-center gap-2">
-              <span className="text-xs uppercase font-extrabold tracking-wider text-slate-400">
-                Your Registered Track:
-              </span>
-              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-md ${
-                isCreative 
-                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' 
-                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-              }`}>
-                {isCreative ? 'Creative Challenge' : 'Movember Mustache'}
-              </span>
+      <div className="booth-info-banners">
+        {/* Registered Contestant Track Banner (One enters the track signed up for at registration) */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 mb-6 rounded-2xl bg-slate-900/90 border border-slate-700/70 shadow-lg max-w-4xl mx-auto">
+          <div className="flex items-center gap-3.5">
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 ${
+              isCreative 
+                ? 'bg-purple-950/80 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-900/40' 
+                : 'bg-amber-950/80 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-900/40'
+            }`}>
+              {isCreative ? <span>🎨</span> : <GiMustache className="text-2xl" />}
             </div>
-            <p className="text-xs text-slate-300 font-medium mt-0.5">
-              {isCreative 
-                ? 'Judging faux, paper, prop, and creative mustaches for women and supporters.' 
-                : 'Judging natural facial hair and grooming growth.'}
-            </p>
+            <div className="text-left">
+              <div className="flex items-center gap-2">
+                <span className="text-xs uppercase font-extrabold tracking-wider text-slate-400">
+                  Your Registered Track:
+                </span>
+                <span className={`text-xs font-bold px-2.5 py-0.5 rounded-md ${
+                  isCreative 
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' 
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                }`}>
+                  {isCreative ? 'Creative Challenge' : 'Movember Mustache'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 font-medium mt-0.5">
+                {isCreative 
+                  ? 'Judging faux, paper, prop, and creative mustaches for women and supporters.' 
+                  : 'Judging natural facial hair and grooming growth.'}
+              </p>
+            </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="shrink-0 text-xs font-bold px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 border border-white/10 hover:border-cyan-500/40 hover:text-cyan-300 transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+            title="Switch competition track in your dashboard"
+          >
+            <span>Switch Track in Dashboard</span>
+            <span className="text-xs">→</span>
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard')}
-          className="shrink-0 text-xs font-bold px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 border border-white/10 hover:border-cyan-500/40 hover:text-cyan-300 transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
-          title="Switch competition track in your dashboard"
-        >
-          <span>Switch Track in Dashboard</span>
-          <span className="text-xs">→</span>
-        </button>
-      </div>
-
-      {/* Donation & Prize Eligibility Banner */}
-      <div className="mb-6 max-w-4xl mx-auto">
-        {user?.isPrizeEligible ? (
-          <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-xs text-emerald-200">
-            <FaCircleCheck className="text-emerald-400 text-lg flex-shrink-0" />
-            <div>
-              <strong className="text-emerald-300">🏆 Grand Prize Eligible (Donated):</strong> Your donation is confirmed! You are officially in the running for the <strong>R1,000 Takealot Voucher</strong> in this challenge track.
-            </div>
-          </div>
-        ) : (
-          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-300">
-            <div className="flex items-start sm:items-center gap-2.5">
-              <FaHeart className="text-rose-400 text-base flex-shrink-0 mt-0.5 sm:mt-0" />
+        {/* Donation & Prize Eligibility Banner */}
+        <div className="mb-6 max-w-4xl mx-auto">
+          {user?.isPrizeEligible ? (
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-xs text-emerald-200">
+              <FaCircleCheck className="text-emerald-400 text-lg flex-shrink-0" />
               <div>
-                <span className="font-bold text-amber-400">🎗️ Free Community Entry:</span> Open to everyone for free! To be eligible to win the <strong>R1,000 Takealot Voucher</strong>, donate a minimum of R100 towards prostate cancer research.
+                <strong className="text-emerald-300">🏆 Grand Prize Eligible (Donated):</strong> Your donation is confirmed! You are officially in the running for the <strong>R1,000 Takealot Voucher</strong> in this challenge track.
               </div>
             </div>
-            <div className="flex-shrink-0 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-cyan-500/30 text-xs text-slate-300">
-              <span className="text-cyan-300 font-bold">EFT:</span> FNB • Acc: <strong className="text-white font-mono">625 3333 8621</strong> (POP to <a href="mailto:marketing@dvtsoftware.com" className="text-cyan-400 underline hover:text-cyan-300 font-medium">marketing@dvtsoftware.com</a>)
+          ) : (
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-300">
+              <div className="flex items-start sm:items-center gap-2.5">
+                <FaHeart className="text-rose-400 text-base flex-shrink-0 mt-0.5 sm:mt-0" />
+                <div>
+                  <span className="font-bold text-amber-400">🎗️ Free Community Entry:</span> Open to everyone for free! To be eligible to win the <strong>R1,000 Takealot Voucher</strong>, donate a minimum of R100 towards prostate cancer research.
+                </div>
+              </div>
+              <div className="flex-shrink-0 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-cyan-500/30 text-xs text-slate-300">
+                <span className="text-cyan-300 font-bold">EFT:</span> FNB • Acc: <strong className="text-white font-mono">625 3333 8621</strong> (POP to <a href="mailto:marketing@dvtsoftware.com" className="text-cyan-400 underline hover:text-cyan-300 font-medium">marketing@dvtsoftware.com</a>)
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Participant Style Guide Quick Callout */}
+        {!isCreative && (
+          <div className="mb-6 max-w-4xl mx-auto">
+            <div className="p-3.5 rounded-xl bg-gradient-to-r from-slate-900/90 via-slate-800/80 to-slate-900/90 border border-cyan-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center flex-shrink-0">
+                  <GiMustache className="text-cyan-400 text-xl" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-2">
+                    <span>Official Moustache Style Guide</span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      6 Mzansi Styles
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 mt-0.5">
+                    The Larnie • The French-Cut • The Upper-Lip • The Buffalo • The Chops • The Whale Tale
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/style-guide"
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold transition-all whitespace-nowrap self-start sm:self-auto"
+              >
+                <span>Explore Style Guide</span>
+                <FaArrowRight className="text-[10px]" />
+              </Link>
             </div>
           </div>
         )}
       </div>
 
-      {/* Participant Style Guide Quick Callout */}
-      {!isCreative && (
-        <div className="mb-6 max-w-4xl mx-auto">
-          <div className="p-3.5 rounded-xl bg-gradient-to-r from-slate-900/90 via-slate-800/80 to-slate-900/90 border border-cyan-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center flex-shrink-0">
-                <GiMustache className="text-cyan-400 text-xl" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-white flex items-center gap-2">
-                  <span>Official Moustache Style Guide</span>
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                    6 Mzansi Styles
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-300 mt-0.5">
-                  The Larnie • The French-Cut • The Upper-Lip • The Buffalo • The Chops • The Whale Tale
-                </p>
-              </div>
-            </div>
-            <Link
-              to="/style-guide"
-              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold transition-all whitespace-nowrap self-start sm:self-auto"
-            >
-              <span>Explore Style Guide</span>
-              <FaArrowRight className="text-[10px]" />
-            </Link>
-          </div>
-        </div>
-      )}
-
       <div className="booth-header">
+        <div className="booth-mobile-track-bar mobile-only">
+          <span className={`booth-mobile-track-pill ${isCreative ? 'creative' : 'mustache'}`}>
+            {isCreative ? '🎨 Creative Track' : '🥸 Mustache Track'}
+          </span>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="booth-mobile-switch-link"
+          >
+            Switch Track →
+          </button>
+        </div>
         <h1 className="booth-title">
           {isCreative ? (
             <>Creative Mustache Challenge 🎨</>
@@ -537,14 +552,14 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
 
                 {/* Face Guide HUD Overlay */}
                 <div className="optical-hud-overlay">
-                  <svg className="hud-svg" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
+                  <svg className="hud-svg" viewBox="0 0 400 440" preserveAspectRatio="xMidYMid meet">
                     <ellipse 
                       cx="200" 
-                      cy="190" 
-                      rx="125" 
-                      ry="160" 
+                      cy="195" 
+                      rx="118" 
+                      ry="152" 
                       fill="none" 
-                      stroke="rgba(255, 255, 255, 0.5)" 
+                      stroke="rgba(255, 255, 255, 0.55)" 
                       strokeWidth="2.5" 
                       strokeDasharray="6,8" 
                     />
@@ -559,7 +574,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                     </span>
                   </div>
 
-                  <div className="hud-camera-controls">
+                  <div className="hud-camera-controls desktop-only">
                     <button 
                       type="button" 
                       className="hud-control-btn"
@@ -577,6 +592,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
 
           {!previewUrl && !cameraError && (
             <div className="shutter-bar">
+              <div className="shutter-bar-spacer mobile-only" aria-hidden="true" />
               <button 
                 type="button" 
                 className="shutter-button mobile-tactile-shutter"
@@ -600,8 +616,11 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                   type="button" 
                   className="mobile-secondary-control"
                   onClick={toggleCameraFacing}
+                  title="Flip Camera"
+                  aria-label="Flip Camera"
                 >
-                  <FaRotate className="btn-icon" /> Flip Camera
+                  <FaRotate className="btn-icon" />
+                  <span>Flip</span>
                 </button>
               </div>
             </div>
