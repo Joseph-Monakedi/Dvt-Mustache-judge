@@ -1178,7 +1178,7 @@ export default function AdminPortal({ onBackToApp }) {
                                   <FaCircleCheck className="badge-icon" /> R1,000 Eligible (Donated R{Number(c.amountPaid || 100).toLocaleString()})
                                 </span>
                               ) : (c.amountPaid > 0) ? (
-                                <span className="payment-status-badge badge-pending" style={{ borderColor: 'rgba(56, 189, 248, 0.4)', color: '#7dd3fc' }}>
+                                <span className="payment-status-badge badge-pending" style={{ borderColor: 'rgba(0, 127, 186, 0.4)', color: 'var(--accent-cyan)' }}>
                                   <FaHandHoldingHeart className="badge-icon" /> Donated R{Number(c.amountPaid).toLocaleString()} (&lt; R100 Community)
                                 </span>
                               ) : (
@@ -1218,8 +1218,8 @@ export default function AdminPortal({ onBackToApp }) {
                                   <button
                                     type="button"
                                     disabled={savingDonationId === c.id}
-                                    className="payment-toggle-btn"
-                                    style={{ padding: '5px 8px', fontSize: '11px', background: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#6ee7b7' }}
+                                    className="payment-toggle-btn text-emerald-400"
+                                    style={{ padding: '5px 8px', fontSize: '11px', background: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.4)' }}
                                     onClick={() => {
                                       setDonationInputs(prev => ({ ...prev, [c.id]: '100' }));
                                       handleSetDonation(c.id, true, 100);

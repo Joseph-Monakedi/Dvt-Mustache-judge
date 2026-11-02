@@ -620,7 +620,7 @@ export default function StyleGuide() {
         >
           <div 
             className="auth-modal-card scale-in" 
-            style={{ maxWidth: '640px', padding: '24px', background: '#0a0f18', border: '1px solid rgba(0,180,216,0.3)' }}
+            style={{ maxWidth: '640px', padding: '24px', background: 'var(--bg-card)', border: '1px solid var(--border-glow)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
