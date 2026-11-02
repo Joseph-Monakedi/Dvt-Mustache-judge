@@ -61,14 +61,44 @@ public class MailjetEmailService : IEmailService
     {
         var safeRecipientName = string.IsNullOrWhiteSpace(toName) ? "Contestant" : toName;
 
-        // 1. Try Authenticated SMTP first if configured (e.g., Gmail App Password or Office 365 SMTP).
-        //    Sending via authenticated SMTP ensures SPF/DKIM/DMARC alignment for the sender domain
-        //    so Microsoft Defender / Outlook and Gmail do not reject or quarantine the message.
+        // 1. Try Gmail HTTPS Webhook (Google Apps Script Web App over port 443) if configured.
+        //    Works on Render Free tier (port 443 HTTPS) and dispatches natively via Google's
+        //    Gmail infrastructure with full SPF, DKIM, and DMARC alignment.
+        var webhookUrl = Environment.GetEnvironmentVariable("GMAIL_WEBHOOK_URL")
+            ?? _config["Email:WebhookUrl"]
+            ?? _config["Smtp:WebhookUrl"];
+
+        if (!string.IsNullOrWhiteSpace(webhookUrl)
+            && !webhookUrl.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase)
+            && webhookUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            var webhookSent = await SendViaWebhookAsync(
+                webhookUrl.Trim(),
+                toEmail,
+                safeRecipientName,
+                subject,
+                textContent,
+                htmlContent,
+                cancellationToken);
+
+            if (webhookSent)
+            {
+                return true;
+            }
+
+            _logger.LogWarning("Gmail HTTPS webhook delivery failed for {Email}. Checking fallback...", toEmail);
+        }
+
+        // 2. Try Authenticated SMTP if configured AND not running on Render
+        //    (Render blocks outbound TCP ports 25, 465, and 587 on Free/Starter web services,
+        //    which caused a 15-second socket connect timeout on every password reset).
+        var isRenderInstance = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RENDER"));
         var smtpHost = _config["Smtp:Host"] ?? Environment.GetEnvironmentVariable("SMTP_HOST");
         var smtpUsername = _config["Smtp:Username"] ?? Environment.GetEnvironmentVariable("SMTP_USERNAME");
         var smtpPassword = _config["Smtp:Password"] ?? Environment.GetEnvironmentVariable("SMTP_PASSWORD");
 
-        var isSmtpConfigured = !string.IsNullOrWhiteSpace(smtpHost)
+        var isSmtpConfigured = !isRenderInstance
+            && !string.IsNullOrWhiteSpace(smtpHost)
             && !string.IsNullOrWhiteSpace(smtpUsername)
             && !string.IsNullOrWhiteSpace(smtpPassword)
             && !smtpHost.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase)
@@ -155,35 +185,113 @@ public class MailjetEmailService : IEmailService
             }
         };
 
-        try
+        var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(payload);
+        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{apiKey}:{secretKey}"));
+
+        for (int attempt = 1; attempt <= 2; attempt++)
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.mailjet.com/v3.1/send");
-            var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{apiKey}:{secretKey}"));
-            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
-            request.Content = new StringContent(
-                JsonSerializer.Serialize(payload),
-                Encoding.UTF8,
-                "application/json");
-
-            var response = await _httpClient.SendAsync(request, cancellationToken);
-            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
+            try
             {
+                using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.mailjet.com/v3.1/send")
+                {
+                    Version = HttpVersion.Version11,
+                    VersionPolicy = HttpVersionPolicy.RequestVersionExact,
+                    Content = new SmallPacketJsonContent(jsonBytes)
+                };
+                request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+                request.Headers.ExpectContinue = false;
+                request.Headers.ConnectionClose = true;
+
+                var response = await _httpClient.SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Email successfully dispatched via Mailjet to {Email}.", toEmail);
+                    return true;
+                }
+
                 _logger.LogError(
-                    "Mailjet API error ({StatusCode}) while sending email to {Email}: {Response}",
+                    "Mailjet API error ({StatusCode}) on attempt {Attempt} while sending email to {Email}: {Response}",
                     (int)response.StatusCode,
+                    attempt,
                     toEmail,
                     responseBody);
-                return false;
+
+                if ((int)response.StatusCode != 408 && (int)response.StatusCode < 500)
+                {
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception on attempt {Attempt} while sending email via Mailjet to {Email}.", attempt, toEmail);
+                if (attempt == 2)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private async Task<bool> SendViaWebhookAsync(
+        string webhookUrl,
+        string recipientEmail,
+        string recipientName,
+        string subject,
+        string textContent,
+        string htmlContent,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var senderName = _config["Smtp:SenderName"]
+                ?? _config["Mailjet:SenderName"]
+                ?? Environment.GetEnvironmentVariable("MAILJET_SENDER_NAME")
+                ?? "DVT Movember 2026";
+
+            var webhookPayload = new
+            {
+                to = recipientEmail,
+                toName = recipientName,
+                subject,
+                text = textContent,
+                html = htmlContent,
+                senderName
+            };
+
+            var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(webhookPayload);
+            using var request = new HttpRequestMessage(HttpMethod.Post, webhookUrl)
+            {
+                Content = new SmallPacketJsonContent(jsonBytes)
+            };
+
+            var response = await _httpClient.SendAsync(request, cancellationToken);
+
+            // Google Apps Script Web Apps execute doPost(e) synchronously and then return
+            // either 200 OK (after redirect to script.googleusercontent.com) or 302 Found.
+            if (response.IsSuccessStatusCode || (int)response.StatusCode is 301 or 302 or 303 or 307)
+            {
+                _logger.LogInformation("Email successfully dispatched via Gmail HTTPS webhook to {Email}.", recipientEmail);
+                return true;
             }
 
-            _logger.LogInformation("Email successfully dispatched via Mailjet to {Email}.", toEmail);
-            return true;
+            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogError(
+                "Gmail HTTPS webhook returned status {StatusCode} for {Email}: {Response}",
+                (int)response.StatusCode,
+                recipientEmail,
+                errorBody);
+            return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Exception occurred while sending email via Mailjet to {Email}.", toEmail);
+            _logger.LogError(ex, "Exception occurred while sending email via Gmail HTTPS webhook to {Email}.", recipientEmail);
             return false;
         }
     }
@@ -258,65 +366,57 @@ public class MailjetEmailService : IEmailService
         var encodedEmail = WebUtility.HtmlEncode(recipientEmail);
         var encodedUrl = WebUtility.HtmlEncode(resetUrl);
 
-        return $"""
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-              <meta charset="utf-8" />
-              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-              <title>DVT Movember 2026 Password Reset</title>
-            </head>
-            <body style="margin: 0; padding: 0; background-color: #f4f6f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f4f6f8; padding: 32px 16px;">
-                <tr>
-                  <td align="center">
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 520px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                      <tr>
-                        <td style="background-color: #0b1622; padding: 20px 28px; border-bottom: 3px solid #007fba;">
-                          <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #7dd3fc; margin-bottom: 4px;">
-                            DVT Movember 2026
-                          </div>
-                          <h1 style="margin: 0; font-size: 18px; font-weight: 700; color: #ffffff;">
-                            Password Reset Request
-                          </h1>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 28px;">
-                          <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.6; color: #334155;">
-                            Hello <strong>{encodedName}</strong>,
-                          </p>
-                          <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #475569;">
-                            We received a request to reset the password for your DVT Movember account (<strong>{encodedEmail}</strong>). Click the button below to choose a new password:
-                          </p>
-                          <div style="text-align: center; margin: 26px 0;">
-                            <a href="{encodedUrl}"
-                               style="display: inline-block; background-color: #007fba; color: #ffffff; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 26px; border-radius: 6px;">
-                              Reset My Password
-                            </a>
-                          </div>
-                          <p style="margin: 0 0 16px; font-size: 12px; line-height: 1.6; color: #64748b; word-break: break-all;">
-                            Or copy and paste this link into your browser:<br />
-                            <span style="color: #007fba;">{encodedUrl}</span>
-                          </p>
-                          <p style="margin: 20px 0 0; font-size: 13px; line-height: 1.6; color: #64748b;">
-                            This link is valid for <strong>30 minutes</strong>. If you did not request a password reset, no action is needed and your account remains secure.
-                          </p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="background-color: #f8fafc; padding: 16px 28px; border-top: 1px solid #e2e8f0; text-align: center;">
-                          <p style="margin: 0; font-size: 12px; color: #64748b;">
-                            DVT Movember 2026 Charity Event &bull; Supporting Men's Health Awareness
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </body>
-            </html>
-            """;
+        return $"<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"/></head>" +
+               $"<body style=\"margin:0;padding:24px;background:#f4f6f8;font-family:Arial,sans-serif;color:#1e293b;\">" +
+               $"<div style=\"max-width:500px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;\">" +
+               $"<div style=\"background:#0b1622;padding:18px 24px;border-bottom:3px solid #007fba;\">" +
+               $"<div style=\"font-size:11px;font-weight:700;text-transform:uppercase;color:#7dd3fc;\">DVT Movember 2026</div>" +
+               $"<h1 style=\"margin:4px 0 0;font-size:18px;color:#ffffff;\">Password Reset Request</h1></div>" +
+               $"<div style=\"padding:24px;\">" +
+               $"<p style=\"margin:0 0 14px;font-size:14px;line-height:1.5;\">Hello <strong>{encodedName}</strong>,</p>" +
+               $"<p style=\"margin:0 0 20px;font-size:14px;line-height:1.5;\">We received a request to reset the password for your DVT Movember account (<strong>{encodedEmail}</strong>).</p>" +
+               $"<p style=\"text-align:center;margin:24px 0;\"><a href=\"{encodedUrl}\" style=\"display:inline-block;background:#007fba;color:#ffffff;font-weight:700;font-size:14px;text-decoration:none;padding:12px 24px;border-radius:6px;\">Reset My Password</a></p>" +
+               $"<p style=\"margin:0 0 14px;font-size:12px;line-height:1.5;color:#64748b;word-break:break-all;\">Or copy and paste this link into your browser:<br/><span style=\"color:#007fba;\">{encodedUrl}</span></p>" +
+               $"<p style=\"margin:16px 0 0;font-size:12px;color:#64748b;\">This link is valid for 2 hours. If you did not request a reset, you can safely ignore this email.</p>" +
+               $"</div></div></body></html>";
+    }
+
+    /// <summary>
+    /// Writes JSON bytes in small 512-byte flushed TLS records so that no single TCP packet
+    /// exceeds cloud container / overlay network Path MTU limits (which otherwise cause
+    /// HAProxy on api.mailjet.com to time out with HTTP 408 waiting for dropped 1500-byte segments).
+    /// </summary>
+    private sealed class SmallPacketJsonContent : HttpContent
+    {
+        private readonly byte[] _bytes;
+
+        public SmallPacketJsonContent(byte[] bytes)
+        {
+            _bytes = bytes;
+            Headers.ContentType = new MediaTypeHeaderValue("application/json")
+            {
+                CharSet = "utf-8"
+            };
+            Headers.ContentLength = bytes.Length;
+        }
+
+        protected override async Task SerializeToStreamAsync(Stream stream, TransportContext? context)
+        {
+            const int chunkSize = 512;
+            int offset = 0;
+            while (offset < _bytes.Length)
+            {
+                int count = Math.Min(chunkSize, _bytes.Length - offset);
+                await stream.WriteAsync(_bytes.AsMemory(offset, count));
+                await stream.FlushAsync();
+                offset += count;
+            }
+        }
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = _bytes.Length;
+            return true;
+        }
     }
 }

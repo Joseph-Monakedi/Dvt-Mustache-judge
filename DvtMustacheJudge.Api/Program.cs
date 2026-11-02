@@ -53,7 +53,52 @@ builder.Services.AddScoped<IPayFastService, PayFastService>();
 // 8. Email Service (Mailjet with IEmailService abstraction)
 builder.Services.AddHttpClient<IEmailService, MailjetEmailService>(client =>
 {
-    client.Timeout = TimeSpan.FromSeconds(15);
+    client.Timeout = TimeSpan.FromSeconds(20);
+})
+.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+{
+    AutomaticDecompression = System.Net.DecompressionMethods.All,
+    Expect100ContinueTimeout = TimeSpan.Zero,
+    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+    ConnectTimeout = TimeSpan.FromSeconds(10),
+    ConnectCallback = async (context, cancellationToken) =>
+    {
+        var socket = new System.Net.Sockets.Socket(
+            System.Net.Sockets.AddressFamily.InterNetwork,
+            System.Net.Sockets.SocketType.Stream,
+            System.Net.Sockets.ProtocolType.Tcp)
+        {
+            NoDelay = true
+        };
+
+        try
+        {
+            if (OperatingSystem.IsLinux())
+            {
+                // Clamp TCP MSS to 1200 bytes (IPPROTO_TCP = 6, TCP_MAXSEG = 2)
+                // to prevent Path MTU blackholes on Render / cloud container overlay networks
+                socket.SetSocketOption(
+                    System.Net.Sockets.SocketOptionLevel.Tcp,
+                    (System.Net.Sockets.SocketOptionName)2,
+                    1200);
+            }
+        }
+        catch
+        {
+            // Ignore if socket option is not supported on current platform
+        }
+
+        try
+        {
+            await socket.ConnectAsync(context.DnsEndPoint.Host, context.DnsEndPoint.Port, cancellationToken);
+            return new System.Net.Sockets.NetworkStream(socket, ownsSocket: true);
+        }
+        catch
+        {
+            socket.Dispose();
+            throw;
+        }
+    }
 });
 
 // 9. CORS policy for React Vite dev server and mobile testing
