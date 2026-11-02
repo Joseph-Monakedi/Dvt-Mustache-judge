@@ -15,7 +15,7 @@ import ResetPasswordPage from './components/ResetPasswordPage';
 import AuthModal from './components/AuthModal';
 import StyleGuide from './components/StyleGuide';
 import { useAuth } from './context/AuthContext';
-import { FaTv, FaMobileScreen, FaXmark } from 'react-icons/fa6';
+import { FaTv, FaMobileScreen, FaXmark, FaArrowUp } from 'react-icons/fa6';
 import { apiUrl } from './utils/api';
 import { useIsMobile } from './utils/useIsMobile';
 import { confirmPayFastReturn } from './utils/payfast';
@@ -34,7 +34,17 @@ export default function App() {
   const [selectedLeaderboardEntry, setSelectedLeaderboardEntry] = useState(null);
   const [totalEntries, setTotalEntries] = useState(0);
   const [toast, setToast] = useState(null);
+  const [showBackTop, setShowBackTop] = useState(false);
   const toastTimerRef = useRef(null);
+
+  // DVT 2026 Back-to-top scroll listener
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Fetch initial entry count
   useEffect(() => {
@@ -186,6 +196,12 @@ export default function App() {
 
   return (
     <div className="app-layout">
+      {/* DVT 2026 Top Brand Gradient Bar */}
+      <div className="dvt-top-gradient-bar" aria-hidden="true" />
+
+      {/* DVT 2026 Ambient Hero Pulse Glow */}
+      <div className="dvt-ambient-bg" aria-hidden="true" />
+
       {/* Toast Notification */}
       {toast && (
         <div
@@ -359,6 +375,18 @@ export default function App() {
         onClose={closeAuthModal}
         onLoginSuccess={() => refreshUser()}
       />
+
+      {/* DVT 2026 Floating Back-to-Top Button */}
+      <button
+        type="button"
+        id="backTop"
+        className={`back-top ${showBackTop ? 'show' : ''}`}
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        aria-label="Back to top"
+        title="Back to top"
+      >
+        <FaArrowUp />
+      </button>
     </div>
   );
 }

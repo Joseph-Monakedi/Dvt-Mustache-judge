@@ -224,7 +224,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       {loading && entries.length > 0 && <div className="global-loading-bar" />}
 
       {/* Total Funds Raised Hero Banner at the Top of the Home Page */}
-      <div className="mb-5 p-4 sm:px-6 sm:py-5 rounded-2xl bg-gradient-to-r from-emerald-950/60 via-[#0b1726] to-cyan-950/60 border border-emerald-500/40 shadow-[0_0_30px_rgba(16,185,129,0.12)] backdrop-blur-md">
+      <div className="dvt-summary-box mb-5 p-4 sm:px-6 sm:py-5 rounded-2xl bg-gradient-to-r from-emerald-950/60 via-[#0b1726] to-cyan-950/60 border border-emerald-500/40 shadow-[0_0_30px_rgba(16,185,129,0.12)] backdrop-blur-md">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 flex items-center justify-center shrink-0 shadow-inner">
@@ -258,7 +258,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       </div>
 
       {/* Grand Prize & Prostate Cancer Awareness Donation Banner */}
-      <div className="mb-8 p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#007FBA]/20 via-[#0b1320] to-purple-950/30 border border-cyan-500/40 shadow-2xl backdrop-blur-md">
+      <div className="dvt-summary-box mb-8 p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#007FBA]/20 via-[#0b1320] to-purple-950/30 border border-cyan-500/40 shadow-2xl backdrop-blur-md">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="flex items-start gap-4">
             <img src={logoSrc} alt="DVT" className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0 mt-1 drop-shadow-[0_0_12px_rgba(0,180,216,0.5)]" />
@@ -303,7 +303,10 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       {/* Header Banner */}
       <div className="leaderboard-header">
         <div>
-          <h1 className="leaderboard-title">
+          <p className="dvt-section-tag">
+            {isCreative ? 'DVT MOVEMBER 2026 · CREATIVE TRACK' : 'DVT MOVEMBER 2026 · OFFICIAL STANDINGS'}
+          </p>
+          <h1 className="leaderboard-title dvt-gradient-title">
             {isCreative ? (
               <>Creative Mustache Challenge <HiSparkles className="title-trophy-icon text-purple-400" /></>
             ) : (

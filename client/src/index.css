@@ -5,18 +5,32 @@
   &:has(> head > meta[name="color-scheme"][content="dark"]) { color-scheme: dark; }
   &:has(> head > meta[name="color-scheme"][content="light"]) { color-scheme: light; }
 
-  /* DVT 2026 Core Brand Tokens */
+  /* DVT 2026 Core Brand Tokens (DESIGN.md v2.3.0) */
   --dvt-blue: #007FBA;
   --dvt-blue-mid: #3DA3D2;
   --dvt-blue-light: #B2E0F7;
   --dvt-blue-dark: #001B36;
   --dvt-gold: #FFC629;
 
+  --bg: #070c14;
+  --bg2: #0c1220;
+  --bg3: #111828;
+  --card: #0e1525;
+  --card-hover: #152035;
+  --accent: #007fba;
+  --white: #f0f4f8;
+  --green: #22c55e;
+  --amber: #eab308;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --radius: 14px;
+  --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
   /* Dark Theme Surfaces & Text (Default when resolved to dark) */
   --bg-dark: #070c14;
-  --bg-card: #0d1522;
-  --bg-card-hover: #131f33;
-  --bg-glass: rgba(13, 21, 34, 0.85);
+  --bg-card: #0e1525;
+  --bg-card-hover: #152035;
+  --bg-glass: rgba(14, 21, 37, 0.88);
   
   --primary: #007FBA;
   --primary-hover: #0093d6;
@@ -41,13 +55,20 @@
   --radius-lg: 20px;
   --radius-xl: 28px;
   
-  --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family: 'Poppins', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   --shadow-card: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 25px rgba(0, 127, 186, 0.25);
 }
 
-/* DVT 2026 Official Light Theme Tokens */
+/* DVT 2026 Official Light Theme Tokens (DESIGN.md v2.3.0) */
 [data-theme="light"] {
+  --bg: #f0f4f8;
+  --bg2: #e8ecf0;
+  --bg3: #dde3eb;
+  --white: #1e293b;
+  --card: #ffffff;
+  --card-hover: #f5f7fa;
+
   --bg-dark: #f0f4f8;
   --bg-card: #ffffff;
   --bg-card-hover: #f5f7fa;
@@ -77,16 +98,26 @@
   }
 }
 
+html {
+  scroll-behavior: smooth;
+  /* DVT 2026 BUG-3 FIX: clears fixed/sticky nav on anchor scrolls */
+  scroll-padding-top: 70px;
+}
+
 body {
   font-family: var(--font-family);
   background-color: var(--bg-dark);
   color: var(--text-main);
   min-height: 100vh;
-  line-height: 1.5;
+  line-height: 1.65;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 700;
 }
 
 /* Scrollbar styling */
