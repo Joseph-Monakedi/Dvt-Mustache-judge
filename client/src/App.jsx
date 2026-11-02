@@ -26,7 +26,7 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
-  const { user, token, authModalOpen, authModalInitialMode, closeAuthModal, refreshUser } = useAuth();
+  const { user, token, authModalOpen, authModalInitialMode, closeAuthModal, refreshUser, logoSrc } = useAuth();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [judgingModalOpen, setJudgingModalOpen] = useState(false);
@@ -320,7 +320,7 @@ export default function App() {
       <footer className="app-footer">
         <div className="footer-content">
           <div className="footer-text flex items-center gap-2">
-            <img src="/dvt-logo.png" alt="DVT" className="footer-dvt-logo" />
+            <img src={logoSrc} alt="DVT" className="footer-dvt-logo" />
             <span>DVT Movember 2026</span> • Celebrating facial hair for a great cause
           </div>
           <div className="footer-links">

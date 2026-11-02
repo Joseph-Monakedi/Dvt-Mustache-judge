@@ -19,7 +19,7 @@ import confetti from 'canvas-confetti';
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { openAuthModal } = useAuth();
+  const { openAuthModal, logoSrc } = useAuth();
 
   const token = searchParams.get('token') || '';
   const email = searchParams.get('email') || '';
@@ -173,7 +173,7 @@ export default function ResetPasswordPage() {
       <div className="reset-pwd-card scale-in">
         <div className="reset-pwd-header">
           <div className="reset-logo-badge">
-            <img src="/dvt-logo.png" alt="DVT" className="auth-logo-img" />
+            <img src={logoSrc} alt="DVT" className="auth-logo-img" />
           </div>
           <h1 className="reset-title">Choose New Password</h1>
           <p className="reset-subtitle">

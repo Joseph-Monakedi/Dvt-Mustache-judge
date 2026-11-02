@@ -9,7 +9,10 @@ import {
   FaEye, 
   FaEyeSlash,
   FaAward,
-  FaUserPen
+  FaUserPen,
+  FaSun,
+  FaMoon,
+  FaDesktop
 } from 'react-icons/fa6';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
@@ -23,7 +26,7 @@ export default function AccountManagementModal({
   onAccountDeleted,
   onOpenDonationModal
 }) {
-  const { user, token, refreshUser, logout } = useAuth();
+  const { user, token, refreshUser, logout, themePreference, setThemePreference } = useAuth();
   const [activeTab, setActiveTab] = useState(initialTab); // 'security' | 'profile' | 'danger'
 
   // Password change state
@@ -180,7 +183,8 @@ export default function AccountManagementModal({
         },
         body: JSON.stringify({
           fullName: fullName.trim(),
-          preferredCompetition: preferredComp
+          preferredCompetition: preferredComp,
+          themePreference
         })
       });
 
@@ -546,6 +550,44 @@ export default function AccountManagementModal({
                         Crafted, handmade, paper, or drawn mustaches for all supporters
                       </p>
                     </button>
+                  </div>
+                </div>
+
+                {/* Appearance & Theme Preference (Database Synced) */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Appearance & Theme Preference (Synced Across Devices)
+                  </label>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {[
+                      { id: 'system', label: 'System Default', desc: 'Follows OS theme', icon: FaDesktop },
+                      { id: 'light', label: 'Light Mode', desc: 'DVT Daylight', icon: FaSun },
+                      { id: 'dark', label: 'Dark Mode', desc: 'DVT Midnight', icon: FaMoon }
+                    ].map((opt) => {
+                      const Icon = opt.icon;
+                      const isSelected = themePreference === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setThemePreference(opt.id)}
+                          className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                            isSelected
+                              ? 'bg-cyan-950/40 border-cyan-500/50 text-white shadow-md shadow-cyan-950/30'
+                              : 'bg-[#131f33]/40 border-white/5 text-slate-400 hover:border-white/10'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                              <Icon className="text-cyan-400" />
+                              {opt.label}
+                            </span>
+                            {isSelected && <FaCheck className="text-cyan-400 text-xs" />}
+                          </div>
+                          <p className="text-[10px] text-slate-400">{opt.desc}</p>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

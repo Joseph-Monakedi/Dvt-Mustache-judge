@@ -5,9 +5,11 @@ import { FaExpand, FaCompress, FaXmark, FaScaleBalanced, FaMobileScreenButton, F
 import { HiSparkles } from 'react-icons/hi2';
 import { apiUrl } from '../utils/api';
 import { useIsMobile } from '../utils/useIsMobile';
+import { useAuth } from '../context/AuthContext';
 
 export default function KioskMode({ onExit }) {
   const isMobile = useIsMobile();
+  const { logoSrc } = useAuth();
   const [entries, setEntries] = useState([]);
   const [divisionFilter, setDivisionFilter] = useState('all'); // 'all' | 'mustache' | 'creative'
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -146,7 +148,7 @@ export default function KioskMode({ onExit }) {
       {/* Top Banner / Ticker */}
       <div className="kiosk-top-bar">
         <div className="kiosk-brand">
-          <img src="/dvt-logo.png" alt="DVT" className="kiosk-brand-logo" />
+          <img src={logoSrc} alt="DVT" className="kiosk-brand-logo" />
           <div>
             <span className="kiosk-brand-dvt">DVT</span>
             <span className="kiosk-brand-title"> MOVEMBER MUSTACHE JUDGE</span>

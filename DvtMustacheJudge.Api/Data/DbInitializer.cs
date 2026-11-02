@@ -156,6 +156,7 @@ public static class DbInitializer
                 ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PasswordResetToken"" text;
                 ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PasswordResetTokenExpiresAt"" timestamp with time zone;
                 ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PreferredCompetition"" character varying(50) DEFAULT 'Mustache';
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""ThemePreference"" character varying(20) DEFAULT 'system';
                 ALTER TABLE ""MustacheEntries"" ADD COLUMN IF NOT EXISTS ""CompetitionType"" character varying(50) DEFAULT 'Mustache';
 
                 -- Ensure existing creative entries, faux mustaches, and craft entries are categorized correctly as CreativeMustache

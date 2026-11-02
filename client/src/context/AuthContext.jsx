@@ -4,6 +4,13 @@ import { apiUrl } from '../utils/api';
 
 const AuthContext = createContext(null);
 
+const normalizeThemePref = (val) => {
+  if (!val) return 'system';
+  const lower = String(val).trim().toLowerCase();
+  if (lower === 'light' || lower === 'dark') return lower;
+  return 'system';
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem('dvt_mustache_token') || null);
@@ -11,9 +18,107 @@ export const AuthProvider = ({ children }) => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalInitialMode, setAuthModalInitialMode] = useState('login'); // 'login' | 'register'
 
+  // Theme preference ('system' | 'light' | 'dark') & OS color-scheme listener
+  const [themePreference, setThemePreferenceState] = useState(() => {
+    const stored = localStorage.getItem('color-scheme');
+    if (stored === 'light' || stored === 'dark') return stored;
+    return 'system';
+  });
+
+  const [systemTheme, setSystemTheme] = useState(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    return 'dark';
+  });
+
+  const resolvedTheme = themePreference === 'system' ? systemTheme : themePreference;
+  const logoSrc = resolvedTheme === 'light' ? '/dvt-logo-light.png' : '/dvt-logo.png';
+
+  // Listen for OS prefers-color-scheme changes and cross-tab storage events
+  useEffect(() => {
+    const mql = window.matchMedia('(prefers-color-scheme: light)');
+    const handleMediaChange = (e) => {
+      setSystemTheme(e.matches ? 'light' : 'dark');
+    };
+    mql.addEventListener('change', handleMediaChange);
+
+    const handleStorage = (e) => {
+      if (e.key === 'color-scheme') {
+        if (e.newValue === 'light' || e.newValue === 'dark') {
+          setThemePreferenceState(e.newValue);
+        } else {
+          setThemePreferenceState('system');
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      mql.removeEventListener('change', handleMediaChange);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
+  // Apply resolved theme and color-scheme meta to DOM & localStorage
+  useEffect(() => {
+    const metaScheme = document.querySelector('meta[name="color-scheme"]');
+    const schemeValue = themePreference === 'system' ? 'light dark' : themePreference;
+    if (metaScheme) {
+      metaScheme.content = schemeValue;
+    }
+
+    if (themePreference === 'system') {
+      localStorage.removeItem('color-scheme');
+    } else {
+      localStorage.setItem('color-scheme', themePreference);
+    }
+
+    document.documentElement.dataset.theme = resolvedTheme;
+
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.content = resolvedTheme === 'light' ? '#f0f4f8' : '#070c14';
+    }
+
+    const favicons = document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]');
+    favicons.forEach((link) => {
+      link.setAttribute('href', logoSrc);
+    });
+  }, [themePreference, resolvedTheme, logoSrc]);
+
   // Ref to track payment state transitions and throttle background/focus polls
   const prevPaymentRef = useRef({ leaderboardPaid: null, quizPaid: null, initialCheckDone: false });
   const lastFetchTimeRef = useRef(0);
+
+  // Persist theme preference locally and to database when authenticated
+  const setThemePreference = useCallback(async (newPref) => {
+    const normalized = normalizeThemePref(newPref);
+    setThemePreferenceState(normalized);
+    setUser((prev) => (prev ? { ...prev, themePreference: normalized } : prev));
+
+    if (token) {
+      try {
+        await fetch(apiUrl('/api/auth/theme'), {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ themePreference: normalized })
+        });
+      } catch (err) {
+        console.warn('Failed to sync theme preference to server:', err);
+      }
+    }
+  }, [token]);
+
+  // Quick two-state toggle: flips rendered scheme; if target matches OS preference, resets override to 'system'
+  const toggleTheme = useCallback(() => {
+    const target = resolvedTheme === 'dark' ? 'light' : 'dark';
+    const nextPref = target === systemTheme ? 'system' : target;
+    setThemePreference(nextPref);
+  }, [resolvedTheme, systemTheme, setThemePreference]);
 
   // Fetch current user from /api/auth/me if token exists
   const fetchCurrentUser = useCallback(async (authToken = token, isPolling = false) => {
@@ -67,6 +172,10 @@ export const AuthProvider = ({ children }) => {
           initialCheckDone: true
         };
 
+        if (userData.themePreference) {
+          setThemePreferenceState(normalizeThemePref(userData.themePreference));
+        }
+
         setUser(prevUser => {
           if (!prevUser) return userData;
           const isSame = 
@@ -78,7 +187,8 @@ export const AuthProvider = ({ children }) => {
             Boolean(prevUser.quizPaid) === Boolean(userData.quizPaid) &&
             prevUser.amountPaid === userData.amountPaid &&
             prevUser.cleanShaveImageUrl === userData.cleanShaveImageUrl &&
-            prevUser.preferredCompetition === userData.preferredCompetition;
+            prevUser.preferredCompetition === userData.preferredCompetition &&
+            prevUser.themePreference === userData.themePreference;
           return isSame ? prevUser : userData;
         });
         return userData;
@@ -149,6 +259,9 @@ export const AuthProvider = ({ children }) => {
 
     localStorage.setItem('dvt_mustache_token', data.token);
     setToken(data.token);
+    if (data.themePreference) {
+      setThemePreferenceState(normalizeThemePref(data.themePreference));
+    }
     setUser({
       id: data.id,
       email: data.email,
@@ -160,7 +273,8 @@ export const AuthProvider = ({ children }) => {
       amountPaid: data.amountPaid ?? 0,
       isPrizeEligible: data.isPrizeEligible,
       cleanShaveImageUrl: data.cleanShaveImageUrl,
-      cleanShaveUploadedAt: data.cleanShaveUploadedAt
+      cleanShaveUploadedAt: data.cleanShaveUploadedAt,
+      themePreference: normalizeThemePref(data.themePreference)
     });
 
     // Refresh full profile stats
@@ -184,6 +298,9 @@ export const AuthProvider = ({ children }) => {
 
     localStorage.setItem('dvt_mustache_token', data.token);
     setToken(data.token);
+    if (data.themePreference) {
+      setThemePreferenceState(normalizeThemePref(data.themePreference));
+    }
     setUser({
       id: data.id,
       email: data.email,
@@ -195,7 +312,8 @@ export const AuthProvider = ({ children }) => {
       amountPaid: data.amountPaid ?? 0,
       isPrizeEligible: data.isPrizeEligible,
       cleanShaveImageUrl: data.cleanShaveImageUrl,
-      cleanShaveUploadedAt: data.cleanShaveUploadedAt
+      cleanShaveUploadedAt: data.cleanShaveUploadedAt,
+      themePreference: normalizeThemePref(data.themePreference)
     });
 
     setAuthModalOpen(false);
@@ -232,7 +350,12 @@ export const AuthProvider = ({ children }) => {
         authModalOpen,
         authModalInitialMode,
         openAuthModal,
-        closeAuthModal
+        closeAuthModal,
+        themePreference,
+        resolvedTheme,
+        setThemePreference,
+        toggleTheme,
+        logoSrc
       }}
     >
       {children}

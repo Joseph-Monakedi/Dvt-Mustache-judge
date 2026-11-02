@@ -22,7 +22,7 @@ import { initiatePayFastCheckout } from '../utils/payfast';
 import { apiUrl } from '../utils/api';
 
 export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLoginSuccess }) {
-  const { login, register } = useAuth();
+  const { login, register, logoSrc } = useAuth();
   const [mode, setMode] = useState(initialMode); // 'login' | 'register' | 'forgot'
 
   // Form states
@@ -133,7 +133,7 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onLo
         {/* Modal Header */}
         <div className="auth-header">
           <div className="auth-logo-badge">
-            <img src="/dvt-logo.png" alt="DVT" className="auth-logo-img" />
+            <img src={logoSrc} alt="DVT" className="auth-logo-img" />
           </div>
           <h2 className="auth-title">
             {mode === 'forgot'

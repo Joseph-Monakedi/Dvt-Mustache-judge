@@ -4,6 +4,7 @@ import { FaTrophy, FaCrown, FaMagnifyingGlass, FaXmark, FaArrowRight, FaHandHold
 import { HiSparkles } from 'react-icons/hi2';
 import { GiMustache } from 'react-icons/gi';
 import { apiUrl } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 const MUSTACHE_CATEGORIES = [
   'All',
@@ -113,6 +114,7 @@ function TableSkeleton() {
 }
 
 export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
+  const { logoSrc } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [entries, setEntries] = useState([]);
   const [totalEntries, setTotalEntries] = useState(0);
@@ -259,7 +261,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       <div className="mb-8 p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#007FBA]/20 via-[#0b1320] to-purple-950/30 border border-cyan-500/40 shadow-2xl backdrop-blur-md">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="flex items-start gap-4">
-            <img src="/dvt-logo.png" alt="DVT" className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0 mt-1 drop-shadow-[0_0_12px_rgba(0,180,216,0.5)]" />
+            <img src={logoSrc} alt="DVT" className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0 mt-1 drop-shadow-[0_0_12px_rgba(0,180,216,0.5)]" />
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-sm">

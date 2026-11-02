@@ -36,7 +36,8 @@ public record AuthResponse(
     DateTime? CleanShaveUploadedAt = null,
     string? PaymentMethod = null,
     string? PreferredCompetition = "Mustache",
-    decimal? AmountPaid = null
+    decimal? AmountPaid = null,
+    string? ThemePreference = "system"
 );
 
 public record ContestantSummaryDto(
@@ -100,7 +101,12 @@ public record ChangePasswordRequest(
 
 public record UpdateProfileRequest(
     [MinLength(2), MaxLength(100)] string? FullName = null,
-    string? PreferredCompetition = null
+    string? PreferredCompetition = null,
+    string? ThemePreference = null
+);
+
+public record UpdateThemeRequest(
+    [Required] string ThemePreference
 );
 
 public record DeleteAccountRequest(

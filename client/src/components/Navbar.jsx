@@ -10,7 +10,9 @@ import {
   FaAward, 
   FaUser, 
   FaRightToBracket, 
-  FaRightFromBracket
+  FaRightFromBracket,
+  FaSun,
+  FaMoon
 } from 'react-icons/fa6';
 import { useAuth } from '../context/AuthContext';
 import { useIsMobile } from '../utils/useIsMobile';
@@ -18,7 +20,16 @@ import { useIsMobile } from '../utils/useIsMobile';
 export default function Navbar({ totalEntries = 0 }) {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout, openAuthModal } = useAuth();
+  const {
+    user,
+    isAuthenticated,
+    logout,
+    openAuthModal,
+    resolvedTheme,
+    themePreference,
+    toggleTheme,
+    logoSrc
+  } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -31,7 +42,7 @@ export default function Navbar({ totalEntries = 0 }) {
         <div className="navbar-container">
           <Link to="/leaderboard" className="navbar-brand">
             <div className="brand-logo-icon-wrap">
-              <img src="/dvt-logo.png" alt="DVT" className="brand-logo-img" />
+              <img src={logoSrc} alt="DVT" className="brand-logo-img" />
             </div>
             <div className="brand-text">
               <div className="brand-title">
@@ -113,6 +124,23 @@ export default function Navbar({ totalEntries = 0 }) {
 
           {/* Desktop Right User Profile / Sign In Pill */}
           <div className="navbar-auth-section desktop-only">
+            <button
+              type="button"
+              className="theme-toggle-btn"
+              onClick={toggleTheme}
+              title={`Theme: ${themePreference === 'system' ? `System (${resolvedTheme})` : themePreference} — Click to switch to ${resolvedTheme === 'dark' ? 'Light' : 'Dark'} mode`}
+              aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {resolvedTheme === 'dark' ? (
+                <FaSun className="theme-toggle-icon text-amber-400" />
+              ) : (
+                <FaMoon className="theme-toggle-icon text-[#007FBA]" />
+              )}
+              <span className="theme-toggle-label">
+                {resolvedTheme === 'dark' ? 'Light' : 'Dark'}
+              </span>
+            </button>
+
             {isAuthenticated ? (
               <div className="user-profile-nav-pill">
                 <button 
@@ -151,6 +179,19 @@ export default function Navbar({ totalEntries = 0 }) {
 
           {/* Mobile Header Right Badge & Quick Action */}
           <div className="mobile-header-right mobile-only">
+            <button
+              type="button"
+              className="mobile-theme-toggle-btn"
+              onClick={toggleTheme}
+              title={`Switch to ${resolvedTheme === 'dark' ? 'Light' : 'Dark'} mode`}
+              aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {resolvedTheme === 'dark' ? (
+                <FaSun className="text-amber-400" />
+              ) : (
+                <FaMoon className="text-[#007FBA]" />
+              )}
+            </button>
             {isAuthenticated ? (
               <div className="mobile-user-nav-group">
                 <button 

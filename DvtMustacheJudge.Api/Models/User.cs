@@ -30,6 +30,10 @@ public class User
     [MaxLength(50)]
     public string PreferredCompetition { get; set; } = "Mustache";
 
+    // Synced UI theme preference across devices: "system" | "light" | "dark"
+    [MaxLength(20)]
+    public string ThemePreference { get; set; } = "system";
+
     public bool IsEligibleToWin => LeaderboardPaid || (AmountPaid >= 100);
 
     // Entry to Mustache Quiz Arena (R50 fee managed by admin or PayFast)

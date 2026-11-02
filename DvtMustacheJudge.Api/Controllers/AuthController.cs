@@ -83,7 +83,8 @@ public class AuthController : ControllerBase
             user.CleanShaveUploadedAt,
             user.PaymentMethod,
             user.PreferredCompetition,
-            user.AmountPaid
+            user.AmountPaid,
+            NormalizeThemePreference(user.ThemePreference)
         ));
     }
 
@@ -158,7 +159,8 @@ public class AuthController : ControllerBase
             user.CleanShaveUploadedAt,
             user.PaymentMethod,
             user.PreferredCompetition,
-            user.AmountPaid
+            user.AmountPaid,
+            NormalizeThemePreference(user.ThemePreference)
         ));
     }
 
@@ -205,6 +207,7 @@ public class AuthController : ControllerBase
             amountDonated = user.AmountPaid,
             isPrizeEligible = user.IsEligibleToWin,
             preferredCompetition = user.PreferredCompetition,
+            themePreference = NormalizeThemePreference(user.ThemePreference),
             user.PaidAt,
             donatedAt = user.PaidAt,
             user.CleanShaveImageUrl,
@@ -471,6 +474,16 @@ public class AuthController : ControllerBase
             }
         }
 
+        if (!string.IsNullOrWhiteSpace(request.ThemePreference))
+        {
+            var normalizedTheme = NormalizeThemePreference(request.ThemePreference);
+            if (user.ThemePreference != normalizedTheme)
+            {
+                user.ThemePreference = normalizedTheme;
+                updated = true;
+            }
+        }
+
         if (updated)
         {
             await _context.SaveChangesAsync();
@@ -491,10 +504,62 @@ public class AuthController : ControllerBase
                 user.LeaderboardPaid,
                 user.QuizPaid,
                 user.PreferredCompetition,
+                themePreference = NormalizeThemePreference(user.ThemePreference),
                 user.AmountPaid,
                 isPrizeEligible = user.IsEligibleToWin
             }
         });
+    }
+
+    /// <summary>
+    /// Update user's theme preference ("system" | "light" | "dark") so it syncs across devices.
+    /// </summary>
+    [HttpPut("theme")]
+    public async Task<IActionResult> UpdateTheme([FromBody] UpdateThemeRequest request)
+    {
+        var authHeader = Request.Headers.Authorization.ToString();
+        string? token = null;
+        if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            token = authHeader.Substring("Bearer ".Length).Trim();
+        }
+
+        var payload = _tokenService.ValidateToken(token);
+        if (payload == null)
+        {
+            return Unauthorized(new { error = "Missing, expired, or invalid authorization token." });
+        }
+
+        var user = await _context.Users.FindAsync(payload.UserId);
+        if (user == null)
+        {
+            return NotFound(new { error = "User account not found." });
+        }
+
+        var normalizedTheme = NormalizeThemePreference(request.ThemePreference);
+        if (user.ThemePreference != normalizedTheme)
+        {
+            user.ThemePreference = normalizedTheme;
+            await _context.SaveChangesAsync();
+        }
+
+        return Ok(new
+        {
+            success = true,
+            themePreference = normalizedTheme
+        });
+    }
+
+    private static string NormalizeThemePreference(string? theme)
+    {
+        if (string.IsNullOrWhiteSpace(theme)) return "system";
+        var trimmed = theme.Trim().ToLowerInvariant();
+        return trimmed switch
+        {
+            "light" => "light",
+            "dark" => "dark",
+            _ => "system"
+        };
     }
 
     /// <summary>

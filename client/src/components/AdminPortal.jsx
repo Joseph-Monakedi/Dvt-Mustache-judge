@@ -28,10 +28,12 @@ import { HiSparkles } from 'react-icons/hi2';
 import { GiMustache } from 'react-icons/gi';
 import { MdOutlineWarningAmber } from 'react-icons/md';
 import { apiUrl } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 import QuizManager from './admin/QuizManager';
 import QuizLiveLeaderboard from './quiz/QuizLiveLeaderboard';
 
 export default function AdminPortal({ onBackToApp }) {
+  const { logoSrc } = useAuth();
   const [adminPassword, setAdminPassword] = useState(() => sessionStorage.getItem('dvt_admin_token') || '');
   const [passwordInput, setPasswordInput] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(sessionStorage.getItem('dvt_admin_token')));
@@ -733,7 +735,7 @@ export default function AdminPortal({ onBackToApp }) {
       <div className="admin-login-backdrop fade-in">
         <div className="admin-login-card">
           <div className="admin-lock-icon-wrap overflow-hidden p-1">
-            <img src="/dvt-logo.png" alt="DVT" className="w-12 h-12 object-contain" />
+            <img src={logoSrc} alt="DVT" className="w-12 h-12 object-contain" />
           </div>
           <h2 className="admin-login-title">DVT Judicial Admin Portal</h2>
           <p className="admin-login-desc">
@@ -788,7 +790,7 @@ export default function AdminPortal({ onBackToApp }) {
       {/* Admin Top Header */}
       <div className="admin-header">
         <div className="flex items-center gap-4">
-          <img src="/dvt-logo.png" alt="DVT" className="w-14 h-14 object-contain shrink-0 drop-shadow-[0_0_12px_rgba(0,180,216,0.5)]" />
+          <img src={logoSrc} alt="DVT" className="w-14 h-14 object-contain shrink-0 drop-shadow-[0_0_12px_rgba(0,180,216,0.5)]" />
           <div>
             <div className="admin-badge">
               <FaUnlock className="btn-icon" /> SECURE ADMINISTRATIVE SESSION
