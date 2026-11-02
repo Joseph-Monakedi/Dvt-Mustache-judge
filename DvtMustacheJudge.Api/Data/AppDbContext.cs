@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
 
     public DbSet<MustacheEntry> MustacheEntries => Set<MustacheEntry>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<ExternalDonation> ExternalDonations => Set<ExternalDonation>();
     public DbSet<QuizGame> QuizGames => Set<QuizGame>();
     public DbSet<QuizQuestion> QuizQuestions => Set<QuizQuestion>();
     public DbSet<QuizPlayer> QuizPlayers => Set<QuizPlayer>();

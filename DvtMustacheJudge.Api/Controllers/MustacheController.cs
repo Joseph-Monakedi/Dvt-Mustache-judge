@@ -479,6 +479,25 @@ public class MustacheController : ControllerBase
 
         var totalEntries = topPerContestant.Count;
 
+        decimal totalFundsRaisedZar = 0m;
+        try
+        {
+            var participantDonations = await _dbContext.Users
+                .Where(u => u.Role != "Admin"
+                         && u.Email.ToLower() != "admin@dvt.co.za"
+                         && u.FullName.ToLower() != "movember admin"
+                         && !u.FullName.ToLower().Contains("alex movember")
+                         && u.Email.ToLower() != "testparticipant@gmail.com")
+                .SumAsync(u => u.AmountPaid ?? 0m);
+            var externalDonations = await _dbContext.ExternalDonations
+                .SumAsync(d => (decimal?)d.Amount) ?? 0m;
+            totalFundsRaisedZar = participantDonations + externalDonations;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not calculate totalFundsRaisedZar for leaderboard.");
+        }
+
         var entries = topPerContestant
             .Take(limit)
             .Select((e, idx) => new LeaderboardEntryDto
@@ -520,6 +539,7 @@ public class MustacheController : ControllerBase
             CrazyHairEntriesCount = creativeCount,
             ChampionshipEntriesCount = mustacheCount,
             WoodenSpoonEntriesCount = 0,
+            TotalFundsRaisedZar = totalFundsRaisedZar,
             Division = isCreative ? "creative" : "mustache",
             Entries = entries
         });
@@ -760,7 +780,15 @@ public class MustacheController : ControllerBase
         var creativeCount = allEntries.Count(e => IsCreativeEntry(e));
         var championship = mustacheCount;
         var prizeEligible = allEntries.Count(e => e.User != null && (e.User.LeaderboardPaid || (e.User.AmountPaid.HasValue && e.User.AmountPaid.Value >= 100)));
-        var totalDonations = await _dbContext.Users.SumAsync(u => u.AmountPaid ?? 0m);
+        var participantDonationsSum = await _dbContext.Users
+            .Where(u => u.Role != "Admin"
+                     && u.Email.ToLower() != "admin@dvt.co.za"
+                     && u.FullName.ToLower() != "movember admin"
+                     && !u.FullName.ToLower().Contains("alex movember")
+                     && u.Email.ToLower() != "testparticipant@gmail.com")
+            .SumAsync(u => u.AmountPaid ?? 0m);
+        var externalDonationsSum = await _dbContext.ExternalDonations.SumAsync(d => (decimal?)d.Amount) ?? 0m;
+        var totalDonations = participantDonationsSum + externalDonationsSum;
         var avg = total > 0 ? Math.Round(allEntries.Average(e => e.OverallScore), 1) : 0;
         var top = total > 0 ? allEntries.Max(e => e.OverallScore) : 0;
 
@@ -863,7 +891,14 @@ public class MustacheController : ControllerBase
         }).ToList();
 
         var prizeEligibleCount = users.Count(u => u.IsEligibleToWin);
-        var totalDonations = users.Sum(u => u.AmountPaid ?? 0m);
+        var participantDonations = users.Sum(u => u.AmountPaid ?? 0m);
+
+        var externalDonationsList = await _dbContext.ExternalDonations
+            .AsNoTracking()
+            .OrderByDescending(d => d.CreatedAt)
+            .ToListAsync();
+        var externalDonationsTotal = externalDonationsList.Sum(d => d.Amount);
+        var totalDonations = participantDonations + externalDonationsTotal;
 
         var mustacheContestants = users.Count(u => u.PreferredCompetition != "CreativeMustache" && u.PreferredCompetition != "CrazyHair");
         var creativeContestants = users.Count(u => u.PreferredCompetition == "CreativeMustache" || u.PreferredCompetition == "CrazyHair");
@@ -877,14 +912,17 @@ public class MustacheController : ControllerBase
             mustacheContestantsCount = mustacheContestants,
             creativeMustacheContestantsCount = creativeContestants,
             crazyHairContestantsCount = creativeContestants,
+            participantFundsRaisedZar = participantDonations,
+            externalFundsRaisedZar = externalDonationsTotal,
             totalFundsRaisedZar = totalDonations,
             totalDonationsZar = totalDonations,
+            externalDonations = externalDonationsList,
             contestants = contestantDtos
         });
     }
 
     /// <summary>
-    /// Set a contestant's donation amount and prize eligibility.
+    /// Set a contestant's custom donation amount and automatic grand prize eligibility (R100+).
     /// </summary>
     [HttpPost("admin/contestant/{id:guid}/set-donation")]
     public async Task<IActionResult> SetContestantDonation(Guid id, [FromBody] SetDonationRequest request)
@@ -900,27 +938,41 @@ public class MustacheController : ControllerBase
             return NotFound(new { error = "Contestant not found." });
         }
 
-        user.LeaderboardPaid = request.Eligible;
+        decimal newAmount;
         if (request.Amount.HasValue)
         {
-            user.AmountPaid = request.Amount.Value;
-            if (user.AmountPaid >= 100)
-            {
-                user.LeaderboardPaid = true;
-            }
+            newAmount = Math.Max(0m, Math.Round(request.Amount.Value, 2));
         }
-        else if (request.Eligible && user.AmountPaid < 100)
+        else if (request.Eligible == true)
         {
-            user.AmountPaid = 100m;
+            newAmount = Math.Max(100m, user.AmountPaid ?? 0m);
+        }
+        else
+        {
+            newAmount = 0m;
         }
 
-        if (user.LeaderboardPaid && string.IsNullOrEmpty(user.PaymentMethod))
+        user.AmountPaid = newAmount;
+        user.LeaderboardPaid = newAmount >= 100m;
+
+        if (newAmount > 0m)
         {
-            user.PaymentMethod = "DonationConfirmed";
-            user.PaidAt = DateTime.UtcNow;
+            if (string.IsNullOrEmpty(user.PaymentMethod))
+            {
+                user.PaymentMethod = "DonationConfirmed";
+            }
+            user.PaidAt ??= DateTime.UtcNow;
+        }
+        else
+        {
+            user.PaidAt = null;
         }
 
         await _dbContext.SaveChangesAsync();
+
+        var statusLabel = user.IsEligibleToWin
+            ? "Grand Prize Eligible (R100+)"
+            : (user.AmountPaid > 0 ? "Community Supporter (< R100)" : "No Donation Recorded");
 
         return Ok(new
         {
@@ -929,7 +981,74 @@ public class MustacheController : ControllerBase
             leaderboardPaid = user.LeaderboardPaid,
             amountPaid = user.AmountPaid,
             isEligibleToWin = user.IsEligibleToWin,
-            message = $"Contestant {user.FullName} marked as {(user.IsEligibleToWin ? "Eligible to Win" : "Community Participant")} (Donated: R{user.AmountPaid})."
+            message = $"Updated {user.FullName}'s donation to R{user.AmountPaid:0.##} ({statusLabel})."
+        });
+    }
+
+    /// <summary>
+    /// Add a non-participant / company / sponsor donation to the total funds raised.
+    /// </summary>
+    [HttpPost("admin/external-donations")]
+    public async Task<IActionResult> AddExternalDonation([FromBody] AddExternalDonationRequest request)
+    {
+        if (!IsAdminAuthorized())
+        {
+            return Unauthorized(new { error = "Admin authorization required." });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.DonorName))
+        {
+            return BadRequest(new { error = "Donor or source name is required." });
+        }
+
+        if (request.Amount <= 0)
+        {
+            return BadRequest(new { error = "Donation amount must be greater than R0." });
+        }
+
+        var donation = new ExternalDonation
+        {
+            Id = Guid.NewGuid(),
+            DonorName = request.DonorName.Trim(),
+            Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
+            Amount = Math.Round(request.Amount, 2),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _dbContext.ExternalDonations.Add(donation);
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(new
+        {
+            donation,
+            message = $"Added R{donation.Amount:0.##} contribution from {donation.DonorName}."
+        });
+    }
+
+    /// <summary>
+    /// Delete a non-participant / company donation entry.
+    /// </summary>
+    [HttpDelete("admin/external-donations/{id:guid}")]
+    public async Task<IActionResult> DeleteExternalDonation(Guid id)
+    {
+        if (!IsAdminAuthorized())
+        {
+            return Unauthorized(new { error = "Admin authorization required." });
+        }
+
+        var donation = await _dbContext.ExternalDonations.FindAsync(id);
+        if (donation == null)
+        {
+            return NotFound(new { error = "External donation entry not found." });
+        }
+
+        _dbContext.ExternalDonations.Remove(donation);
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(new
+        {
+            id = donation.Id,
+            message = $"Removed R{donation.Amount:0.##} contribution from {donation.DonorName}."
         });
     }
 

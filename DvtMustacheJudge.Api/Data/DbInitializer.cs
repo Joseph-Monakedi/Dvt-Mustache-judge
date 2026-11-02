@@ -141,6 +141,14 @@ public static class DbInitializer
                     ""CompletedAt"" timestamp with time zone
                 );
 
+                CREATE TABLE IF NOT EXISTS ""ExternalDonations"" (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""DonorName"" character varying(150) NOT NULL,
+                    ""Note"" character varying(300),
+                    ""Amount"" numeric(12,2) NOT NULL DEFAULT 0,
+                    ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
                 ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PaymentMethod"" character varying(50);
                 ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PayfastPaymentId"" character varying(100);
                 ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""AmountPaid"" numeric(10,2);

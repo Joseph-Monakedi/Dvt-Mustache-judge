@@ -160,6 +160,7 @@ public class LeaderboardResponseDto
     public int CrazyHairEntriesCount { get; set; }
     public int ChampionshipEntriesCount { get; set; }
     public int WoodenSpoonEntriesCount { get; set; }
+    public decimal TotalFundsRaisedZar { get; set; }
     public string Division { get; set; } = "mustache";
     public List<LeaderboardEntryDto> Entries { get; set; } = new();
 }

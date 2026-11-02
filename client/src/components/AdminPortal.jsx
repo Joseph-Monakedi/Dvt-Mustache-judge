@@ -46,6 +46,14 @@ export default function AdminPortal({ onBackToApp }) {
   const [contestantsLoading, setContestantsLoading] = useState(false);
   const [contestantSearch, setContestantSearch] = useState('');
   const [contestantFilter, setContestantFilter] = useState('all'); // 'all' | 'eligible' | 'community' | 'mustache' | 'crazyhair'
+  const [donationInputs, setDonationInputs] = useState({});
+  const [savingDonationId, setSavingDonationId] = useState(null);
+
+  // External / Non-Participant / Company Donations state
+  const [externalDonorName, setExternalDonorName] = useState('');
+  const [externalAmount, setExternalAmount] = useState('');
+  const [externalNote, setExternalNote] = useState('');
+  const [addingExternalDonation, setAddingExternalDonation] = useState(false);
 
   // Quiz host state (code preserved for future use)
   const [quizState, setQuizState] = useState(null);
@@ -113,6 +121,13 @@ export default function AdminPortal({ onBackToApp }) {
       if (res.ok) {
         const data = await res.json();
         setContestantData(data);
+        if (Array.isArray(data.contestants)) {
+          const initialInputs = {};
+          data.contestants.forEach(c => {
+            initialInputs[c.id] = c.amountPaid != null ? String(c.amountPaid) : (c.leaderboardPaid ? '100' : '0');
+          });
+          setDonationInputs(initialInputs);
+        }
       }
     } catch (err) {
       console.warn('Error fetching contestants:', err);
@@ -121,8 +136,11 @@ export default function AdminPortal({ onBackToApp }) {
     }
   };
 
-  // Set / Toggle Donation and Prize Eligibility (min R100)
+  // Set / Save Custom Donation Amount and Automatic Prize Eligibility (min R100 for Grand Prize)
   const handleSetDonation = async (userId, eligible, amount = 100) => {
+    const parsedAmount = Math.max(0, Number(amount) || 0);
+    const isEligible = parsedAmount >= 100;
+    setSavingDonationId(userId);
     try {
       const res = await fetch(apiUrl(`/api/mustache/admin/contestant/${userId}/set-donation`), {
         method: 'POST',
@@ -130,11 +148,11 @@ export default function AdminPortal({ onBackToApp }) {
           'Content-Type': 'application/json',
           'X-Admin-Password': adminPassword
         },
-        body: JSON.stringify({ eligible, amount: eligible ? amount : 0 })
+        body: JSON.stringify({ eligible: isEligible, amount: parsedAmount })
       });
       if (res.ok) {
         const data = await res.json();
-        setActionMessage(data.message || 'Donation status updated.');
+        setActionMessage(data.message || 'Donation amount updated.');
         setTimeout(() => setActionMessage(''), 4500);
         fetchContestants();
       } else {
@@ -143,6 +161,81 @@ export default function AdminPortal({ onBackToApp }) {
       }
     } catch (err) {
       alert(`Donation status update failed: ${err.message}`);
+    } finally {
+      setSavingDonationId(null);
+    }
+  };
+
+  // Add Non-Participant / Company Donation
+  const handleAddExternalDonation = async (e) => {
+    e.preventDefault();
+    const cleanName = externalDonorName.trim();
+    const numericAmount = Number(externalAmount);
+    if (!cleanName) {
+      alert('Please enter a donor or source name (e.g. DVT Corporate Contribution).');
+      return;
+    }
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      alert('Please enter a valid donation amount greater than R0.');
+      return;
+    }
+
+    setAddingExternalDonation(true);
+    try {
+      const res = await fetch(apiUrl('/api/mustache/admin/external-donations'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Password': adminPassword
+        },
+        body: JSON.stringify({
+          donorName: cleanName,
+          amount: numericAmount,
+          note: externalNote.trim() || null
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Server returned ${res.status}`);
+      }
+
+      const data = await res.json();
+      setActionMessage(data.message || 'Non-participant donation added.');
+      setTimeout(() => setActionMessage(''), 4500);
+      setExternalDonorName('');
+      setExternalAmount('');
+      setExternalNote('');
+      fetchContestants();
+      fetchAdminData();
+    } catch (err) {
+      alert(`Failed to add non-participant donation: ${err.message}`);
+    } finally {
+      setAddingExternalDonation(false);
+    }
+  };
+
+  // Delete Non-Participant / Company Donation
+  const handleDeleteExternalDonation = async (donationId, donorName, amount) => {
+    if (!window.confirm(`Remove R${amount} contribution from "${donorName}"?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(apiUrl(`/api/mustache/admin/external-donations/${donationId}`), {
+        method: 'DELETE',
+        headers: { 'X-Admin-Password': adminPassword }
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Server returned ${res.status}`);
+      }
+      const data = await res.json();
+      setActionMessage(data.message || 'Contribution removed.');
+      setTimeout(() => setActionMessage(''), 4500);
+      fetchContestants();
+      fetchAdminData();
+    } catch (err) {
+      alert(`Failed to remove donation: ${err.message}`);
     }
   };
 
@@ -818,12 +911,144 @@ export default function AdminPortal({ onBackToApp }) {
             </div>
             <div className="admin-stat-card">
               <div className="stat-label">
-                <FaHandHoldingHeart className="inline-icon text-rose-400" /> Total Donated for Prostate Cancer
+                <FaHandHoldingHeart className="inline-icon text-rose-400" /> Total Funds Raised (Home Page)
               </div>
               <div className="stat-val text-green">
                 R {(contestantData?.totalFundsRaisedZar || 0).toLocaleString()}
               </div>
+              <div className="text-[11px] text-slate-400 mt-1">
+                Participants: R{(contestantData?.participantFundsRaisedZar ?? contestantData?.totalFundsRaisedZar ?? 0).toLocaleString()} &bull; Non-Participants: R{(contestantData?.externalFundsRaisedZar || 0).toLocaleString()}
+              </div>
             </div>
+          </div>
+
+          {/* Funds Section: Non-Participant / Company Contributions */}
+          <div className="mb-6 p-5 rounded-2xl bg-[#0b1524]/90 border border-emerald-500/30 shadow-xl">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-white/10">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                  <FaHandHoldingHeart className="text-emerald-400" />
+                  <span>Funds Raised &amp; Non-Participant Contributions</span>
+                </h3>
+                <p className="text-xs text-slate-300 mt-1">
+                  Record company pledges, corporate matching, or donations from non-participants here. The Home Page displays the combined <strong>Total Funds Raised</strong> (Participant Donations + Non-Participant Contributions).
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-xs shrink-0">
+                <div className="px-3 py-2 rounded-xl bg-slate-900/90 border border-white/10">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Participant Donations</span>
+                  <strong className="text-cyan-300 text-sm font-mono">
+                    R {(contestantData?.participantFundsRaisedZar ?? 0).toLocaleString()}
+                  </strong>
+                </div>
+                <div className="px-3 py-2 rounded-xl bg-slate-900/90 border border-white/10">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Company / Non-Participants</span>
+                  <strong className="text-purple-300 text-sm font-mono">
+                    R {(contestantData?.externalFundsRaisedZar ?? 0).toLocaleString()}
+                  </strong>
+                </div>
+                <div className="px-3.5 py-2 rounded-xl bg-emerald-950/60 border border-emerald-500/40">
+                  <span className="text-emerald-300 block text-[10px] uppercase font-extrabold">Total Shown on Home Page</span>
+                  <strong className="text-emerald-400 text-base font-black font-mono">
+                    R {(contestantData?.totalFundsRaisedZar ?? 0).toLocaleString()}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Form to Add Non-Participant / Company Donation */}
+            <form onSubmit={handleAddExternalDonation} className="mt-4 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+              <div className="sm:col-span-4">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                  Donor / Company Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. DVT Corporate Contribution"
+                  value={externalDonorName}
+                  onChange={e => setExternalDonorName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-[#060d17] border border-slate-700 text-sm text-white focus:outline-none focus:border-emerald-400"
+                />
+              </div>
+              <div className="sm:col-span-3">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                  Amount (ZAR) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-400">R</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    required
+                    placeholder="5000"
+                    value={externalAmount}
+                    onChange={e => setExternalAmount(e.target.value)}
+                    className="w-full pl-7 pr-3 py-2 rounded-lg bg-[#060d17] border border-slate-700 text-sm text-white font-mono focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+              </div>
+              <div className="sm:col-span-3">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                  Note / Reference (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Company pledge / Sponsor"
+                  value={externalNote}
+                  onChange={e => setExternalNote(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-[#060d17] border border-slate-700 text-sm text-white focus:outline-none focus:border-emerald-400"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <button
+                  type="submit"
+                  disabled={addingExternalDonation}
+                  className="w-full py-2 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider transition cursor-pointer shadow-md"
+                >
+                  {addingExternalDonation ? 'Adding...' : '+ Add Funds'}
+                </button>
+              </div>
+            </form>
+
+            {/* List of Non-Participant / Company Donations */}
+            {contestantData?.externalDonations && contestantData.externalDonations.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                  Recorded Non-Participant &amp; Company Contributions ({contestantData.externalDonations.length})
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {contestantData.externalDonations.map(item => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl bg-[#060d17]/90 border border-slate-800"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-white truncate">{item.donorName}</div>
+                        <div className="text-[11px] text-slate-400 truncate">
+                          {item.note ? `${item.note} • ` : ''}
+                          {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        <span className="text-xs font-extrabold font-mono text-emerald-400">
+                          R {Number(item.amount || 0).toLocaleString()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteExternalDonation(item.id, item.donorName, item.amount)}
+                          className="p-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 transition cursor-pointer"
+                          title="Remove contribution"
+                        >
+                          <FaTrash className="text-[11px]" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Search & Filter Controls for Donations */}
@@ -945,24 +1170,79 @@ export default function AdminPortal({ onBackToApp }) {
                             </div>
                           </td>
                           <td>
-                            <div className="payment-action-cell">
+                            <div className="payment-action-cell" style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
                               {isEligible ? (
                                 <span className="payment-status-badge badge-paid">
-                                  <FaCircleCheck className="badge-icon" /> R1,000 Eligible (Donated R{c.amountPaid || 100})
+                                  <FaCircleCheck className="badge-icon" /> R1,000 Eligible (Donated R{Number(c.amountPaid || 100).toLocaleString()})
+                                </span>
+                              ) : (c.amountPaid > 0) ? (
+                                <span className="payment-status-badge badge-pending" style={{ borderColor: 'rgba(56, 189, 248, 0.4)', color: '#7dd3fc' }}>
+                                  <FaHandHoldingHeart className="badge-icon" /> Donated R{Number(c.amountPaid).toLocaleString()} (&lt; R100 Community)
                                 </span>
                               ) : (
                                 <span className="payment-status-badge badge-pending">
-                                  <FaClock className="badge-icon" /> Community (No Donation)
+                                  <FaClock className="badge-icon" /> Community (R0 Donated)
                                 </span>
                               )}
-                              <button
-                                type="button"
-                                className={`payment-toggle-btn ${isEligible ? 'btn-revoke' : 'btn-approve-100'}`}
-                                onClick={() => handleSetDonation(c.id, !isEligible, 100)}
-                                title={isEligible ? 'Mark as Community participant (Revoke eligibility)' : 'Mark as Eligible for R1,000 Grand Prize (R100 Donated)'}
-                              >
-                                {isEligible ? 'Revoke Eligibility' : 'Mark Donated R100 (Eligible)'}
-                              </button>
+
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <div className="relative flex items-center">
+                                  <span className="absolute left-2.5 text-xs font-bold text-emerald-400 pointer-events-none">R</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    aria-label={`Donation amount in ZAR for ${c.fullName}`}
+                                    value={donationInputs[c.id] ?? (c.amountPaid != null ? String(c.amountPaid) : '0')}
+                                    onChange={e => setDonationInputs(prev => ({ ...prev, [c.id]: e.target.value }))}
+                                    className="w-24 pl-6 pr-2 py-1 rounded-lg bg-[#060d17] border border-slate-700 text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
+                                    placeholder="0"
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  disabled={savingDonationId === c.id}
+                                  className="payment-toggle-btn btn-approve-100"
+                                  style={{ padding: '5px 10px', fontSize: '11px' }}
+                                  onClick={() => {
+                                    const val = Number(donationInputs[c.id] ?? c.amountPaid ?? 0);
+                                    handleSetDonation(c.id, val >= 100, val);
+                                  }}
+                                  title="Save custom donation amount (R100+ automatically qualifies for the R1,000 Grand Prize)"
+                                >
+                                  {savingDonationId === c.id ? 'Saving...' : 'Save Amount'}
+                                </button>
+                                {(!isEligible) && (
+                                  <button
+                                    type="button"
+                                    disabled={savingDonationId === c.id}
+                                    className="payment-toggle-btn"
+                                    style={{ padding: '5px 8px', fontSize: '11px', background: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#6ee7b7' }}
+                                    onClick={() => {
+                                      setDonationInputs(prev => ({ ...prev, [c.id]: '100' }));
+                                      handleSetDonation(c.id, true, 100);
+                                    }}
+                                    title="Quick set R100 donation (Grand Prize Eligible)"
+                                  >
+                                    +R100
+                                  </button>
+                                )}
+                                {(c.amountPaid > 0 || isEligible) && (
+                                  <button
+                                    type="button"
+                                    disabled={savingDonationId === c.id}
+                                    className="payment-toggle-btn btn-revoke"
+                                    style={{ padding: '5px 8px', fontSize: '11px' }}
+                                    onClick={() => {
+                                      setDonationInputs(prev => ({ ...prev, [c.id]: '0' }));
+                                      handleSetDonation(c.id, false, 0);
+                                    }}
+                                    title="Reset donation to R0"
+                                  >
+                                    Reset R0
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </td>
                           <td>

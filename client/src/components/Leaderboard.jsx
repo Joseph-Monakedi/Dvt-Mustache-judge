@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { FaTrophy, FaCrown, FaMagnifyingGlass, FaXmark, FaArrowRight } from 'react-icons/fa6';
+import { FaTrophy, FaCrown, FaMagnifyingGlass, FaXmark, FaArrowRight, FaHandHoldingHeart } from 'react-icons/fa6';
 import { HiSparkles } from 'react-icons/hi2';
 import { GiMustache } from 'react-icons/gi';
 import { apiUrl } from '../utils/api';
@@ -118,6 +118,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
   const [totalEntries, setTotalEntries] = useState(0);
   const [mustacheCount, setMustacheCount] = useState(0);
   const [creativeCount, setCreativeCount] = useState(0);
+  const [totalFundsRaised, setTotalFundsRaised] = useState(0);
   const [division, setDivision] = useState(() => {
     const d = searchParams.get('division');
     return (d && (d.toLowerCase().includes('creative') || d.toLowerCase().includes('hair'))) ? 'creative' : 'mustache';
@@ -162,6 +163,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
       setTotalEntries(data.totalEntries || 0);
       setMustacheCount(data.mustacheEntriesCount ?? data.championshipEntriesCount ?? 0);
       setCreativeCount(data.creativeMustacheEntriesCount ?? data.crazyHairEntriesCount ?? 0);
+      setTotalFundsRaised(Number(data.totalFundsRaisedZar ?? 0));
       setLastUpdated(new Date());
       setError(null);
     } catch (err) {
@@ -201,6 +203,40 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
     <div className="leaderboard-container fade-in">
       {/* Top Ambient Loading Bar during Background Refresh */}
       {loading && entries.length > 0 && <div className="global-loading-bar" />}
+
+      {/* Total Funds Raised Hero Banner at the Top of the Home Page */}
+      <div className="mb-5 p-4 sm:px-6 sm:py-5 rounded-2xl bg-gradient-to-r from-emerald-950/60 via-[#0b1726] to-cyan-950/60 border border-emerald-500/40 shadow-[0_0_30px_rgba(16,185,129,0.12)] backdrop-blur-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 flex items-center justify-center shrink-0 shadow-inner">
+              <FaHandHoldingHeart className="text-emerald-400 text-2xl sm:text-3xl drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[11px] sm:text-xs font-extrabold uppercase tracking-widest text-emerald-300">
+                  DVT Movember 2026 Charity Drive
+                </span>
+              </div>
+              <h2 className="text-base sm:text-lg font-bold text-white mt-0.5">
+                Total Funds Raised for Prostate Cancer Awareness &amp; Research
+              </h2>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Every contribution supports men&apos;s health initiatives. Donate any amount — R100+ unlocks R1,000 Grand Prize eligibility!
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:items-end justify-center px-4 py-2.5 rounded-xl bg-[#060d17]/90 border border-emerald-400/30 shrink-0">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              Total Raised So Far
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-emerald-400 tracking-tight font-mono drop-shadow-[0_0_12px_rgba(52,211,153,0.3)]">
+              R {totalFundsRaised.toLocaleString('en-ZA', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Grand Prize & Prostate Cancer Awareness Donation Banner */}
       <div className="mb-8 p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#007FBA]/20 via-[#0b1320] to-purple-950/30 border border-cyan-500/40 shadow-2xl backdrop-blur-md">

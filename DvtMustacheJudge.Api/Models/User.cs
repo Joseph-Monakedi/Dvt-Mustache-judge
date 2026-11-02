@@ -60,3 +60,20 @@ public class User
     // Navigation property
     public List<MustacheEntry> Entries { get; set; } = new();
 }
+
+public class ExternalDonation
+{
+    [Key]
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    [Required]
+    [MaxLength(150)]
+    public string DonorName { get; set; } = string.Empty;
+
+    [MaxLength(300)]
+    public string? Note { get; set; }
+
+    public decimal Amount { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}

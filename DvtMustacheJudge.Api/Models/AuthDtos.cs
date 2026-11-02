@@ -59,8 +59,14 @@ public record ContestantSummaryDto(
 );
 
 public record SetDonationRequest(
-    bool Eligible,
+    bool? Eligible = null,
     decimal? Amount = null
+);
+
+public record AddExternalDonationRequest(
+    [Required, MaxLength(150)] string DonorName,
+    decimal Amount,
+    [MaxLength(300)] string? Note = null
 );
 
 public record TogglePaymentRequest(
