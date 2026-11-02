@@ -1511,8 +1511,9 @@ public class MustacheController : ControllerBase
         }
 
         var entries = await _dbContext.MustacheEntries
+            .Include(e => e.User)
             .Where(e => request.Ids.Contains(e.Id))
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         if (entries.Count == 0)
         {
@@ -1545,17 +1546,40 @@ public class MustacheController : ControllerBase
                 continue;
             }
 
+            bool isCreative = IsCreativeEntry(entry);
+            string entryTrack = isCreative ? "CreativeMustache" : "Mustache";
+            entry.CompetitionType = entryTrack;
+
+            byte[]? cleanShaveBytes = null;
+            string? cleanShaveMime = null;
+            var cleanShaveUrl = !string.IsNullOrWhiteSpace(entry.CleanShaveImageUrl)
+                ? entry.CleanShaveImageUrl
+                : entry.User?.CleanShaveImageUrl;
+
+            if (!isCreative && !string.IsNullOrWhiteSpace(cleanShaveUrl))
+            {
+                var loadedBaseline = await LoadImageBytesAsync(cleanShaveUrl);
+                cleanShaveBytes = loadedBaseline.bytes;
+                cleanShaveMime = loadedBaseline.contentType;
+            }
+
             try
             {
                 using var aiStream = new MemoryStream(imageBytes);
-                // GeminiJudgeService awaits _rateLimiter.AcquireAsync()
+                using var csStream = (cleanShaveBytes != null && cleanShaveBytes.Length > 0)
+                    ? new MemoryStream(cleanShaveBytes)
+                    : null;
+
+                // GeminiJudgeService awaits _rateLimiter.AcquireAsync() and evaluates according to entryTrack
                 var result = await _geminiService.JudgeMustacheAsync(
                     aiStream,
                     contentType,
                     entry.ContestantName,
+                    csStream,
+                    cleanShaveMime,
+                    entryTrack,
                     cancellationToken: cancellationToken);
 
-                bool isCreative = IsCreativeEntry(entry);
                 if (InjectionDetector.IsInjectionAttempt(entry.ContestantName, out _))
                 {
                     if (isCreative)
@@ -1572,6 +1596,17 @@ public class MustacheController : ControllerBase
                 entry.DensityScore = Math.Clamp(result.DensityScore, 0, 10);
                 entry.SymmetryScore = Math.Clamp(result.SymmetryScore, 0, 10);
                 entry.SwaggerScore = Math.Clamp(result.SwaggerScore, 0, 10);
+                if (!isCreative)
+                {
+                    if (result.GrowthScore > 0)
+                    {
+                        entry.GrowthScore = Math.Clamp(result.GrowthScore, 0, 100);
+                    }
+                    if (!string.IsNullOrWhiteSpace(result.GrowthAnalysis))
+                    {
+                        entry.GrowthAnalysis = result.GrowthAnalysis;
+                    }
+                }
                 entry.IsWoodenSpoon = false;
                 entry.WoodenSpoonReason = null;
                 entry.InnovationScore = Math.Clamp(result.InnovationScore, 0, 10);
@@ -1596,10 +1631,16 @@ public class MustacheController : ControllerBase
                     ContestantName = entry.ContestantName,
                     ImageUrl = entry.ImageUrl,
                     ThumbnailUrl = entry.ThumbnailUrl,
+                    CleanShaveImageUrl = entry.CleanShaveImageUrl,
+                    CompetitionType = entry.CompetitionType,
+                    IsPrizeEligible = entry.User != null && (entry.User.LeaderboardPaid || (entry.User.AmountPaid.HasValue && entry.User.AmountPaid.Value >= 100)),
+                    AmountDonated = entry.User?.AmountPaid ?? 0m,
                     OverallScore = entry.OverallScore,
                     DensityScore = entry.DensityScore,
                     SymmetryScore = entry.SymmetryScore,
                     SwaggerScore = entry.SwaggerScore,
+                    GrowthScore = entry.GrowthScore,
+                    GrowthAnalysis = entry.GrowthAnalysis,
                     IsWoodenSpoon = false,
                     WoodenSpoonReason = null,
                     InnovationScore = entry.InnovationScore,
