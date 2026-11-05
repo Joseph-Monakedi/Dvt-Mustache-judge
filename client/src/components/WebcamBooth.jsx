@@ -485,7 +485,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
           {isCreative
             ? 'Women can participate too by taking part in the creative challenge! Craft a wild, funny, or inventive mustache using wigs, paper, cotton, cardboard, drawings, or surprise items. The more creative the better! Grand Prize: R1,000 Takealot Voucher!'
             : needsCleanShave
-              ? 'Before entering the mustache contest, snap a fresh clean-shaven photo. This baseline is saved to your profile and used to evaluate your growth over time.'
+              ? 'Before entering the mustache contest, snap a fresh clean-shaven photo. The AI verifies you are completely clean-shaven on Day 1 to establish a fair starting line.'
               : 'Submit as many photos as you want! Growth is evaluated alongside your clean-shave baseline, and only your single highest score is featured on the leaderboard.'}
         </p>
       </div>
@@ -726,7 +726,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
               {savingCleanShave ? (
                 <span className="btn-loading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <span className="btn-spinner"></span>
-                  <span>Saving Day 1 Clean Shave Baseline...</span>
+                  <span>Verifying Clean Shave with AI & Saving...</span>
                 </span>
               ) : isSubmitting ? (
                 <span className="btn-loading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
@@ -736,7 +736,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
               ) : needsCleanShave ? (
                 <>
                   <FaCamera className="btn-icon" />
-                  <span>SAVE DAY 1 CLEAN SHAVE BASELINE</span>
+                  <span>VERIFY & SAVE CLEAN SHAVE BASELINE</span>
                 </>
               ) : (
                 <>

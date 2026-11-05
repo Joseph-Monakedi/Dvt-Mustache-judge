@@ -12,4 +12,10 @@ public interface IGeminiJudgeService
         string? cleanShaveMimeType = null,
         string competitionType = "Mustache",
         CancellationToken cancellationToken = default);
+
+    Task<CleanShaveVerificationResult> VerifyCleanShaveAsync(
+        Stream imageStream,
+        string mimeType,
+        string contestantName,
+        CancellationToken cancellationToken = default);
 }

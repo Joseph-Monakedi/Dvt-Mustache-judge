@@ -164,6 +164,21 @@ public class MustacheController : ControllerBase
                 cleanShaveBytes = cMs.ToArray();
                 cleanShaveMime = request.CleanShaveImage.ContentType;
 
+                using var vStream = new MemoryStream(cleanShaveBytes);
+                var vResult = await _geminiService.VerifyCleanShaveAsync(vStream, cleanShaveMime, contestantName, cancellationToken);
+                if (!vResult.IsAppropriate)
+                {
+                    return BadRequest(new { error = !string.IsNullOrWhiteSpace(vResult.InappropriateReason) ? $"Day 1 photo rejected: {vResult.InappropriateReason}" : "Day 1 clean shave photo rejected due to content policy violation." });
+                }
+                if (!vResult.HasFace)
+                {
+                    return BadRequest(new { error = !string.IsNullOrWhiteSpace(vResult.Feedback) ? vResult.Feedback : "No human face detected in Day 1 clean shave photo." });
+                }
+                if (!vResult.IsCleanShaven)
+                {
+                    return BadRequest(new { error = !string.IsNullOrWhiteSpace(vResult.Feedback) ? vResult.Feedback : "Day 1 baseline photo must be clean-shaven. Please shave and try again." });
+                }
+
                 using var cUploadMs = new MemoryStream(cleanShaveBytes);
                 var cUpload = await _storageService.UploadImageAsync(cUploadMs, request.CleanShaveImage.FileName, cleanShaveMime);
                 cleanShaveUrl = cUpload.ImageUrl;
@@ -178,24 +193,21 @@ public class MustacheController : ControllerBase
                 return BadRequest(new { error = "You must first take and submit your Day 1 Clean Shave baseline photo before entering mustache contest photos." });
             }
 
-            // If cleanShaveBytes is null, load from local disk if available
+            // If cleanShaveBytes is null, load baseline photo (supports remote Cloudinary/HTTP URLs and local disk)
             if (cleanShaveBytes == null && !string.IsNullOrWhiteSpace(cleanShaveUrl))
             {
-                try
+                var loaded = await LoadImageBytesAsync(cleanShaveUrl);
+                cleanShaveBytes = loaded.bytes;
+                cleanShaveMime = loaded.contentType;
+
+                if (cleanShaveBytes != null && cleanShaveBytes.Length > 0)
                 {
-                    var webRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
-                    var uri = new Uri(cleanShaveUrl, UriKind.RelativeOrAbsolute);
-                    var localPath = uri.IsAbsoluteUri ? uri.AbsolutePath : cleanShaveUrl;
-                    var diskPath = Path.Combine(webRoot, localPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                    if (System.IO.File.Exists(diskPath))
-                    {
-                        cleanShaveBytes = await System.IO.File.ReadAllBytesAsync(diskPath, cancellationToken);
-                        cleanShaveMime = "image/jpeg";
-                    }
+                    _logger.LogInformation("Successfully loaded Day 1 clean shave baseline ({Bytes} bytes, mime: {Mime}) from {Url} for contestant '{Name}'.",
+                        cleanShaveBytes.Length, cleanShaveMime, cleanShaveUrl, contestantName);
                 }
-                catch
+                else
                 {
-                    // Ignore fallback if reading baseline fails
+                    _logger.LogWarning("Failed to load Day 1 clean shave baseline photo from {Url} for contestant '{Name}'.", cleanShaveUrl, contestantName);
                 }
             }
 
@@ -422,6 +434,45 @@ public class MustacheController : ControllerBase
         await image.CopyToAsync(memoryStream, cancellationToken);
         var imageBytes = memoryStream.ToArray();
 
+        // 1. Verify with Gemini AI that the contestant is genuinely clean-shaven, has a visible human face, and meets content policies
+        using var verificationStream = new MemoryStream(imageBytes);
+        var verification = await _geminiService.VerifyCleanShaveAsync(
+            verificationStream,
+            image.ContentType,
+            user.FullName ?? user.Email,
+            cancellationToken);
+
+        if (!verification.IsAppropriate)
+        {
+            return BadRequest(new
+            {
+                error = !string.IsNullOrWhiteSpace(verification.InappropriateReason)
+                    ? $"Photo rejected: {verification.InappropriateReason}"
+                    : "Photo rejected due to content policy violation."
+            });
+        }
+
+        if (!verification.HasFace)
+        {
+            return BadRequest(new
+            {
+                error = !string.IsNullOrWhiteSpace(verification.Feedback)
+                    ? verification.Feedback
+                    : "No human face detected! Please snap a clear selfie centering your face."
+            });
+        }
+
+        if (!verification.IsCleanShaven)
+        {
+            return BadRequest(new
+            {
+                error = !string.IsNullOrWhiteSpace(verification.Feedback)
+                    ? verification.Feedback
+                    : "You must be clean-shaven to establish your Day 1 baseline. Please shave and snap a fresh photo!"
+            });
+        }
+
+        // 2. Verified clean-shaven: upload to storage and link to user
         using var uploadStream = new MemoryStream(imageBytes);
         var uploadResult = await _storageService.UploadImageAsync(
             uploadStream,
@@ -436,7 +487,9 @@ public class MustacheController : ControllerBase
         {
             cleanShaveImageUrl = user.CleanShaveImageUrl,
             cleanShaveUploadedAt = user.CleanShaveUploadedAt,
-            message = "Day 1 Clean Shave baseline photo saved successfully!"
+            message = !string.IsNullOrWhiteSpace(verification.Feedback)
+                ? verification.Feedback
+                : "Day 1 Clean Shave baseline verified and saved successfully!"
         });
     }
 
@@ -1491,12 +1544,60 @@ public class MustacheController : ControllerBase
     }
 
     /// <summary>
-    /// Helper to download or read local image bytes for re-analysis.
+    /// Helper to download remote Cloudinary images or read local disk image bytes.
     /// </summary>
     private async Task<(byte[]? bytes, string contentType)> LoadImageBytesAsync(string imageUrl)
     {
         if (string.IsNullOrWhiteSpace(imageUrl)) return (null, "image/jpeg");
 
+        var webRoot = _environment.WebRootPath;
+        if (string.IsNullOrWhiteSpace(webRoot))
+        {
+            webRoot = Path.Combine(_environment.ContentRootPath, "wwwroot");
+        }
+
+        // 1. First check if the file exists locally on disk (handles local storage, test runs, and localhost URLs)
+        try
+        {
+            string fileName;
+            if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri))
+            {
+                fileName = Path.GetFileName(uri.LocalPath);
+            }
+            else
+            {
+                fileName = Path.GetFileName(imageUrl.TrimStart('/'));
+            }
+
+            if (!string.IsNullOrWhiteSpace(fileName))
+            {
+                // Check in both wwwroot/uploads/ and wwwroot/
+                var inUploadsPath = Path.Combine(webRoot, "uploads", fileName);
+                var directPath = Path.Combine(webRoot, fileName);
+
+                var targetPath = System.IO.File.Exists(inUploadsPath) ? inUploadsPath
+                               : (System.IO.File.Exists(directPath) ? directPath : null);
+
+                if (targetPath != null)
+                {
+                    var bytes = await System.IO.File.ReadAllBytesAsync(targetPath);
+                    var ext = Path.GetExtension(targetPath).ToLowerInvariant();
+                    var ct = ext switch
+                    {
+                        ".png" => "image/png",
+                        ".webp" => "image/webp",
+                        _ => "image/jpeg"
+                    };
+                    return (bytes, ct);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed local filesystem check for {Url}", imageUrl);
+        }
+
+        // 2. Download from remote storage (e.g. Cloudinary CDN)
         if (imageUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
             imageUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
@@ -1511,39 +1612,14 @@ public class MustacheController : ControllerBase
                     var ct = resp.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
                     return (bytes, ct);
                 }
+                else
+                {
+                    _logger.LogWarning("Remote image download returned status {Status} for {Url}", resp.StatusCode, imageUrl);
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to download image from {Url}", imageUrl);
-            }
-            return (null, "image/jpeg");
-        }
-
-        // Local filesystem fallback
-        var webRoot = _environment.WebRootPath;
-        if (string.IsNullOrWhiteSpace(webRoot))
-        {
-            webRoot = Path.Combine(_environment.ContentRootPath, "wwwroot");
-        }
-        var relative = imageUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-        var localPath = Path.Combine(webRoot, relative);
-        if (System.IO.File.Exists(localPath))
-        {
-            try
-            {
-                var bytes = await System.IO.File.ReadAllBytesAsync(localPath);
-                var ext = Path.GetExtension(localPath).ToLowerInvariant();
-                var ct = ext switch
-                {
-                    ".png" => "image/png",
-                    ".webp" => "image/webp",
-                    _ => "image/jpeg"
-                };
-                return (bytes, ct);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to read local file from {Path}", localPath);
             }
         }
 

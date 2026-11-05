@@ -233,7 +233,7 @@ export default function DayOneCleanShaveModal({
       isOpen={isOpen}
       onClose={handleModalClose}
       title="Day 1 Clean Shave Baseline"
-      subtitle="Snap a photo of your clean-shaven face. The AI Judge uses this to verify your identity and track your growth progression across all submissions."
+      subtitle="Snap a photo of your clean-shaven face. The AI Judge verifies you are clean-shaven, confirms your identity, and tracks your growth progression across all submissions."
       maxWidth="max-w-2xl"
     >
       <div className="space-y-5">
@@ -330,7 +330,7 @@ export default function DayOneCleanShaveModal({
         <div className="flex items-start gap-3 p-3.5 bg-[#131f33]/70 border border-white/5 rounded-xl text-xs text-slate-300">
           <FaCircleInfo className="text-cyan-400 text-base shrink-0 mt-0.5" />
           <p>
-            <strong className="text-white font-semibold">Baseline Rule:</strong> Future mustache entries will be compared against this photo to measure your growth.
+            <strong className="text-white font-semibold">AI Clean Shave Audit:</strong> The AI Judge verifies you are completely clean-shaven on Day 1. Future mustache entries are measured against this baseline photo.
           </p>
         </div>
 
@@ -352,7 +352,7 @@ export default function DayOneCleanShaveModal({
                 icon={FaCheck}
                 loading={isSubmitting}
               >
-                Save Baseline
+                {isSubmitting ? 'Verifying Clean Shave with AI...' : 'Verify & Save Baseline'}
               </Button>
             </>
           ) : cameraActive ? (

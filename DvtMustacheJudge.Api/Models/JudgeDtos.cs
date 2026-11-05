@@ -65,6 +65,24 @@ public class GeminiJudgeResult
     public string? InappropriateReason { get; set; }
 }
 
+public class CleanShaveVerificationResult
+{
+    [JsonPropertyName("isCleanShaven")]
+    public bool IsCleanShaven { get; set; }
+
+    [JsonPropertyName("hasFace")]
+    public bool HasFace { get; set; } = true;
+
+    [JsonPropertyName("feedback")]
+    public string Feedback { get; set; } = string.Empty;
+
+    [JsonPropertyName("isAppropriate")]
+    public bool IsAppropriate { get; set; } = true;
+
+    [JsonPropertyName("inappropriateReason")]
+    public string? InappropriateReason { get; set; }
+}
+
 public class JudgeRequestDto
 {
     public string Name { get; set; } = string.Empty;

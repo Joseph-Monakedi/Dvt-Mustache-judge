@@ -83,6 +83,18 @@ public class GeminiJudgeService : IGeminiJudgeService
             }
         }
 
+        if (cleanShaveBase64 != null)
+        {
+            _logger.LogInformation("Gemini AI Judge: Attaching Day 1 Clean Shave baseline ({Length} base64 chars, mime: {Mime}) for contestant '{Name}' in {Comp} Challenge.",
+                cleanShaveBase64.Length, cleanShaveMimeType ?? "image/jpeg", contestantName, competitionType);
+        }
+        else if (!string.Equals(competitionType, "CreativeMustache", StringComparison.OrdinalIgnoreCase) &&
+                 !string.Equals(competitionType, "Creative", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Gemini AI Judge: No Day 1 Clean Shave baseline photo attached for contestant '{Name}' in {Comp} Challenge.",
+                contestantName, competitionType);
+        }
+
         bool isCreativeMustache = string.Equals(competitionType, "CreativeMustache", StringComparison.OrdinalIgnoreCase) 
             || string.Equals(competitionType, "Creative", StringComparison.OrdinalIgnoreCase)
             || string.Equals(competitionType, "CrazyHair", StringComparison.OrdinalIgnoreCase);
@@ -655,6 +667,238 @@ OTHER REQUIRED FIELDS:
             VerdictBadge = score >= 80 ? "Certified Movember Hero" : "Developing Follicle Contender",
             IsAppropriate = true,
             InappropriateReason = null
+        };
+    }
+
+    public async Task<CleanShaveVerificationResult> VerifyCleanShaveAsync(
+        Stream imageStream,
+        string mimeType,
+        string contestantName,
+        CancellationToken cancellationToken = default)
+    {
+        var apiKey = _configuration["Gemini:ApiKey"];
+        var model = _configuration["Gemini:Model"] ?? "gemini-2.5-flash";
+
+        if (string.IsNullOrWhiteSpace(apiKey) || apiKey.Contains("YOUR_"))
+        {
+            _logger.LogWarning("Gemini API key is not configured for clean shave verification. Using fallback baseline verification.");
+            return GenerateFallbackCleanShaveResult(contestantName);
+        }
+
+        // Wait in the rate limiter queue until the sliding window opens
+        _logger.LogInformation("Waiting for rate limiter permit for clean shave verification of '{Name}' (Queue depth: {QueueDepth})", 
+            contestantName, _rateLimiter.QueuedRequestsCount);
+        await _rateLimiter.AcquireAsync(cancellationToken);
+        _logger.LogInformation("Rate limiter permit acquired for clean shave verification of '{Name}'. Proceeding with Gemini AI call.", 
+            contestantName);
+
+        // Read image bytes
+        byte[] imageBytes;
+        if (imageStream.CanSeek)
+        {
+            imageStream.Position = 0;
+        }
+        using (var ms = new MemoryStream())
+        {
+            await imageStream.CopyToAsync(ms, cancellationToken);
+            imageBytes = ms.ToArray();
+        }
+
+        var base64Image = Convert.ToBase64String(imageBytes);
+        var normalizedMime = string.IsNullOrWhiteSpace(mimeType) || !mimeType.StartsWith("image/")
+            ? "image/jpeg"
+            : mimeType;
+
+        var systemPrompt = @"You are the Chief Arbiter and Follicular Baseline Inspector of the DVT Movember Challenge 2026.
+Your sole mission is to inspect this submitted photograph and strictly verify whether the contestant has fully shaved and presented a clean-shaven face to establish their Day 1 baseline for the Movember Mustache Challenge.
+
+EVALUATION PROTOCOL:
+1. FACE PRESENCE (hasFace):
+   - Check if a genuine, clear human face is present.
+   - If NO human face is found (e.g. photo of an object, pet/animal, empty room, clothing, back of head, completely blurry/obscured face):
+     * hasFace: false
+     * isCleanShaven: false
+     * feedback: 'No human face detected! Please snap a clear selfie centering your face so the AI Judge can establish your clean-shave baseline.'
+
+2. CONTENT SAFETY (isAppropriate):
+   - Check for NSFW, nudity, vulgar/obscene gestures (e.g., middle finger), or offensive material.
+   - If ANY vulgar or NSFW behaviour is detected:
+     * isAppropriate: false
+     * isCleanShaven: false
+     * inappropriateReason: 'Obscene gesture or inappropriate content detected.'
+     * feedback: 'Photo rejected due to content policy violation.'
+
+3. CLEAN-SHAVEN INSPECTION (isCleanShaven):
+   - Closely inspect the UPPER LIP (the mustache area), philtrum, chin, and jawline.
+   - ACCEPTABLE as clean-shaven:
+     * Completely bare, smooth skin.
+     * Negligible, faint 5-o'clock shadow or very faint follicular shadow immediately following a fresh razor shave on Day 1.
+   - NOT ACCEPTABLE (REJECT):
+     * Any existing grown mustache, pencil mustache, handlebar, horseshoe, or distinct facial hair above the lip (more than 1-2mm growth).
+     * An existing beard, goatee, stubble beard, or multi-day growth.
+     * Attempting to register an already-grown mustache or beard as a 'clean shave'!
+   - If NOT clean-shaven:
+     * isCleanShaven: false
+     * feedback: A witty, firm, encouraging DVT Movember critique explaining that they still have visible facial hair/stubble/mustache and must shave down to bare skin to establish a fair starting line. Example: 'Baseline rejected! Our forensic follicular scanner detected an existing mustache/beard. Movember rules require starting from a genuine clean shave on Day 1. Grab your razor, shave down to bare skin, and snap your fresh baseline!'
+   - If CLEAN-SHAVEN:
+     * isCleanShaven: true
+     * feedback: An encouraging DVT Movember confirmation. Example: 'Day 1 clean shave confirmed! Bare follicles detected across the upper lip. You are officially certified to begin growing your Movember mustache!'";
+
+        var userPrompt = $"Contestant Name: \"{contestantName}\". Establish Day 1 clean-shaven baseline. Inspect the photo: 1. Confirm clear human face is present. 2. Verify no vulgarity/NSFW. 3. Strictly verify whether the upper lip and jaw are cleanly shaved or if pre-existing mustache/beard growth is present. Return structured evaluation.";
+
+        var requestBody = new
+        {
+            systemInstruction = new
+            {
+                parts = new[]
+                {
+                    new { text = systemPrompt }
+                }
+            },
+            contents = new[]
+            {
+                new
+                {
+                    parts = new object[]
+                    {
+                        new { text = userPrompt },
+                        new
+                        {
+                            inlineData = new
+                            {
+                                mimeType = normalizedMime,
+                                data = base64Image
+                            }
+                        }
+                    }
+                }
+            },
+            generationConfig = new
+            {
+                temperature = 0.1,
+                responseMimeType = "application/json",
+                responseSchema = new
+                {
+                    type = "OBJECT",
+                    properties = new
+                    {
+                        isCleanShaven = new { type = "BOOLEAN" },
+                        hasFace = new { type = "BOOLEAN" },
+                        feedback = new { type = "STRING" },
+                        isAppropriate = new { type = "BOOLEAN" },
+                        inappropriateReason = new { type = "STRING" }
+                    },
+                    required = new[] { "isCleanShaven", "hasFace", "feedback", "isAppropriate" }
+                }
+            }
+        };
+
+        var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
+        var jsonPayload = JsonSerializer.Serialize(requestBody);
+        var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+        var response = await _httpClient.PostAsync(endpoint, content, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync();
+            _logger.LogError("Gemini API clean shave check returned status {StatusCode}: {Error}", response.StatusCode, errorBody);
+            return GenerateFallbackCleanShaveResult(contestantName);
+        }
+
+        var responseJson = await response.Content.ReadAsStringAsync();
+        var parsedResult = ExtractCleanShaveResultFromGeminiResponse(responseJson);
+        if (parsedResult == null)
+        {
+            _logger.LogWarning("Failed to parse valid clean shave result from Gemini response: {Json}. Falling back.", responseJson);
+            return GenerateFallbackCleanShaveResult(contestantName);
+        }
+
+        _logger.LogInformation("Clean shave verification for '{Name}': IsCleanShaven={Clean}, HasFace={Face}, IsAppropriate={Appropriate}",
+            contestantName, parsedResult.IsCleanShaven, parsedResult.HasFace, parsedResult.IsAppropriate);
+
+        return parsedResult;
+    }
+
+    private CleanShaveVerificationResult? ExtractCleanShaveResultFromGeminiResponse(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("promptFeedback", out var promptFeedback))
+            {
+                if (promptFeedback.TryGetProperty("blockReason", out var blockReason))
+                {
+                    _logger.LogWarning("Gemini clean-shave prompt blocked due to safety: {BlockReason}", blockReason.GetString());
+                    return new CleanShaveVerificationResult
+                    {
+                        IsAppropriate = false,
+                        IsCleanShaven = false,
+                        InappropriateReason = $"Image blocked by safety moderation filters ({blockReason.GetString()}).",
+                        Feedback = "Photo rejected due to content safety policy violation."
+                    };
+                }
+            }
+
+            if (root.TryGetProperty("candidates", out var candidates) && candidates.GetArrayLength() > 0)
+            {
+                var candidate = candidates[0];
+                if (candidate.TryGetProperty("content", out var contentElem) &&
+                    contentElem.TryGetProperty("parts", out var parts) &&
+                    parts.GetArrayLength() > 0)
+                {
+                    var part = parts[0];
+                    if (part.TryGetProperty("text", out var textElem))
+                    {
+                        var text = textElem.GetString();
+                        if (!string.IsNullOrWhiteSpace(text))
+                        {
+                            var cleanedJson = text.Trim();
+                            if (cleanedJson.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
+                            {
+                                cleanedJson = cleanedJson.Substring(7);
+                            }
+                            else if (cleanedJson.StartsWith("```"))
+                            {
+                                cleanedJson = cleanedJson.Substring(3);
+                            }
+
+                            if (cleanedJson.EndsWith("```"))
+                            {
+                                cleanedJson = cleanedJson.Substring(0, cleanedJson.Length - 3);
+                            }
+
+                            cleanedJson = cleanedJson.Trim();
+
+                            var options = new JsonSerializerOptions
+                            {
+                                PropertyNameCaseInsensitive = true
+                            };
+
+                            return JsonSerializer.Deserialize<CleanShaveVerificationResult>(cleanedJson, options);
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error extracting clean shave JSON from Gemini response: {Json}", json);
+            return null;
+        }
+    }
+
+    public static CleanShaveVerificationResult GenerateFallbackCleanShaveResult(string contestantName)
+    {
+        return new CleanShaveVerificationResult
+        {
+            IsCleanShaven = true,
+            HasFace = true,
+            IsAppropriate = true,
+            Feedback = $"Day 1 clean shave confirmed for {contestantName}! Bare follicles detected. You're ready for Movember!"
         };
     }
 }

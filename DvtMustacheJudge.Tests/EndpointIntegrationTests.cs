@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using DvtMustacheJudge.Api.Data;
 using DvtMustacheJudge.Api.Models;
+using DvtMustacheJudge.Api.Controllers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -51,6 +52,52 @@ public class TestGeminiJudgeService : DvtMustacheJudge.Api.Services.IGeminiJudge
         bool hasBaseline = cleanShaveStream != null;
         var verdict = DvtMustacheJudge.Api.Services.GeminiJudgeService.GenerateFallbackVerdict(contestantName, hasBaseline);
         return Task.FromResult(verdict);
+    }
+
+    public Task<CleanShaveVerificationResult> VerifyCleanShaveAsync(
+        Stream imageStream,
+        string mimeType,
+        string contestantName,
+        CancellationToken cancellationToken = default)
+    {
+        if (contestantName.Contains("NotShavenTest", StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(new CleanShaveVerificationResult
+            {
+                IsCleanShaven = false,
+                HasFace = true,
+                Feedback = "Baseline rejected! An existing mustache was detected. You must be clean-shaven to establish your Day 1 baseline."
+            });
+        }
+
+        if (contestantName.Contains("NoFaceTest", StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(new CleanShaveVerificationResult
+            {
+                IsCleanShaven = false,
+                HasFace = false,
+                Feedback = "No human face detected! Please snap a clear selfie centering your face."
+            });
+        }
+
+        if (contestantName.Contains("FlaggedVisionTest", StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(new CleanShaveVerificationResult
+            {
+                IsAppropriate = false,
+                IsCleanShaven = false,
+                InappropriateReason = "Inappropriate content detected in clean shave photo.",
+                Feedback = "Photo rejected due to content policy violation."
+            });
+        }
+
+        return Task.FromResult(new CleanShaveVerificationResult
+        {
+            IsCleanShaven = true,
+            HasFace = true,
+            IsAppropriate = true,
+            Feedback = "Day 1 clean shave confirmed! Bare follicles detected across the upper lip."
+        });
     }
 }
 
@@ -132,6 +179,7 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
 
     public EndpointIntegrationTests(TestWebApplicationFactory factory)
     {
+        MustacheController.InvalidateLeaderboardCache();
         _client = factory.CreateClient();
         var config = factory.Services.GetRequiredService<IConfiguration>();
         _adminPassword = config["Admin:Password"] 
@@ -215,6 +263,7 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
     [Fact]
     public async Task GetEntryById_ExistingId_ReturnsOk()
     {
+        MustacheController.InvalidateLeaderboardCache();
         // 1. Grab first entry from leaderboard
         var lbResponse = await _client.GetAsync("/api/mustache/leaderboard?limit=1");
         var lbJson = await lbResponse.Content.ReadAsStringAsync();
@@ -577,5 +626,77 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         var creativeResult = JsonSerializer.Deserialize<LeaderboardResponseDto>(await updatedCreativeLb.Content.ReadAsStringAsync(), _jsonOptions);
         Assert.NotNull(creativeResult);
         Assert.Contains(creativeResult.Entries, e => e.ContestantName == "Bobby Tables'; DROP TABLE MustacheEntries;--");
+    }
+
+    [Fact]
+    public async Task CleanShave_WhenNotShaven_RejectsWithBadRequest()
+    {
+        var email = $"not_shaven_{Guid.NewGuid():N}@example.com";
+        var reg = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "NotShavenTest User", "password123", "Mustache"));
+        var regDoc = JsonDocument.Parse(await reg.Content.ReadAsStringAsync());
+        var token = regDoc.RootElement.GetProperty("token").GetString()!;
+
+        using var csFormData = new MultipartFormDataContent();
+        var dummyBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
+        var imageContent = new ByteArrayContent(dummyBytes);
+        imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        csFormData.Add(imageContent, "Image", "mustache_baseline.jpg");
+
+        var uploadReq = new HttpRequestMessage(HttpMethod.Post, "/api/mustache/clean-shave") { Content = csFormData };
+        uploadReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var uploadRes = await _client.SendAsync(uploadReq);
+
+        Assert.Equal(HttpStatusCode.BadRequest, uploadRes.StatusCode);
+        var resJson = await uploadRes.Content.ReadAsStringAsync();
+        Assert.Contains("mustache was detected", resJson);
+    }
+
+    [Fact]
+    public async Task CleanShave_WhenNoFaceDetected_RejectsWithBadRequest()
+    {
+        var email = $"noface_{Guid.NewGuid():N}@example.com";
+        var reg = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "NoFaceTest User", "password123", "Mustache"));
+        var regDoc = JsonDocument.Parse(await reg.Content.ReadAsStringAsync());
+        var token = regDoc.RootElement.GetProperty("token").GetString()!;
+
+        using var csFormData = new MultipartFormDataContent();
+        var dummyBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
+        var imageContent = new ByteArrayContent(dummyBytes);
+        imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        csFormData.Add(imageContent, "Image", "wall.jpg");
+
+        var uploadReq = new HttpRequestMessage(HttpMethod.Post, "/api/mustache/clean-shave") { Content = csFormData };
+        uploadReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var uploadRes = await _client.SendAsync(uploadReq);
+
+        Assert.Equal(HttpStatusCode.BadRequest, uploadRes.StatusCode);
+        var resJson = await uploadRes.Content.ReadAsStringAsync();
+        Assert.Contains("No human face detected", resJson);
+    }
+
+    [Fact]
+    public async Task CleanShave_WhenCleanShaven_AcceptsAndSavesBaseline()
+    {
+        var email = $"cleanshaven_{Guid.NewGuid():N}@example.com";
+        var reg = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "Genuine Clean Shave", "password123", "Mustache"));
+        var regDoc = JsonDocument.Parse(await reg.Content.ReadAsStringAsync());
+        var token = regDoc.RootElement.GetProperty("token").GetString()!;
+
+        using var csFormData = new MultipartFormDataContent();
+        var dummyBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
+        var imageContent = new ByteArrayContent(dummyBytes);
+        imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        csFormData.Add(imageContent, "Image", "clean_shave.jpg");
+
+        var uploadReq = new HttpRequestMessage(HttpMethod.Post, "/api/mustache/clean-shave") { Content = csFormData };
+        uploadReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var uploadRes = await _client.SendAsync(uploadReq);
+
+        Assert.Equal(HttpStatusCode.OK, uploadRes.StatusCode);
+        var resJson = await uploadRes.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(resJson);
+        var url = doc.RootElement.GetProperty("cleanShaveImageUrl").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(url));
+        Assert.Contains("clean shave confirmed", doc.RootElement.GetProperty("message").GetString());
     }
 }
