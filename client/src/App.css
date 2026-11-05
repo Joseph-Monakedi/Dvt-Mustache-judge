@@ -10330,6 +10330,7 @@
 /* 1. Ambient Blurred Conic Glow with DVT Signature Palette (Outer Glow Only) */
 .dvt-payment-instructions-card::before {
   inset: -2px;
+  padding: 3px;
   z-index: 0;
   filter: blur(8px);
   opacity: 0.55;
@@ -10344,6 +10345,10 @@
     #005F8C,
     #007FBA
   );
+  -webkit-mask: linear-gradient(rgb(0, 0, 0) 0px, rgb(0, 0, 0) 0px) content-box, linear-gradient(rgb(0, 0, 0) 0px, rgb(0, 0, 0) 0px);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(rgb(0, 0, 0) 0px, rgb(0, 0, 0) 0px) content-box exclude, linear-gradient(rgb(0, 0, 0) 0px, rgb(0, 0, 0) 0px);
+  mask-composite: exclude;
   animation: 10s linear infinite dvtConicRotate;
 }
 
