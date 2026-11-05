@@ -10367,7 +10367,7 @@
   -webkit-mask-composite: xor;
   mask: linear-gradient(rgb(0, 0, 0) 0px, rgb(0, 0, 0) 0px) content-box exclude, linear-gradient(rgb(0, 0, 0) 0px, rgb(0, 0, 0) 0px);
   mask-composite: exclude;
-  animation: 5s linear 0s infinite normal none running ceHRKE;
+  animation: 15s linear 0s infinite normal none running ceHRKE;
 }
 
 /* 3. Solid Opaque Inner Card - Completely shields card interior from conic glow bleed */
