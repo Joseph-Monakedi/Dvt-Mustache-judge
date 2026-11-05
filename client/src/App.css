@@ -10311,7 +10311,7 @@
 .dvt-payment-instructions-card {
   position: relative;
   border-radius: 16px;
-  background: rgba(7, 12, 20, 0.95);
+  background: transparent;
   box-sizing: border-box;
   isolation: isolate;
 }
@@ -10325,11 +10325,11 @@
   box-sizing: inherit;
 }
 
-/* 1. Ambient Blurred Conic Glow with DVT Signature Palette */
+/* 1. Ambient Blurred Conic Glow with DVT Signature Palette (Outer Glow Only) */
 .dvt-payment-instructions-card::before {
-  inset: -3px;
-  z-index: -1;
-  filter: blur(10px);
+  inset: -2px;
+  z-index: 0;
+  filter: blur(8px);
   opacity: 0.55;
   background: conic-gradient(
     from 0deg,
@@ -10349,8 +10349,8 @@
 .dvt-payment-instructions-card::after {
   z-index: 1;
   opacity: 0.95;
-  inset: -3px;
-  padding: 3px;
+  inset: -2px;
+  padding: 2px;
   background: linear-gradient(
     105deg,
     transparent 36%,
@@ -10368,10 +10368,15 @@
   animation: 5s linear 0s infinite normal none running ceHRKE;
 }
 
-/* Ensure all interactive contents inside sit above the mask border */
-.dvt-payment-instructions-card > * {
+/* 3. Solid Opaque Inner Card - Completely shields card interior from conic glow bleed */
+.dvt-payment-instructions-inner {
   position: relative;
   z-index: 2;
+  border-radius: 14px;
+  background: #070c14;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @keyframes ceHRKE {
@@ -10385,23 +10390,26 @@
 
 @keyframes dvtConicRotate {
   0% {
-    filter: blur(10px) hue-rotate(0deg);
+    filter: blur(8px) hue-rotate(0deg);
   }
   100% {
-    filter: blur(10px) hue-rotate(360deg);
+    filter: blur(8px) hue-rotate(360deg);
   }
 }
 
 /* Light Mode Overrides for DVT Animated Gradient Border Card */
 [data-theme="light"] .dvt-payment-instructions-card {
-  background: rgba(255, 255, 255, 0.98);
-  color: #1e293b;
   box-shadow: 0 8px 30px rgba(0, 127, 186, 0.14);
 }
 
+[data-theme="light"] .dvt-payment-instructions-inner {
+  background: #ffffff;
+  color: #1e293b;
+}
+
 [data-theme="light"] .dvt-payment-instructions-card::before {
-  opacity: 0.38;
-  filter: blur(12px);
+  opacity: 0.35;
+  filter: blur(10px);
 }
 
 [data-theme="light"] .dvt-payment-instructions-card::after {
