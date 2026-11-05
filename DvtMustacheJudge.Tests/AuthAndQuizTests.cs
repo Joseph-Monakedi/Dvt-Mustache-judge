@@ -379,6 +379,60 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
     }
 
     [Fact]
+    public async Task MustacheJudge_WithIdentityMismatch_RejectsSubmission()
+    {
+        // 1. Register a contestant
+        var email = $"mismatch_{Guid.NewGuid()}@dvt.co.za";
+        var regRequest = new RegisterRequest(email, "Identity Fraudster", "pass123");
+        var regRes = await _client.PostAsJsonAsync("/api/auth/register", regRequest);
+        var regJson = await regRes.Content.ReadAsStringAsync();
+        using var regDoc = JsonDocument.Parse(regJson);
+        var token = regDoc.RootElement.GetProperty("token").GetString();
+        var userId = regDoc.RootElement.GetProperty("id").GetGuid();
+
+        // 2. Upload Day 1 Clean Shave
+        using var csFormData = new MultipartFormDataContent();
+        var dummyCsBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
+        var csImageContent = new ByteArrayContent(dummyCsBytes);
+        csImageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        csFormData.Add(csImageContent, "image", "baseline.jpg");
+
+        var uploadReq = new HttpRequestMessage(HttpMethod.Post, "/api/mustache/clean-shave")
+        {
+            Content = csFormData
+        };
+        uploadReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var uploadRes = await _client.SendAsync(uploadReq);
+        Assert.Equal(HttpStatusCode.OK, uploadRes.StatusCode);
+
+        // 3. Admin approves leaderboard fee
+        var adminToggle = new HttpRequestMessage(HttpMethod.Post, $"/api/mustache/admin/contestant/{userId}/toggle-leaderboard-paid");
+        adminToggle.Headers.Add("X-Admin-Password", _adminPassword);
+        await _client.SendAsync(adminToggle);
+
+        // 4. Submit mustache photo of a DIFFERENT PERSON (simulated via IdentityMismatchTest)
+        using var judgeForm = new MultipartFormDataContent();
+        judgeForm.Add(new StringContent("Different Person IdentityMismatchTest"), "Name");
+
+        var dummyMustacheBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
+        var mContent = new ByteArrayContent(dummyMustacheBytes);
+        mContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        judgeForm.Add(mContent, "Image", "borrowed_stache.jpg");
+
+        var judgeReq = new HttpRequestMessage(HttpMethod.Post, "/api/mustache/judge")
+        {
+            Content = judgeForm
+        };
+        judgeReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var judgeRes = await _client.SendAsync(judgeReq);
+
+        // 5. Must return 400 Bad Request with rejection reason
+        Assert.Equal(HttpStatusCode.BadRequest, judgeRes.StatusCode);
+        var errJson = await judgeRes.Content.ReadAsStringAsync();
+        Assert.Contains("Identity Mismatch", errJson);
+    }
+
+    [Fact]
     public async Task Quiz_HostCanLaunchNextQuestionBeforeTimerRunsOut_AndStaleTimerOrRevealDoesNotCloseCurrentQuestion()
     {
         // 1. Reset to lobby
