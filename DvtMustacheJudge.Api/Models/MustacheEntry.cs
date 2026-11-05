@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DvtMustacheJudge.Api.Models;
 
@@ -54,7 +55,11 @@ public class MustacheEntry
     public string? CleanShaveImageUrl { get; set; }
     public int GrowthScore { get; set; } = 0;
     public string? GrowthAnalysis { get; set; }
+
+    [NotMapped]
     public bool? IsSamePerson { get; set; }
+
+    [NotMapped]
     public string? IdentityMatchReason { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
