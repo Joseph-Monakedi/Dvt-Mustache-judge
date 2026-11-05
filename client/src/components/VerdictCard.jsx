@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
-import { FaScaleBalanced, FaLocationDot, FaCamera, FaTrophy, FaRotate, FaArrowTrendUp } from 'react-icons/fa6';
+import { FaScaleBalanced, FaLocationDot, FaCamera, FaTrophy, FaRotate, FaArrowTrendUp, FaUserCheck } from 'react-icons/fa6';
 import { HiSparkles, HiOutlineDocumentText } from 'react-icons/hi2';
 import ShareableCanvasCard from './ShareableCanvasCard';
 
@@ -281,9 +281,16 @@ export default function VerdictCard({ verdict, onReset, onViewLeaderboard }) {
               <div className="growth-header-left">
                 <FaArrowTrendUp className="growth-icon text-cyan" />
                 <div>
-                  <h4 className="growth-header-title">Follicle Transformation Analysis</h4>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="growth-header-title">Follicle Transformation Analysis</h4>
+                    {(verdict.isSamePerson === true || verdict.cleanShaveImageUrl) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                        <FaUserCheck className="text-emerald-400" /> Contestant Identity Verified
+                      </span>
+                    )}
+                  </div>
                   <span className="growth-header-sub">
-                    {verdict.cleanShaveImageUrl ? 'Evaluated against Day 1 Clean Shave Baseline' : 'Follicle Evolution Assessment'}
+                    {verdict.cleanShaveImageUrl ? 'Biometrically matched & evaluated against Day 1 Clean Shave Baseline' : 'Follicle Evolution Assessment'}
                   </span>
                 </div>
               </div>

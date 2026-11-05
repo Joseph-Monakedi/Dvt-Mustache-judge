@@ -360,6 +360,7 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
         Assert.False(string.IsNullOrWhiteSpace(cleanShaveUrl));
         Assert.True(growthScore >= 10);
         Assert.False(string.IsNullOrWhiteSpace(growthAnalysis));
+        Assert.True(judgeDoc.RootElement.GetProperty("isSamePerson").GetBoolean());
 
         // 5. Leaderboard shows ONLY the after photo thumbnail, while entry detail modal shows both before and after
         var lbRes = await _client.GetAsync("/api/mustache/leaderboard?limit=50");

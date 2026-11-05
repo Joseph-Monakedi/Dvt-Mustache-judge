@@ -287,6 +287,8 @@ public class MustacheController : ControllerBase
                     CompetitionType = finalCompetitionType,
                     GrowthScore = calculatedGrowthScore,
                     GrowthAnalysis = calculatedGrowthAnalysis,
+                    IsSamePerson = judgeResult.IsSamePerson,
+                    IdentityMatchReason = judgeResult.IdentityMatchReason,
                     OverallScore = Math.Clamp(judgeResult.OverallScore, 0, 100),
                     DensityScore = Math.Clamp(judgeResult.DensityScore, 0, 10),
                     SymmetryScore = Math.Clamp(judgeResult.SymmetryScore, 0, 10),
@@ -334,6 +336,8 @@ public class MustacheController : ControllerBase
                     SwaggerScore = entry.SwaggerScore,
                     GrowthScore = entry.GrowthScore,
                     GrowthAnalysis = entry.GrowthAnalysis,
+                    IsSamePerson = entry.IsSamePerson,
+                    IdentityMatchReason = entry.IdentityMatchReason,
                     IsWoodenSpoon = false,
                     WoodenSpoonReason = null,
                     InnovationScore = entry.InnovationScore,
@@ -1658,6 +1662,8 @@ public class MustacheController : ControllerBase
                     {
                         entry.GrowthAnalysis = result.GrowthAnalysis;
                     }
+                    entry.IsSamePerson = result.IsSamePerson;
+                    entry.IdentityMatchReason = result.IdentityMatchReason;
                 }
                 entry.IsWoodenSpoon = false;
                 entry.WoodenSpoonReason = null;
@@ -1693,6 +1699,8 @@ public class MustacheController : ControllerBase
                     SwaggerScore = entry.SwaggerScore,
                     GrowthScore = entry.GrowthScore,
                     GrowthAnalysis = entry.GrowthAnalysis,
+                    IsSamePerson = entry.IsSamePerson,
+                    IdentityMatchReason = entry.IdentityMatchReason,
                     IsWoodenSpoon = false,
                     WoodenSpoonReason = null,
                     InnovationScore = entry.InnovationScore,

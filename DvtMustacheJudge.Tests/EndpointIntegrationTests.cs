@@ -34,7 +34,8 @@ public class TestGeminiJudgeService : DvtMustacheJudge.Api.Services.IGeminiJudge
             });
         }
 
-        var verdict = DvtMustacheJudge.Api.Services.GeminiJudgeService.GenerateFallbackVerdict(contestantName);
+        bool hasBaseline = cleanShaveStream != null;
+        var verdict = DvtMustacheJudge.Api.Services.GeminiJudgeService.GenerateFallbackVerdict(contestantName, hasBaseline);
         return Task.FromResult(verdict);
     }
 }

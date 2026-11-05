@@ -217,6 +217,23 @@ CRITICAL INTEGRITY & GENUINE HUMAN MUSTACHE RULES:
     - celebrityTwin: 'None'
     - verdictBadge: 'Anti-Spoofing Violation'
     - styleCategory: 'Other'
+- CONTESTANT BIOMETRIC IDENTITY MATCH RULE (DAY 1 BASELINE vs. SUBMISSION):
+  * When a Day 1 Clean Shave baseline photo is provided (2nd photo in contents), you MUST perform a forensic biometric comparison between the person in the Day 1 baseline photo and the person in the current mustache submission photo (1st photo).
+  * Compare invariant facial features that do NOT change with facial hair growth: eye shape, inter-pupillary distance, eyebrow bone structure, nose bridge width and cartilage curvature, ear morphology, cheekbone structure, and jaw proportions.
+  * You MUST evaluate `isSamePerson`:
+    - Set `isSamePerson: true` if the mustache submission and the Day 1 baseline photo depict the EXACT SAME INDIVIDUAL.
+    - Set `isSamePerson: false` if they depict DIFFERENT PEOPLE (e.g. submitting a friend, colleague, stranger, family member, celebrity, or stock photo instead of the contestant who registered the Day 1 clean shave photo).
+  * If `isSamePerson: false`:
+    - You MUST STRICTLY REJECT the submission:
+      - isAppropriate: MUST BE false.
+      - inappropriateReason: 'Identity Mismatch: The person in this mustache submission does not match the person in the Day 1 clean shave baseline photo. In the Main Challenge, all entries must be of the same registered contestant.'
+      - overallScore: 0, densityScore: 0, symmetryScore: 0, swaggerScore: 0, growthScore: 0
+      - isWoodenSpoon: false, woodenSpoonReason: null, innovationScore: 0, dedicationScore: 0, funninessScore: 0
+      - mustacheTitle: 'Rejected: Identity Mismatch'
+      - roast: 'Submission rejected for identity mismatch: Our biometric facial comparison indicates that the person in this mustache submission is NOT the same individual who registered the Day 1 clean-shave baseline. You cannot borrow another person\'s mustache for the Movember challenge!'
+      - celebrityTwin: 'None'
+      - verdictBadge: 'Identity Mismatch'
+      - styleCategory: 'Other'
 - NON-HUMAN, CARTOON, OR FAUX MUSTACHES IN THE MAIN CHALLENGE:
   * If the subject is an animal/pet, toy, doll, cartoon, drawing, sketch, or wearing a fake craft mustache (drawn on with marker, taped on cardboard, etc.):
   * In this Main Movember Challenge, only real, biological facial hair is eligible. Award overallScore: 0, densityScore: 0, symmetryScore: 0, swaggerScore: 0, isWoodenSpoon: false, woodenSpoonReason: null, verdictBadge: 'Follicle 404', and roast them explaining that faux/DIY creations belong in The Creative Mustache Challenge!
@@ -313,7 +330,7 @@ OTHER REQUIRED FIELDS:
                                     data = base64Image
                                 }
                             },
-                            new { text = "DAY 1 CLEAN SHAVE BASELINE PHOTO: The following photo is the contestant's clean-shaven baseline. Conduct a pedantic, forensic comparison of the current mustache against this clean-shaven baseline. Measure millimeter length progression, follicle maturation (vellus to terminal conversion), and coverage expansion rate. Be methodic and strict: early stubble or faint shadow gets 25-45; modest growth gets 46-65; strong, obvious transformation gets 66-80; dramatic, dense metamorphosis gets 81-95. Supply growthScore (1-100) and growthAnalysis citing specific follicular delta observations." },
+                            new { text = "DAY 1 CLEAN SHAVE BASELINE PHOTO: The following photo is the contestant's registered Day 1 clean-shaven baseline. You MUST FIRST compare invariant facial features (eyes, inter-pupillary distance, eyebrow ridge, nose bridge and cartilage, ear morphology, cheekbones, jawline) to verify whether the person in the current mustache submission (1st photo) and the person in this clean-shave baseline photo (2nd photo) are THE EXACT SAME INDIVIDUAL. Set `isSamePerson: true` if they are confirmed to be the same person, or `isSamePerson: false` if they are different people. If `isSamePerson: false`, you MUST reject the entry with `isAppropriate: false` and cite the identity mismatch in `inappropriateReason` and `identityMatchReason`. If they ARE verified to be the same person, proceed with a pedantic, forensic growth audit: measure millimeter length progression, follicle maturation (vellus to terminal conversion), and coverage expansion rate. Be methodic and strict: early stubble or faint shadow gets 25-45; modest growth gets 46-65; strong, obvious transformation gets 66-80; dramatic, dense metamorphosis gets 81-95. Supply growthScore (1-100) and growthAnalysis citing specific follicular delta observations." },
                             new
                             {
                                 inlineData = new
@@ -353,6 +370,8 @@ OTHER REQUIRED FIELDS:
                         swaggerScore = new { type = "INTEGER" },
                         growthScore = new { type = "INTEGER" },
                         growthAnalysis = new { type = "STRING" },
+                        isSamePerson = new { type = "BOOLEAN" },
+                        identityMatchReason = new { type = "STRING" },
                         isWoodenSpoon = new { type = "BOOLEAN" },
                         woodenSpoonReason = new { type = "STRING" },
                         innovationScore = new { type = "INTEGER" },
@@ -433,6 +452,24 @@ OTHER REQUIRED FIELDS:
                 _logger.LogWarning("Prompt or SQL injection detected for contestant '{Name}' in Main Challenge. Rejecting submission.", contestantName);
                 InjectionDetector.RejectMainChallengeInjection(parsedResult);
             }
+        }
+        else if (cleanShaveBase64 != null && parsedResult.IsSamePerson == false)
+        {
+            _logger.LogWarning("Identity mismatch detected for contestant '{Name}'. Submission photo does not match Day 1 baseline photo.", contestantName);
+            parsedResult.IsAppropriate = false;
+            parsedResult.OverallScore = 0;
+            parsedResult.DensityScore = 0;
+            parsedResult.SymmetryScore = 0;
+            parsedResult.SwaggerScore = 0;
+            parsedResult.GrowthScore = 0;
+            parsedResult.MustacheTitle = "Rejected: Identity Mismatch";
+            parsedResult.InappropriateReason = !string.IsNullOrWhiteSpace(parsedResult.InappropriateReason) && parsedResult.InappropriateReason.Contains("identity", StringComparison.OrdinalIgnoreCase)
+                ? parsedResult.InappropriateReason
+                : "Identity Mismatch: The person in this mustache submission does not match the person in the Day 1 clean shave baseline photo. In the Main Challenge, all entries must be of the same registered contestant.";
+            parsedResult.Roast = !string.IsNullOrWhiteSpace(parsedResult.Roast) && parsedResult.Roast.Contains("identity", StringComparison.OrdinalIgnoreCase)
+                ? parsedResult.Roast
+                : "Follicular identity fraud detected! Our biometric facial comparison indicates that the person in this mustache submission is NOT the same individual who registered the Day 1 clean-shaven baseline. You cannot borrow another person's mustache for the Movember challenge!";
+            parsedResult.VerdictBadge = "Identity Mismatch";
         }
         else if (!parsedResult.IsAppropriate)
         {
@@ -609,6 +646,8 @@ OTHER REQUIRED FIELDS:
             SwaggerScore = swagger,
             GrowthScore = growthScore,
             GrowthAnalysis = growthAnalysis,
+            IsSamePerson = hasCleanShave ? true : null,
+            IdentityMatchReason = hasCleanShave ? "Biometric facial comparison verified: Contestant matches Day 1 clean shave baseline photo." : null,
             MustacheTitle = score >= 80 ? "The Bristle Stalwart" : "The Caliper Contender",
             StyleCategory = category,
             Roast = $"Forensic caliper reading for {contestantName}: Density registered {density}/10 with {symmetry}/10 symmetry. Solid bristle foundation, but pedantic inspection demands sharper line trimming and continued follicle density expansion.",

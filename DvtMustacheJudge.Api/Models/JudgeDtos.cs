@@ -52,6 +52,12 @@ public class GeminiJudgeResult
     [JsonPropertyName("growthAnalysis")]
     public string? GrowthAnalysis { get; set; }
 
+    [JsonPropertyName("isSamePerson")]
+    public bool? IsSamePerson { get; set; } = null;
+
+    [JsonPropertyName("identityMatchReason")]
+    public string? IdentityMatchReason { get; set; } = null;
+
     [JsonPropertyName("isAppropriate")]
     public bool IsAppropriate { get; set; } = true;
 
@@ -81,6 +87,8 @@ public class JudgeResponseDto
     public int SwaggerScore { get; set; }
     public int GrowthScore { get; set; }
     public string? GrowthAnalysis { get; set; }
+    public bool? IsSamePerson { get; set; }
+    public string? IdentityMatchReason { get; set; }
     public bool IsWoodenSpoon { get; set; }
     public string? WoodenSpoonReason { get; set; }
     public int InnovationScore { get; set; }
@@ -139,6 +147,8 @@ public class LeaderboardEntryDto
     public int SwaggerScore { get; set; }
     public int GrowthScore { get; set; }
     public string? GrowthAnalysis { get; set; }
+    public bool? IsSamePerson { get; set; }
+    public string? IdentityMatchReason { get; set; }
     public bool IsWoodenSpoon { get; set; }
     public string? WoodenSpoonReason { get; set; }
     public int InnovationScore { get; set; }

@@ -54,6 +54,8 @@ public class MustacheEntry
     public string? CleanShaveImageUrl { get; set; }
     public int GrowthScore { get; set; } = 0;
     public string? GrowthAnalysis { get; set; }
+    public bool? IsSamePerson { get; set; }
+    public string? IdentityMatchReason { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

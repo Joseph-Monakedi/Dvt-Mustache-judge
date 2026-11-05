@@ -683,7 +683,8 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                   </>
                 ) : (
                   <>
-                    <li>Facial hair only: Judging focuses strictly on mustache growth and styling.</li>
+                    <li>Facial hair only: Judging focuses strictly on genuine mustache growth and styling.</li>
+                    <li>Biometric Identity Check: The AI Judge strictly verifies that the person in your mustache submission matches your Day 1 baseline photo.</li>
                     <li>Growth evaluated against your Day 1 clean shave photo.</li>
                     <li>Grand Prize: R1,000 Takealot Voucher for participants who donated R100+.</li>
                     <li>Submit unlimited attempts — only your top score features on the leaderboard.</li>
@@ -699,7 +700,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
                   <img src={user.cleanShaveImageUrl} alt="Baseline" className="booth-baseline-thumb" />
                   <div>
                     <span className="booth-baseline-tag"><FaCircleCheck /> Day 1 Baseline Active</span>
-                    <p className="booth-baseline-desc">Your facial hair growth is judged alongside this clean shave photo.</p>
+                    <p className="booth-baseline-desc">The AI Judge verifies contestant identity match and measures growth against this photo.</p>
                   </div>
                 </div>
               </div>

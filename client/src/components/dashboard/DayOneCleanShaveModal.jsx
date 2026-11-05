@@ -233,7 +233,7 @@ export default function DayOneCleanShaveModal({
       isOpen={isOpen}
       onClose={handleModalClose}
       title="Day 1 Clean Shave Baseline"
-      subtitle="Snap a photo of your clean-shaven face to start tracking your growth."
+      subtitle="Snap a photo of your clean-shaven face. The AI Judge uses this to verify your identity and track your growth progression across all submissions."
       maxWidth="max-w-2xl"
     >
       <div className="space-y-5">
