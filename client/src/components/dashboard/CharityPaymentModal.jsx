@@ -108,7 +108,7 @@ export default function CharityPaymentModal({
         </div>
 
         {/* EFT Banking Details Card */}
-        <div className="p-5 bg-[#0b1320] border border-cyan-500/30 rounded-2xl space-y-4 shadow-xl">
+        <div className="dvt-payment-instructions-card p-5 rounded-2xl space-y-4 shadow-xl">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div className="flex items-center gap-2.5 text-cyan-300 font-bold text-sm">
               <FaBuildingColumns className="text-cyan-400 text-lg" />

@@ -286,7 +286,7 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
               </p>
             </div>
           </div>
-          <div className="shrink-0 p-4 bg-[#070c14]/95 border border-cyan-400/40 rounded-xl text-xs space-y-1.5 text-slate-300 shadow-xl min-w-[270px]">
+          <div className="dvt-payment-instructions-card shrink-0 p-4 rounded-xl text-xs space-y-1.5 text-slate-300 shadow-xl min-w-[270px]">
             <div className="font-bold text-cyan-300 flex items-center justify-between text-sm border-b border-white/10 pb-1.5">
               <span>🏦 Direct EFT Donation:</span>
               <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">FNB</span>

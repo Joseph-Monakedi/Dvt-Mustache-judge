@@ -10305,6 +10305,141 @@
   }
 }
 
+/* ==========================================================================
+   DVT 2026 ANIMATED GRADIENT BORDER CONTAINER (Payment Instructions)
+   ========================================================================== */
+.dvt-payment-instructions-card {
+  position: relative;
+  border-radius: 16px;
+  background: rgba(7, 12, 20, 0.95);
+  box-sizing: border-box;
+  isolation: isolate;
+}
+
+.dvt-payment-instructions-card::before,
+.dvt-payment-instructions-card::after {
+  content: "";
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+  box-sizing: inherit;
+}
+
+/* 1. Ambient Blurred Conic Glow with DVT Signature Palette */
+.dvt-payment-instructions-card::before {
+  inset: -3px;
+  z-index: -1;
+  filter: blur(10px);
+  opacity: 0.55;
+  background: conic-gradient(
+    from 0deg,
+    #007FBA,
+    #00B4D8,
+    #3DA3D2,
+    #FFC629,
+    #F59E0B,
+    #38BDF8,
+    #005F8C,
+    #007FBA
+  );
+  animation: 10s linear infinite dvtConicRotate;
+}
+
+/* 2. Masked Animated Gradient Border with Sleek Shimmer Light Beam */
+.dvt-payment-instructions-card::after {
+  z-index: 1;
+  opacity: 0.95;
+  inset: -3px;
+  padding: 3px;
+  background: linear-gradient(
+    105deg,
+    transparent 36%,
+    rgba(0, 180, 216, 0.45) 43%,
+    rgba(255, 198, 41, 0.95) 47%,
+    rgb(249, 250, 251) 50%,
+    rgba(0, 180, 216, 0.95) 53%,
+    rgba(0, 127, 186, 0.45) 57%,
+    transparent 64%
+  ) 0% 0% / 300% 100%;
+  -webkit-mask: linear-gradient(rgb(0, 0, 0) 0px, rgb(0, 0, 0) 0px) content-box, linear-gradient(rgb(0, 0, 0) 0px, rgb(0, 0, 0) 0px);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(rgb(0, 0, 0) 0px, rgb(0, 0, 0) 0px) content-box exclude, linear-gradient(rgb(0, 0, 0) 0px, rgb(0, 0, 0) 0px);
+  mask-composite: exclude;
+  animation: 5s linear 0s infinite normal none running ceHRKE;
+}
+
+/* Ensure all interactive contents inside sit above the mask border */
+.dvt-payment-instructions-card > * {
+  position: relative;
+  z-index: 2;
+}
+
+@keyframes ceHRKE {
+  0% {
+    background-position: 100% 0%;
+  }
+  100% {
+    background-position: -200% 0%;
+  }
+}
+
+@keyframes dvtConicRotate {
+  0% {
+    filter: blur(10px) hue-rotate(0deg);
+  }
+  100% {
+    filter: blur(10px) hue-rotate(360deg);
+  }
+}
+
+/* Light Mode Overrides for DVT Animated Gradient Border Card */
+[data-theme="light"] .dvt-payment-instructions-card {
+  background: rgba(255, 255, 255, 0.98);
+  color: #1e293b;
+  box-shadow: 0 8px 30px rgba(0, 127, 186, 0.14);
+}
+
+[data-theme="light"] .dvt-payment-instructions-card::before {
+  opacity: 0.38;
+  filter: blur(12px);
+}
+
+[data-theme="light"] .dvt-payment-instructions-card::after {
+  background: linear-gradient(
+    105deg,
+    transparent 36%,
+    rgba(0, 127, 186, 0.4) 43%,
+    rgba(255, 198, 41, 0.95) 47%,
+    #007FBA 50%,
+    rgba(0, 180, 216, 0.95) 53%,
+    rgba(0, 127, 186, 0.4) 57%,
+    transparent 64%
+  ) 0% 0% / 300% 100%;
+}
+
+[data-theme="light"] .dvt-payment-instructions-card .text-white {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .dvt-payment-instructions-card .text-slate-300,
+[data-theme="light"] .dvt-payment-instructions-card .text-slate-400 {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .dvt-payment-instructions-card .text-cyan-300,
+[data-theme="light"] .dvt-payment-instructions-card .text-cyan-400 {
+  color: #007FBA !important;
+}
+
+[data-theme="light"] .dvt-payment-instructions-card a {
+  color: #007FBA !important;
+}
+
+[data-theme="light"] .dvt-payment-instructions-card .border-white\/10 {
+  border-color: #e2e8f0 !important;
+}
+
+
 
 
 
