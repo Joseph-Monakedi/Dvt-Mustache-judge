@@ -17,7 +17,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useIsMobile } from '../utils/useIsMobile';
 
-export default function Navbar({ totalEntries = 0 }) {
+export default function Navbar({ totalEntries = null }) {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const {
@@ -62,7 +62,7 @@ export default function Navbar({ totalEntries = 0 }) {
             >
               <FaTrophy className="nav-icon" />
               <span className="nav-label">Leaderboard</span>
-              {totalEntries > 0 && (
+              {totalEntries != null && totalEntries > 0 && (
                 <span className="nav-badge">{totalEntries}</span>
               )}
             </NavLink>
@@ -238,7 +238,7 @@ export default function Navbar({ totalEntries = 0 }) {
         >
           <div className="mobile-nav-icon-wrap">
             <FaTrophy className="mobile-nav-icon" />
-            {totalEntries > 0 && (
+            {totalEntries != null && totalEntries > 0 && (
               <span className="mobile-nav-badge">{totalEntries}</span>
             )}
           </div>

@@ -33,7 +33,7 @@ import AccountManagementModal from './dashboard/AccountManagementModal';
 
 export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQuiz, onSelectEntry }) {
   const navigate = useNavigate();
-  const { user, token, refreshUser, openAuthModal, logout } = useAuth();
+  const { user, token, refreshUser, openAuthModal, logout, isLoading: authLoading } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -179,6 +179,17 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
       fetchDashboard();
     }
   }, [user?.leaderboardPaid, user?.isPrizeEligible, user?.amountPaid, user?.cleanShaveImageUrl]);
+
+  if (authLoading) {
+    return (
+      <div className="dashboard-login-gate fade-in min-h-[60vh] flex items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 mx-auto border-3 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-semibold text-slate-300">Loading your profile &amp; submissions...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -552,8 +563,12 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
           <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-xl shrink-0">
             <FaCamera />
           </div>
-          <div>
-            <span className="block text-2xl font-black text-white">{dashboardData?.totalSubmissions ?? 0}</span>
+          <div className="min-w-0">
+            {loading && !dashboardData ? (
+              <span className="skeleton-shimmer block h-7 w-12 rounded my-0.5" />
+            ) : (
+              <span className="block text-2xl font-black text-white">{dashboardData?.totalSubmissions ?? 0}</span>
+            )}
             <span className="block text-xs font-medium text-slate-400">Total Submissions</span>
           </div>
         </div>
@@ -563,8 +578,12 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
           <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl shrink-0">
             <FaStar />
           </div>
-          <div>
-            <span className="block text-2xl font-black text-white">{dashboardData?.bestScore ?? 0}</span>
+          <div className="min-w-0">
+            {loading && !dashboardData ? (
+              <span className="skeleton-shimmer block h-7 w-14 rounded my-0.5" />
+            ) : (
+              <span className="block text-2xl font-black text-white">{dashboardData?.bestScore ?? 0}</span>
+            )}
             <span className="block text-xs font-medium text-slate-400">Personal Best Score</span>
           </div>
         </div>
@@ -579,13 +598,17 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
           <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 text-xl shrink-0 group-hover:scale-105 transition-transform">
             {isCreative ? <HiSparkles /> : <GiMustache />}
           </div>
-          <div>
+          <div className="min-w-0">
             <span className="block text-base font-extrabold text-white truncate group-hover:text-purple-300 transition-colors">
               {isCreative ? 'Creative Mustache' : 'Mustache Challenge'}
             </span>
-            <span className="block text-xs font-medium text-slate-400">
-              {dashboardData?.leaderboardRank ? `Rank #${dashboardData.leaderboardRank} (View Standings →)` : 'View Challenge Standings →'}
-            </span>
+            {loading && !dashboardData ? (
+              <span className="skeleton-shimmer block h-4 w-32 rounded mt-1" />
+            ) : (
+              <span className="block text-xs font-medium text-slate-400 truncate">
+                {dashboardData?.leaderboardRank ? `Rank #${dashboardData.leaderboardRank} (View Standings →)` : 'View Challenge Standings →'}
+              </span>
+            )}
           </div>
         </div>
 
@@ -611,7 +634,11 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
           <h2 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-3">
             <span>My Submissions</span>
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">
-              {dashboardData?.entries?.length ?? 0} attempts
+              {loading && !dashboardData ? (
+                <span className="skeleton-shimmer inline-block w-12 h-3.5 rounded align-middle" />
+              ) : (
+                `${dashboardData?.entries?.length ?? 0} attempts`
+              )}
             </span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-400">

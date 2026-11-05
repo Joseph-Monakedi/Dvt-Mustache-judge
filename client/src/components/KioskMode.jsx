@@ -167,7 +167,7 @@ export default function KioskMode({ onExit }) {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              All Tracks ({entries.length})
+              All Tracks ({isLoading && entries.length === 0 ? '...' : entries.length})
             </button>
             <button
               type="button"
@@ -178,7 +178,7 @@ export default function KioskMode({ onExit }) {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <GiMustache className="text-cyan-400" /> Mustache ({entries.filter(e => !e.isCreativeTrack).length})
+              <GiMustache className="text-cyan-400" /> Mustache ({isLoading && entries.length === 0 ? '...' : entries.filter(e => !e.isCreativeTrack).length})
             </button>
             <button
               type="button"
@@ -189,7 +189,7 @@ export default function KioskMode({ onExit }) {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <HiSparkles className="text-purple-400" /> Creative ({entries.filter(e => e.isCreativeTrack).length})
+              <HiSparkles className="text-purple-400" /> Creative ({isLoading && entries.length === 0 ? '...' : entries.filter(e => e.isCreativeTrack).length})
             </button>
           </div>
           <button className="kiosk-btn" onClick={toggleFullscreen}>

@@ -881,48 +881,52 @@ export default function AdminPortal({ onBackToApp }) {
       {/* TAB 1: Contestants, Donations & Grand Prize Eligibility */}
       {activeAdminTab === 'donations' && (
         <div className="admin-payments-section fade-in">
-          {/* Top Charity Overview Cards */}
-          <div className="admin-stats-grid">
-            <div className="admin-stat-card">
-              <div className="stat-label">Total Registered Contestants</div>
-              <div className="stat-val">{contestantData?.totalContestants || 0}</div>
+          {/* Top Charity Overview Cards or Skeleton */}
+          {contestantsLoading && !contestantData ? (
+            <AdminStatsSkeleton />
+          ) : (
+            <div className="admin-stats-grid">
+              <div className="admin-stat-card">
+                <div className="stat-label">Total Registered Contestants</div>
+                <div className="stat-val">{contestantData?.totalContestants || 0}</div>
+              </div>
+              <div className="admin-stat-card">
+                <div className="stat-label">
+                  <FaTrophy className="inline-icon text-gold" /> R1,000 Voucher Eligible (Donated)
+                </div>
+                <div className="stat-val text-gold">
+                  {contestantData?.eligibleContestantsCount ?? contestantData?.prizeEligibleCount ?? contestantData?.leaderboardPaidCount ?? 0}
+                </div>
+              </div>
+              <div className="admin-stat-card">
+                <div className="stat-label">
+                  <GiMustache className="inline-icon text-cyan" /> Mustache Track Contestants
+                </div>
+                <div className="stat-val text-cyan">
+                  {contestantData?.mustacheContestantsCount || 0}
+                </div>
+              </div>
+              <div className="admin-stat-card">
+                <div className="stat-label">
+                  <HiSparkles className="inline-icon text-purple-400" /> Creative Mustache Contestants
+                </div>
+                <div className="stat-val text-purple-400">
+                  {contestantData?.creativeMustacheContestantsCount ?? contestantData?.crazyHairContestantsCount ?? 0}
+                </div>
+              </div>
+              <div className="admin-stat-card">
+                <div className="stat-label">
+                  <FaHandHoldingHeart className="inline-icon text-rose-400" /> Total Funds Raised (Home Page)
+                </div>
+                <div className="stat-val text-green">
+                  R {(contestantData?.totalFundsRaisedZar || 0).toLocaleString()}
+                </div>
+                <div className="text-[11px] text-slate-400 mt-1">
+                  Participants: R{(contestantData?.participantFundsRaisedZar ?? contestantData?.totalFundsRaisedZar ?? 0).toLocaleString()} &bull; Non-Participants: R{(contestantData?.externalFundsRaisedZar || 0).toLocaleString()}
+                </div>
+              </div>
             </div>
-            <div className="admin-stat-card">
-              <div className="stat-label">
-                <FaTrophy className="inline-icon text-gold" /> R1,000 Voucher Eligible (Donated)
-              </div>
-              <div className="stat-val text-gold">
-                {contestantData?.eligibleContestantsCount ?? contestantData?.prizeEligibleCount ?? contestantData?.leaderboardPaidCount ?? 0}
-              </div>
-            </div>
-            <div className="admin-stat-card">
-              <div className="stat-label">
-                <GiMustache className="inline-icon text-cyan" /> Mustache Track Contestants
-              </div>
-              <div className="stat-val text-cyan">
-                {contestantData?.mustacheContestantsCount || 0}
-              </div>
-            </div>
-            <div className="admin-stat-card">
-              <div className="stat-label">
-                <HiSparkles className="inline-icon text-purple-400" /> Creative Mustache Contestants
-              </div>
-              <div className="stat-val text-purple-400">
-                {contestantData?.creativeMustacheContestantsCount ?? contestantData?.crazyHairContestantsCount ?? 0}
-              </div>
-            </div>
-            <div className="admin-stat-card">
-              <div className="stat-label">
-                <FaHandHoldingHeart className="inline-icon text-rose-400" /> Total Funds Raised (Home Page)
-              </div>
-              <div className="stat-val text-green">
-                R {(contestantData?.totalFundsRaisedZar || 0).toLocaleString()}
-              </div>
-              <div className="text-[11px] text-slate-400 mt-1">
-                Participants: R{(contestantData?.participantFundsRaisedZar ?? contestantData?.totalFundsRaisedZar ?? 0).toLocaleString()} &bull; Non-Participants: R{(contestantData?.externalFundsRaisedZar || 0).toLocaleString()}
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* Funds Section: Non-Participant / Company Contributions */}
           <div className="mb-6 p-5 rounded-2xl bg-[#0b1524]/90 border border-emerald-500/30 shadow-xl">
@@ -939,21 +943,33 @@ export default function AdminPortal({ onBackToApp }) {
               <div className="flex flex-wrap items-center gap-3 text-xs shrink-0">
                 <div className="px-3 py-2 rounded-xl bg-slate-900/90 border border-white/10">
                   <span className="text-slate-400 block text-[10px] uppercase font-bold">Participant Donations</span>
-                  <strong className="text-cyan-300 text-sm font-mono">
-                    R {(contestantData?.participantFundsRaisedZar ?? 0).toLocaleString()}
-                  </strong>
+                  {contestantsLoading && !contestantData ? (
+                    <span className="skeleton-shimmer inline-block h-5 w-20 rounded mt-1" />
+                  ) : (
+                    <strong className="text-cyan-300 text-sm font-mono">
+                      R {(contestantData?.participantFundsRaisedZar ?? 0).toLocaleString()}
+                    </strong>
+                  )}
                 </div>
                 <div className="px-3 py-2 rounded-xl bg-slate-900/90 border border-white/10">
                   <span className="text-slate-400 block text-[10px] uppercase font-bold">Company / Non-Participants</span>
-                  <strong className="text-purple-300 text-sm font-mono">
-                    R {(contestantData?.externalFundsRaisedZar ?? 0).toLocaleString()}
-                  </strong>
+                  {contestantsLoading && !contestantData ? (
+                    <span className="skeleton-shimmer inline-block h-5 w-20 rounded mt-1" />
+                  ) : (
+                    <strong className="text-purple-300 text-sm font-mono">
+                      R {(contestantData?.externalFundsRaisedZar ?? 0).toLocaleString()}
+                    </strong>
+                  )}
                 </div>
                 <div className="px-3.5 py-2 rounded-xl bg-emerald-950/60 border border-emerald-500/40">
                   <span className="text-emerald-300 block text-[10px] uppercase font-extrabold">Total Shown on Home Page</span>
-                  <strong className="text-emerald-400 text-base font-black font-mono">
-                    R {(contestantData?.totalFundsRaisedZar ?? 0).toLocaleString()}
-                  </strong>
+                  {contestantsLoading && !contestantData ? (
+                    <span className="skeleton-shimmer inline-block h-5 w-24 rounded mt-1" />
+                  ) : (
+                    <strong className="text-emerald-400 text-base font-black font-mono">
+                      R {(contestantData?.totalFundsRaisedZar ?? 0).toLocaleString()}
+                    </strong>
+                  )}
                 </div>
               </div>
             </div>

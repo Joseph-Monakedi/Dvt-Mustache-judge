@@ -186,7 +186,7 @@ export default function QuizLiveLeaderboard({
         <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-400">
           <div className="flex items-center gap-4">
             <span>
-              Contestants in Game: <strong className="text-white font-mono">{allPlayers.length}</strong>
+              Contestants in Game: <strong className="text-white font-mono">{loading && !scoreboardData ? '...' : allPlayers.length}</strong>
             </span>
             {scoreboardData?.currentQuestionIndex != null && (
               <span>
@@ -202,8 +202,23 @@ export default function QuizLiveLeaderboard({
         </div>
       </div>
 
-      {/* Top 3 Podium Cards */}
-      {allPlayers.length > 0 && (
+      {/* Top 3 Podium Cards or Loading Skeleton */}
+      {loading && !scoreboardData ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-[#0d1522] border border-white/10 rounded-2xl p-5 space-y-3">
+              <div className="skeleton-shimmer h-6 w-24 rounded" />
+              <div className="flex items-center gap-3">
+                <div className="skeleton-shimmer w-12 h-12 rounded-full shrink-0" />
+                <div className="space-y-1.5 flex-1">
+                  <div className="skeleton-shimmer h-4 w-3/4 rounded" />
+                  <div className="skeleton-shimmer h-4 w-1/2 rounded" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : allPlayers.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* 2nd Place: Silver */}
           <div className="bg-[#0d1522] border-2 border-slate-400/50 rounded-2xl p-5 shadow-xl relative overflow-hidden flex flex-col justify-between order-2 md:order-1">
@@ -311,7 +326,7 @@ export default function QuizLiveLeaderboard({
             )}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Your Standing Banner */}
       {myRankInfo && (

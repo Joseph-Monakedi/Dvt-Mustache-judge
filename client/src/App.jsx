@@ -32,7 +32,7 @@ export default function App() {
   const [judgingModalOpen, setJudgingModalOpen] = useState(false);
   const [activeVerdict, setActiveVerdict] = useState(null);
   const [selectedLeaderboardEntry, setSelectedLeaderboardEntry] = useState(null);
-  const [totalEntries, setTotalEntries] = useState(0);
+  const [totalEntries, setTotalEntries] = useState(null);
   const [toast, setToast] = useState(null);
   const [showBackTop, setShowBackTop] = useState(false);
   const toastTimerRef = useRef(null);

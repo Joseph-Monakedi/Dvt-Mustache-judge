@@ -22,7 +22,7 @@ import { initiatePayFastCheckout } from '../utils/payfast';
 
 export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
   const navigate = useNavigate();
-  const { user, token, refreshUser, openAuthModal } = useAuth();
+  const { user, token, refreshUser, openAuthModal, isLoading: authLoading } = useAuth();
   const [searchParams] = useSearchParams();
   const [name, setName] = useState(user?.fullName || '');
   
@@ -309,7 +309,16 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
     });
   };
 
-  // 1. GATE: Unauthenticated user
+  // 1. GATE: Authentication checking / Unauthenticated user
+  if (authLoading && !user) {
+    return (
+      <div className="booth-container fade-in min-h-[50vh] flex flex-col items-center justify-center py-20">
+        <div className="w-12 h-12 border-3 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-sm font-semibold text-slate-300">Checking contestant profile...</p>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="booth-container fade-in">

@@ -117,10 +117,10 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
   const { logoSrc } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [entries, setEntries] = useState([]);
-  const [totalEntries, setTotalEntries] = useState(0);
-  const [mustacheCount, setMustacheCount] = useState(0);
-  const [creativeCount, setCreativeCount] = useState(0);
-  const [totalFundsRaised, setTotalFundsRaised] = useState(0);
+  const [totalEntries, setTotalEntries] = useState(null);
+  const [mustacheCount, setMustacheCount] = useState(null);
+  const [creativeCount, setCreativeCount] = useState(null);
+  const [totalFundsRaised, setTotalFundsRaised] = useState(null);
   const [division, setDivision] = useState(() => {
     const d = searchParams.get('division');
     return (d && (d.toLowerCase().includes('creative') || d.toLowerCase().includes('hair'))) ? 'creative' : 'mustache';
@@ -246,13 +246,19 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
             </div>
           </div>
 
-          <div className="flex flex-col sm:items-end justify-center px-4 py-2.5 rounded-xl bg-[#060d17]/90 border border-emerald-400/30 shrink-0">
+          <div className="flex flex-col sm:items-end justify-center px-4 py-2.5 rounded-xl bg-[#060d17]/90 border border-emerald-400/30 shrink-0 min-w-[170px]">
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
               Total Raised So Far
             </span>
-            <span className="text-2xl sm:text-3xl font-black text-emerald-400 tracking-tight font-mono drop-shadow-[0_0_12px_rgba(52,211,153,0.3)]">
-              R {totalFundsRaised.toLocaleString('en-ZA', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-            </span>
+            {totalFundsRaised === null ? (
+              <div className="flex items-center gap-2 mt-1">
+                <span className="skeleton-shimmer inline-block h-8 w-28 rounded-lg" />
+              </div>
+            ) : (
+              <span className="text-2xl sm:text-3xl font-black text-emerald-400 tracking-tight font-mono drop-shadow-[0_0_12px_rgba(52,211,153,0.3)]">
+                R {totalFundsRaised.toLocaleString('en-ZA', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -323,10 +329,12 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
         <div className="live-status-pill">
           <span className="live-dot"></span>
           <span className="live-text">
-            {loading && entries.length > 0 ? (
+            {loading && entries.length === 0 ? (
+              <span className="bg-refreshing-pill"><span className="bg-refreshing-dot"></span> Loading Standings...</span>
+            ) : loading && entries.length > 0 ? (
               <span className="bg-refreshing-pill"><span className="bg-refreshing-dot"></span> Syncing Standings...</span>
             ) : (
-              `LIVE • ${totalEntries} in Challenge • Refreshed ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+              `LIVE • ${totalEntries ?? 0} in Challenge • Refreshed ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
             )}
           </span>
         </div>
@@ -343,7 +351,13 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
             setSearchParams({ division: 'mustache' });
           }}
         >
-          <GiMustache className="tab-icon text-cyan-400" /> Mustache Challenge ({mustacheCount})
+          <GiMustache className="tab-icon text-cyan-400" />
+          <span>Mustache Challenge</span>
+          {mustacheCount === null ? (
+            <span className="skeleton-shimmer inline-block w-8 h-4 rounded-full ml-1 align-middle" />
+          ) : (
+            <span>({mustacheCount})</span>
+          )}
         </button>
         <button
           type="button"
@@ -354,7 +368,13 @@ export default function Leaderboard({ onSelectEntry, onGoToBooth }) {
             setSearchParams({ division: 'creative' });
           }}
         >
-          <HiSparkles className="tab-icon text-purple-400" /> Creative Mustache Challenge ({creativeCount})
+          <HiSparkles className="tab-icon text-purple-400" />
+          <span>Creative Mustache Challenge</span>
+          {creativeCount === null ? (
+            <span className="skeleton-shimmer inline-block w-8 h-4 rounded-full ml-1 align-middle" />
+          ) : (
+            <span>({creativeCount})</span>
+          )}
         </button>
       </div>
 

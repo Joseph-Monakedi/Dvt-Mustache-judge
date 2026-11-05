@@ -24,7 +24,7 @@ import QuizCountdownOverlay from './quiz/QuizCountdownOverlay';
 import { playCountdownTone } from '../utils/quizAudio';
 
 export default function MustacheQuizArena({ onGoToDashboard }) {
-  const { user, token, refreshUser, openAuthModal } = useAuth();
+  const { user, token, refreshUser, openAuthModal, isLoading: authLoading } = useAuth();
   const [isPaying, setIsPaying] = useState(false);
   
   // Game session states
@@ -321,6 +321,16 @@ export default function MustacheQuizArena({ onGoToDashboard }) {
   };
 
   const isAdmin = user?.role === 'Admin' || Boolean(sessionStorage.getItem('dvt_admin_token'));
+
+  // 0. Initial Session Verification
+  if (authLoading && !user) {
+    return (
+      <div className="quiz-entry-wrapper animate-in fade-in py-20 flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-3 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-sm font-semibold text-slate-300">Connecting to Quiz Arena...</p>
+      </div>
+    );
+  }
 
   // 1. Gate Check if user is not logged in
   if (!user) {
