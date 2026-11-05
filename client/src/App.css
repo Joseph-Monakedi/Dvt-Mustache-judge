@@ -10182,8 +10182,8 @@
 .dashboard-cleanshave-banner {
   position: relative;
   overflow: hidden;
-  border-radius: var(--radius) !important;
-  transition: var(--transition);
+  border-radius: 16px;
+  transition: all 0.25s ease;
 }
 
 .dvt-summary-box::before,
@@ -10196,6 +10196,8 @@
   width: 4px;
   height: 100%;
   background: linear-gradient(180deg, #007FBA 0%, #3DA3D2 65%, #FFC629 100%);
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
   z-index: 2;
 }
 
