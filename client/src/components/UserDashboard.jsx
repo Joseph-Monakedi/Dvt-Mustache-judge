@@ -530,7 +530,7 @@ export default function UserDashboard({ onGoToBooth, onGoToLeaderboard, onGoToQu
               onClick={() => setShowCleanShaveModal(true)}
               className={!hasBaseline ? 'shadow-cyan-500/30' : ''}
             >
-              {hasBaseline ? 'Replace Baseline Photo' : 'Upload or Snap Clean Shave'}
+              {hasBaseline ? 'Replace Baseline Photo' : 'Snap Clean Shave'}
             </Button>
           </div>
         </div>

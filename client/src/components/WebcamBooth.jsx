@@ -245,7 +245,7 @@ export default function WebcamBooth({ onJudgeSubmit, isSubmitting }) {
   // Step 1: Save Clean Shave Baseline (only for Mustache growers)
   const handleSaveCleanShaveBaseline = async () => {
     if (!capturedBlob) {
-      setValidationError('Please snap or upload your clean-shaven face first.');
+      setValidationError('Please snap your clean-shaven face first.');
       return;
     }
 

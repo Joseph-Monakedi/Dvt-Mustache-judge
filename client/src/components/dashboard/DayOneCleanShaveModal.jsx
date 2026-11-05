@@ -164,7 +164,7 @@ export default function DayOneCleanShaveModal({
 
   const handleConfirmBaseline = async () => {
     if (!capturedBlob) {
-      setErrorMessage('Please capture or upload a clean shave photo first.');
+      setErrorMessage('Please capture a clean shave photo first.');
       return;
     }
 
