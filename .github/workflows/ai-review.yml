@@ -1,0 +1,26 @@
+name: AI PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ai-pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: AI Code Review
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run AI PR Reviewer
+        uses: Joseph-Monakedi/PullReviewer@v1
+        # Or pin by SHA: uses: Joseph-Monakedi/PullReviewer@c3c759ccf754df33f97c5cf191897b9e3ab5d303
+        with:
+          api_key: ${{ secrets.AI_API_KEY }}
+          model: gemini-3.8-flash # or gpt-4.1-mini, claude-sonnet-4-20250514, etc.
