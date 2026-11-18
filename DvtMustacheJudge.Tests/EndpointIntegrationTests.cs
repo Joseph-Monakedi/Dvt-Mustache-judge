@@ -699,4 +699,19 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         Assert.False(string.IsNullOrWhiteSpace(url));
         Assert.Contains("clean shave confirmed", doc.RootElement.GetProperty("message").GetString());
     }
+
+    [Fact]
+    public async Task GetHealth_ReturnsOkAndStatusHealthy()
+    {
+        var response = await _client.GetAsync("/api/mustache/health");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        Assert.Equal("Healthy", root.GetProperty("status").GetString());
+        Assert.Equal("Connected", root.GetProperty("database").GetString());
+        Assert.Equal("2.3.0", root.GetProperty("version").GetString());
+    }
 }
