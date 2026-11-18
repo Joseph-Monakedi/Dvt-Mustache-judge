@@ -152,7 +152,7 @@ public class MustacheController : ControllerBase
                     string.Equals(request.CompetitionType, "CrazyHair", StringComparison.OrdinalIgnoreCase)));
             var competitionType = isCreative ? "CreativeMustache" : "Mustache";
 
-            string? cleanShaveUrl = user.CleanShaveImageUrl;
+            string? cleanShaveUrl = user?.CleanShaveImageUrl;
             byte[]? cleanShaveBytes = null;
             string? cleanShaveMime = null;
 
@@ -182,9 +182,12 @@ public class MustacheController : ControllerBase
                 using var cUploadMs = new MemoryStream(cleanShaveBytes);
                 var cUpload = await _storageService.UploadImageAsync(cUploadMs, request.CleanShaveImage.FileName, cleanShaveMime);
                 cleanShaveUrl = cUpload.ImageUrl;
-                user.CleanShaveImageUrl = cleanShaveUrl;
-                user.CleanShaveUploadedAt = DateTime.UtcNow;
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                if (user != null)
+                {
+                    user.CleanShaveImageUrl = cleanShaveUrl;
+                    user.CleanShaveUploadedAt = DateTime.UtcNow;
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
             }
 
             // Gating: Natural mustache growers MUST have a Day 1 clean shave photo saved
@@ -316,7 +319,7 @@ public class MustacheController : ControllerBase
                     StyleCategory = string.IsNullOrWhiteSpace(judgeResult.StyleCategory)
                         ? "Other"
                         : judgeResult.StyleCategory,
-                    RoastCommentary = judgeResult.Roast,
+                    RoastCommentary = judgeResult.Roast ?? string.Empty,
                     CelebrityTwin = judgeResult.CelebrityTwin,
                     VerdictBadge = string.IsNullOrWhiteSpace(judgeResult.VerdictBadge)
                         ? (isCreative ? "Craft Follicle Hero" : (judgeResult.OverallScore == 0 ? "Zero-Bristle Deficit" : "Certified Movember Hero"))
@@ -357,13 +360,13 @@ public class MustacheController : ControllerBase
                     FunninessScore = entry.FunninessScore,
                     MustacheTitle = entry.MustacheTitle,
                     StyleCategory = entry.StyleCategory,
-                    Roast = entry.RoastCommentary,
+                    Roast = entry.RoastCommentary ?? string.Empty,
                     CelebrityTwin = entry.CelebrityTwin,
                     VerdictBadge = entry.VerdictBadge,
                     CreatedAt = entry.CreatedAt,
                     IsLeaderboardEligible = true,
-                    IsPrizeEligible = user.IsEligibleToWin,
-                    AmountDonated = user.AmountPaid ?? 0m,
+                    IsPrizeEligible = user?.IsEligibleToWin ?? false,
+                    AmountDonated = user?.AmountPaid ?? 0m,
                     IsBestEntry = isBest,
                     UserId = authenticatedUserId
                 };
@@ -382,6 +385,34 @@ public class MustacheController : ControllerBase
             _logger.LogError(ex, "Error judging mustache for {Name}: {Message}", request.Name, ex.Message);
             return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Health check and diagnostic probe for the Movember Mustache Judge API.
+    /// Returns application status, UTC timestamp, and database connectivity.
+    /// </summary>
+    [HttpGet("health")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetHealth(CancellationToken cancellationToken = default)
+    {
+        bool dbConnected = false;
+        try
+        {
+            dbConnected = await _dbContext.Database.CanConnectAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Health check database connectivity probe failed.");
+        }
+
+        return Ok(new
+        {
+            status = dbConnected ? "Healthy" : "Degraded",
+            database = dbConnected ? "Connected" : "Disconnected",
+            timestamp = DateTime.UtcNow,
+            version = "2.3.0",
+            service = "DVT Mustache Judge API"
+        });
     }
 
     /// <summary>
