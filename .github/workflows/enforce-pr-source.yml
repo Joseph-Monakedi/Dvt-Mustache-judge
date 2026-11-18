@@ -1,0 +1,20 @@
+name: Enforce PR Source Branch
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify-source:
+    name: Verify PR is from dev
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Source Branch
+        run: |
+          echo "Target base branch: ${{ github.base_ref }}"
+          echo "Incoming head branch: ${{ github.head_ref }}"
+          if [ "${{ github.head_ref }}" != "dev" ]; then
+            echo "::error::Only pull requests originating from the 'dev' branch are permitted to merge into 'main'. Current branch is '${{ github.head_ref }}'."
+            exit 1
+          fi
+          echo "✓ Pull request originated from 'dev'. Validation passed."
