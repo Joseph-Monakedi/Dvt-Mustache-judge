@@ -23,4 +23,4 @@ jobs:
         # Or pin by SHA: uses: Joseph-Monakedi/PullReviewer@c3c759ccf754df33f97c5cf191897b9e3ab5d303
         with:
           api_key: ${{ secrets.AI_API_KEY }}
-          model: gemini-3.8-flash # or gpt-4.1-mini, claude-sonnet-4-20250514, etc.
+          model: gemini-3.5-flash # or gpt-4.1-mini, claude-sonnet-4-20250514, etc.
