@@ -38,11 +38,14 @@ builder.Services.AddSingleton<IContentModerationService, ContentModerationServic
 // 5. Rate Limiter (strictly max 3 requests per minute for free Gemini tier)
 builder.Services.AddSingleton<IApiRateLimiter, GeminiRateLimiter>();
 
-// 5. Gemini AI Judge HTTP Client
+// 5. Gemini AI Judge HTTP Client & Background Retry Service (Exponential Backoff on 503)
 builder.Services.AddHttpClient<IGeminiJudgeService, GeminiJudgeService>(client =>
 {
-    client.Timeout = TimeSpan.FromSeconds(30);
+    client.Timeout = TimeSpan.FromSeconds(45);
 });
+builder.Services.AddSingleton<IJudgingRetryService, JudgingRetryService>();
+builder.Services.AddSingleton<JudgingRetryBackgroundWorker>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<JudgingRetryBackgroundWorker>());
 
 // 6. Token Service for authentication
 builder.Services.AddSingleton<ITokenService, TokenService>();
