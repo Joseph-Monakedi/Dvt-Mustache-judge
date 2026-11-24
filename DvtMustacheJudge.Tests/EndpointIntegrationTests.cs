@@ -761,7 +761,8 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
     public void JudgingRetryService_AppliesExponentialBackoffSchedule()
     {
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DvtMustacheJudge.Api.Services.JudgingRetryService>.Instance;
-        var retryService = new DvtMustacheJudge.Api.Services.JudgingRetryService(logger);
+        var tempPersistenceFile = Path.Combine(Path.GetTempPath(), $"retry_test_{Guid.NewGuid():N}.json");
+        var retryService = new DvtMustacheJudge.Api.Services.JudgingRetryService(logger, tempPersistenceFile);
         var entryId = Guid.NewGuid();
         var now = DateTime.UtcNow;
 
@@ -769,7 +770,7 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         {
             EntryId = entryId,
             ContestantName = "Backoff Tester",
-            ImageBytes = new byte[] { 1, 2, 3 },
+            ImageUrl = "https://example.com/uploads/stache.jpg",
             CreatedAtUtc = now,
             NextRetryAtUtc = now.AddSeconds(-1), // Due immediately
             MaxAttempts = 4
@@ -800,9 +801,18 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         var thirdDelaySec = (attempt.NextRetryAtUtc - beforeThirdRetry).TotalSeconds;
         Assert.InRange(thirdDelaySec, 59.0, 65.0);
 
+        // Verify queue state survives restart via disk persistence
+        var restartedService = new DvtMustacheJudge.Api.Services.JudgingRetryService(logger, tempPersistenceFile);
+        Assert.True(restartedService.IsPending(entryId));
+
         // Mark completed removes it from queue
         retryService.MarkCompleted(entryId);
         Assert.False(retryService.IsPending(entryId));
+
+        if (File.Exists(tempPersistenceFile))
+        {
+            File.Delete(tempPersistenceFile);
+        }
     }
 
     [Fact]

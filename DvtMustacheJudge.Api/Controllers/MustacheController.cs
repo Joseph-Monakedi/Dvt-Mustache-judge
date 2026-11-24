@@ -363,7 +363,7 @@ public class MustacheController : ControllerBase
                 };
 
                 _dbContext.MustacheEntries.Add(entry);
-                await _dbContext.SaveChangesAsync();
+                await _dbContext.SaveChangesAsync(cancellationToken);
                 InvalidateLeaderboardCache();
 
                 if (deferredForBackgroundRetry && _retryService != null)
@@ -372,9 +372,9 @@ public class MustacheController : ControllerBase
                     {
                         EntryId = entry.Id,
                         ContestantName = contestantName,
-                        ImageBytes = imageBytes,
+                        ImageUrl = entry.ImageUrl,
                         ImageMimeType = request.Image.ContentType ?? "image/jpeg",
-                        CleanShaveBytes = cleanShaveBytes,
+                        CleanShaveImageUrl = cleanShaveUrl,
                         CleanShaveMimeType = cleanShaveMime,
                         CompetitionType = finalCompetitionType,
                         CreatedAtUtc = DateTime.UtcNow
@@ -382,7 +382,9 @@ public class MustacheController : ControllerBase
                 }
 
                 var higherScoreExists = await _dbContext.MustacheEntries
-                    .AnyAsync(e => e.UserId == authenticatedUserId.Value && e.Id != entry.Id && !e.IsHidden && e.CompetitionType == finalCompetitionType && e.OverallScore > entry.OverallScore);
+                    .AnyAsync(
+                        e => e.UserId == authenticatedUserId.Value && e.Id != entry.Id && !e.IsHidden && e.CompetitionType == finalCompetitionType && e.OverallScore > entry.OverallScore,
+                        cancellationToken);
                 bool isBest = !higherScoreExists;
 
                 var responseDto = new JudgeResponseDto

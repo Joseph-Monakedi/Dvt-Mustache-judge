@@ -8,15 +8,18 @@ public class JudgingRetryBackgroundWorker : BackgroundService
 {
     private readonly IJudgingRetryService _retryService;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IWebHostEnvironment _environment;
     private readonly ILogger<JudgingRetryBackgroundWorker> _logger;
 
     public JudgingRetryBackgroundWorker(
         IJudgingRetryService retryService,
         IServiceScopeFactory scopeFactory,
+        IWebHostEnvironment environment,
         ILogger<JudgingRetryBackgroundWorker> logger)
     {
         _retryService = retryService;
         _scopeFactory = scopeFactory;
+        _environment = environment;
         _logger = logger;
     }
 
@@ -61,20 +64,6 @@ public class JudgingRetryBackgroundWorker : BackgroundService
                 var geminiService = scope.ServiceProvider.GetRequiredService<IGeminiJudgeService>();
                 var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-                using var imageStream = new MemoryStream(attempt.ImageBytes);
-                using var cleanShaveStream = attempt.CleanShaveBytes != null
-                    ? new MemoryStream(attempt.CleanShaveBytes)
-                    : null;
-
-                var judgeResult = await geminiService.JudgeMustacheAsync(
-                    imageStream,
-                    attempt.ImageMimeType,
-                    attempt.ContestantName,
-                    cleanShaveStream,
-                    attempt.CleanShaveMimeType,
-                    attempt.CompetitionType,
-                    cancellationToken);
-
                 var entry = await dbContext.MustacheEntries
                     .FirstOrDefaultAsync(e => e.Id == attempt.EntryId, cancellationToken);
 
@@ -84,6 +73,42 @@ public class JudgingRetryBackgroundWorker : BackgroundService
                     _retryService.MarkCompleted(attempt.EntryId);
                     continue;
                 }
+
+                var imageUrl = !string.IsNullOrWhiteSpace(attempt.ImageUrl) ? attempt.ImageUrl : entry.ImageUrl;
+                var (imageBytes, loadedMime) = await LoadImageBytesAsync(imageUrl, cancellationToken);
+                if (imageBytes == null || imageBytes.Length == 0)
+                {
+                    _logger.LogWarning("Could not load image from {Url} for queued entry {EntryId}. Removing from retry queue.", imageUrl, attempt.EntryId);
+                    _retryService.MarkCompleted(attempt.EntryId);
+                    continue;
+                }
+
+                var cleanShaveUrl = !string.IsNullOrWhiteSpace(attempt.CleanShaveImageUrl)
+                    ? attempt.CleanShaveImageUrl
+                    : entry.CleanShaveImageUrl;
+
+                byte[]? cleanShaveBytes = null;
+                string? cleanShaveMime = attempt.CleanShaveMimeType;
+                if (!string.IsNullOrWhiteSpace(cleanShaveUrl))
+                {
+                    var loadedCs = await LoadImageBytesAsync(cleanShaveUrl, cancellationToken);
+                    cleanShaveBytes = loadedCs.bytes;
+                    cleanShaveMime ??= loadedCs.contentType;
+                }
+
+                using var imageStream = new MemoryStream(imageBytes);
+                using var cleanShaveStream = cleanShaveBytes != null
+                    ? new MemoryStream(cleanShaveBytes)
+                    : null;
+
+                var judgeResult = await geminiService.JudgeMustacheAsync(
+                    imageStream,
+                    !string.IsNullOrWhiteSpace(attempt.ImageMimeType) ? attempt.ImageMimeType : loadedMime,
+                    attempt.ContestantName,
+                    cleanShaveStream,
+                    cleanShaveMime,
+                    attempt.CompetitionType,
+                    cancellationToken);
 
                 bool isCreative = string.Equals(attempt.CompetitionType, "CreativeMustache", StringComparison.OrdinalIgnoreCase);
 
@@ -100,7 +125,7 @@ public class JudgingRetryBackgroundWorker : BackgroundService
                 }
                 else
                 {
-                    bool hasCleanShave = attempt.CleanShaveBytes != null || !string.IsNullOrWhiteSpace(entry.CleanShaveImageUrl);
+                    bool hasCleanShave = cleanShaveBytes != null || !string.IsNullOrWhiteSpace(entry.CleanShaveImageUrl);
 
                     entry.OverallScore = Math.Clamp(judgeResult.OverallScore, 0, 100);
                     entry.DensityScore = Math.Clamp(judgeResult.DensityScore, 0, 10);
@@ -142,5 +167,72 @@ public class JudgingRetryBackgroundWorker : BackgroundService
         }
 
         return processedCount;
+    }
+
+    private async Task<(byte[]? bytes, string contentType)> LoadImageBytesAsync(string imageUrl, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl))
+        {
+            return (null, "image/jpeg");
+        }
+
+        var webRoot = _environment.WebRootPath;
+        if (string.IsNullOrWhiteSpace(webRoot))
+        {
+            webRoot = Path.Combine(_environment.ContentRootPath, "wwwroot");
+        }
+
+        try
+        {
+            string fileName = Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri)
+                ? Path.GetFileName(uri.LocalPath)
+                : Path.GetFileName(imageUrl.TrimStart('/'));
+
+            if (!string.IsNullOrWhiteSpace(fileName))
+            {
+                var inUploadsPath = Path.Combine(webRoot, "uploads", fileName);
+                var directPath = Path.Combine(webRoot, fileName);
+                var targetPath = File.Exists(inUploadsPath) ? inUploadsPath : (File.Exists(directPath) ? directPath : null);
+
+                if (targetPath != null)
+                {
+                    var bytes = await File.ReadAllBytesAsync(targetPath, cancellationToken);
+                    var ext = Path.GetExtension(targetPath).ToLowerInvariant();
+                    var ct = ext switch
+                    {
+                        ".png" => "image/png",
+                        ".webp" => "image/webp",
+                        _ => "image/jpeg"
+                    };
+                    return (bytes, ct);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed local filesystem lookup for {Url}", imageUrl);
+        }
+
+        if (imageUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            imageUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(25) };
+                var resp = await client.GetAsync(imageUrl, cancellationToken);
+                if (resp.IsSuccessStatusCode)
+                {
+                    var bytes = await resp.Content.ReadAsByteArrayAsync(cancellationToken);
+                    var ct = resp.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
+                    return (bytes, ct);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed remote image download from {Url}", imageUrl);
+            }
+        }
+
+        return (null, "image/jpeg");
     }
 }

@@ -907,7 +907,13 @@ EVALUATION PROTOCOL:
         int baseDelayMs,
         RetryConditionHeaderValue? retryAfter)
     {
-        if (retryAfter?.Delta is TimeSpan serverDelta && serverDelta > TimeSpan.Zero && serverDelta <= TimeSpan.FromSeconds(15))
+        TimeSpan? serverSpecifiedDelay = retryAfter?.Delta;
+        if (serverSpecifiedDelay == null && retryAfter?.Date is DateTimeOffset retryDate)
+        {
+            serverSpecifiedDelay = retryDate - DateTimeOffset.UtcNow;
+        }
+
+        if (serverSpecifiedDelay is TimeSpan serverDelta && serverDelta > TimeSpan.Zero && serverDelta <= TimeSpan.FromSeconds(15))
         {
             return serverDelta;
         }

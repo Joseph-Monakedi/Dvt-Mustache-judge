@@ -4,9 +4,9 @@ public class PendingJudgingAttempt
 {
     public Guid EntryId { get; set; }
     public string ContestantName { get; set; } = string.Empty;
-    public byte[] ImageBytes { get; set; } = Array.Empty<byte>();
+    public string ImageUrl { get; set; } = string.Empty;
     public string ImageMimeType { get; set; } = "image/jpeg";
-    public byte[]? CleanShaveBytes { get; set; }
+    public string? CleanShaveImageUrl { get; set; }
     public string? CleanShaveMimeType { get; set; }
     public string CompetitionType { get; set; } = "Mustache";
     public int AttemptCount { get; set; }
