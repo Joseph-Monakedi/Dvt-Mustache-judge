@@ -33,6 +33,7 @@ public class MustacheController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly ITokenService _tokenService;
     private readonly ILogger<MustacheController> _logger;
+    private readonly IJudgingRetryService? _retryService;
 
     public MustacheController(
         AppDbContext dbContext,
@@ -43,7 +44,8 @@ public class MustacheController : ControllerBase
         IWebHostEnvironment environment,
         IConfiguration configuration,
         ITokenService tokenService,
-        ILogger<MustacheController> logger)
+        ILogger<MustacheController> logger,
+        IJudgingRetryService? retryService = null)
     {
         _dbContext = dbContext;
         _storageService = storageService;
@@ -54,6 +56,7 @@ public class MustacheController : ControllerBase
         _configuration = configuration;
         _tokenService = tokenService;
         _logger = logger;
+        _retryService = retryService;
     }
 
     /// <summary>
@@ -152,7 +155,7 @@ public class MustacheController : ControllerBase
                     string.Equals(request.CompetitionType, "CrazyHair", StringComparison.OrdinalIgnoreCase)));
             var competitionType = isCreative ? "CreativeMustache" : "Mustache";
 
-            string? cleanShaveUrl = user.CleanShaveImageUrl;
+            string? cleanShaveUrl = user?.CleanShaveImageUrl;
             byte[]? cleanShaveBytes = null;
             string? cleanShaveMime = null;
 
@@ -165,7 +168,16 @@ public class MustacheController : ControllerBase
                 cleanShaveMime = request.CleanShaveImage.ContentType;
 
                 using var vStream = new MemoryStream(cleanShaveBytes);
-                var vResult = await _geminiService.VerifyCleanShaveAsync(vStream, cleanShaveMime, contestantName, cancellationToken);
+                CleanShaveVerificationResult vResult;
+                try
+                {
+                    vResult = await _geminiService.VerifyCleanShaveAsync(vStream, cleanShaveMime, contestantName, cancellationToken);
+                }
+                catch (Exception ex) when (IsTransientGeminiException(ex, cancellationToken))
+                {
+                    _logger.LogWarning(ex, "Gemini AI unavailable (503/transient) during inline clean shave verification for '{Name}'. Saving baseline attempt using fallback verification.", contestantName);
+                    vResult = GeminiJudgeService.GenerateFallbackCleanShaveResult(contestantName);
+                }
                 if (!vResult.IsAppropriate)
                 {
                     return BadRequest(new { error = !string.IsNullOrWhiteSpace(vResult.InappropriateReason) ? $"Day 1 photo rejected: {vResult.InappropriateReason}" : "Day 1 clean shave photo rejected due to content policy violation." });
@@ -182,9 +194,12 @@ public class MustacheController : ControllerBase
                 using var cUploadMs = new MemoryStream(cleanShaveBytes);
                 var cUpload = await _storageService.UploadImageAsync(cUploadMs, request.CleanShaveImage.FileName, cleanShaveMime);
                 cleanShaveUrl = cUpload.ImageUrl;
-                user.CleanShaveImageUrl = cleanShaveUrl;
-                user.CleanShaveUploadedAt = DateTime.UtcNow;
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                if (user != null)
+                {
+                    user.CleanShaveImageUrl = cleanShaveUrl;
+                    user.CleanShaveUploadedAt = DateTime.UtcNow;
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
             }
 
             // Gating: Natural mustache growers MUST have a Day 1 clean shave photo saved
@@ -221,17 +236,38 @@ public class MustacheController : ControllerBase
 
             // 2. Call Gemini AI judge for vision analysis & NSFW/vulgarity detection FIRST (queues if rate limited)
             GeminiJudgeResult judgeResult;
+            bool deferredForBackgroundRetry = false;
             using (var aiStream = new MemoryStream(imageBytes))
             using (var csStream = cleanShaveBytes != null ? new MemoryStream(cleanShaveBytes) : null)
             {
-                judgeResult = await _geminiService.JudgeMustacheAsync(
-                    aiStream,
-                    request.Image.ContentType,
-                    contestantName,
-                    csStream,
-                    cleanShaveMime,
-                    competitionType,
-                    cancellationToken);
+                try
+                {
+                    judgeResult = await _geminiService.JudgeMustacheAsync(
+                        aiStream,
+                        request.Image.ContentType,
+                        contestantName,
+                        csStream,
+                        cleanShaveMime,
+                        competitionType,
+                        cancellationToken);
+                }
+                catch (Exception ex) when (IsTransientGeminiException(ex, cancellationToken))
+                {
+                    deferredForBackgroundRetry = true;
+                    _logger.LogWarning(
+                        ex,
+                        "Gemini AI returned transient error ({Message}) for contestant '{Name}'. Saving attempt in backend with provisional score and queueing exponential backoff retry.",
+                        ex.Message,
+                        contestantName);
+
+                    judgeResult = GeminiJudgeService.GenerateFallbackVerdict(contestantName, cleanShaveBytes != null);
+                    if (isCreative)
+                    {
+                        judgeResult.InnovationScore = 7;
+                        judgeResult.DedicationScore = 7;
+                        judgeResult.FunninessScore = 7;
+                    }
+                }
             }
 
             // 2.5 Check for Prompt or SQL injection attempts
@@ -316,7 +352,7 @@ public class MustacheController : ControllerBase
                     StyleCategory = string.IsNullOrWhiteSpace(judgeResult.StyleCategory)
                         ? "Other"
                         : judgeResult.StyleCategory,
-                    RoastCommentary = judgeResult.Roast,
+                    RoastCommentary = judgeResult.Roast ?? string.Empty,
                     CelebrityTwin = judgeResult.CelebrityTwin,
                     VerdictBadge = string.IsNullOrWhiteSpace(judgeResult.VerdictBadge)
                         ? (isCreative ? "Craft Follicle Hero" : (judgeResult.OverallScore == 0 ? "Zero-Bristle Deficit" : "Certified Movember Hero"))
@@ -327,11 +363,28 @@ public class MustacheController : ControllerBase
                 };
 
                 _dbContext.MustacheEntries.Add(entry);
-                await _dbContext.SaveChangesAsync();
+                await _dbContext.SaveChangesAsync(cancellationToken);
                 InvalidateLeaderboardCache();
 
+                if (deferredForBackgroundRetry && _retryService != null)
+                {
+                    _retryService.Enqueue(new PendingJudgingAttempt
+                    {
+                        EntryId = entry.Id,
+                        ContestantName = contestantName,
+                        ImageUrl = entry.ImageUrl,
+                        ImageMimeType = request.Image.ContentType ?? "image/jpeg",
+                        CleanShaveImageUrl = cleanShaveUrl,
+                        CleanShaveMimeType = cleanShaveMime,
+                        CompetitionType = finalCompetitionType,
+                        CreatedAtUtc = DateTime.UtcNow
+                    });
+                }
+
                 var higherScoreExists = await _dbContext.MustacheEntries
-                    .AnyAsync(e => e.UserId == authenticatedUserId.Value && e.Id != entry.Id && !e.IsHidden && e.CompetitionType == finalCompetitionType && e.OverallScore > entry.OverallScore);
+                    .AnyAsync(
+                        e => e.UserId == authenticatedUserId.Value && e.Id != entry.Id && !e.IsHidden && e.CompetitionType == finalCompetitionType && e.OverallScore > entry.OverallScore,
+                        cancellationToken);
                 bool isBest = !higherScoreExists;
 
                 var responseDto = new JudgeResponseDto
@@ -357,13 +410,13 @@ public class MustacheController : ControllerBase
                     FunninessScore = entry.FunninessScore,
                     MustacheTitle = entry.MustacheTitle,
                     StyleCategory = entry.StyleCategory,
-                    Roast = entry.RoastCommentary,
+                    Roast = entry.RoastCommentary ?? string.Empty,
                     CelebrityTwin = entry.CelebrityTwin,
                     VerdictBadge = entry.VerdictBadge,
                     CreatedAt = entry.CreatedAt,
                     IsLeaderboardEligible = true,
-                    IsPrizeEligible = user.IsEligibleToWin,
-                    AmountDonated = user.AmountPaid ?? 0m,
+                    IsPrizeEligible = user?.IsEligibleToWin ?? false,
+                    AmountDonated = user?.AmountPaid ?? 0m,
                     IsBestEntry = isBest,
                     UserId = authenticatedUserId
                 };
@@ -382,6 +435,75 @@ public class MustacheController : ControllerBase
             _logger.LogError(ex, "Error judging mustache for {Name}: {Message}", request.Name, ex.Message);
             return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
         }
+    }
+
+    private static bool IsTransientGeminiException(Exception ex, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+
+        if (ex is TaskCanceledException or TimeoutException)
+        {
+            return true;
+        }
+
+        if (ex is HttpRequestException httpEx)
+        {
+            if (httpEx.StatusCode is System.Net.HttpStatusCode.ServiceUnavailable
+                                  or System.Net.HttpStatusCode.TooManyRequests
+                                  or System.Net.HttpStatusCode.InternalServerError
+                                  or System.Net.HttpStatusCode.BadGateway
+                                  or System.Net.HttpStatusCode.GatewayTimeout
+                                  or null)
+            {
+                // Verify it's not an explicit auth or billing error message when StatusCode is null
+                var msg = httpEx.Message ?? string.Empty;
+                if (msg.Contains("Invalid Gemini API credentials", StringComparison.OrdinalIgnoreCase) ||
+                    msg.Contains("credits are depleted", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        var message = ex.Message ?? string.Empty;
+        return message.Contains("503", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("ServiceUnavailable", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("Service Unavailable", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("rate limit", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("TooManyRequests", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("overloaded", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Health check and diagnostic probe for the Movember Mustache Judge API.
+    /// Returns application status, UTC timestamp, and database connectivity.
+    /// </summary>
+    [HttpGet("health")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetHealth(CancellationToken cancellationToken = default)
+    {
+        bool dbConnected = false;
+        try
+        {
+            dbConnected = await _dbContext.Database.CanConnectAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Health check database connectivity probe failed.");
+        }
+
+        return Ok(new
+        {
+            status = dbConnected ? "Healthy" : "Degraded",
+            database = dbConnected ? "Connected" : "Disconnected",
+            timestamp = DateTime.UtcNow,
+            version = "2.3.0",
+            service = "DVT Mustache Judge API"
+        });
     }
 
     /// <summary>
@@ -436,11 +558,20 @@ public class MustacheController : ControllerBase
 
         // 1. Verify with Gemini AI that the contestant is genuinely clean-shaven, has a visible human face, and meets content policies
         using var verificationStream = new MemoryStream(imageBytes);
-        var verification = await _geminiService.VerifyCleanShaveAsync(
-            verificationStream,
-            image.ContentType,
-            user.FullName ?? user.Email,
-            cancellationToken);
+        CleanShaveVerificationResult verification;
+        try
+        {
+            verification = await _geminiService.VerifyCleanShaveAsync(
+                verificationStream,
+                image.ContentType,
+                user.FullName ?? user.Email,
+                cancellationToken);
+        }
+        catch (Exception ex) when (IsTransientGeminiException(ex, cancellationToken))
+        {
+            _logger.LogWarning(ex, "Gemini AI unavailable (503/transient) during Day 1 clean shave verification for '{Name}'. Saving baseline attempt using fallback verification.", user.FullName ?? user.Email);
+            verification = GeminiJudgeService.GenerateFallbackCleanShaveResult(user.FullName ?? user.Email);
+        }
 
         if (!verification.IsAppropriate)
         {

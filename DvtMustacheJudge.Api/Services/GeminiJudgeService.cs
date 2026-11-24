@@ -419,24 +419,28 @@ OTHER REQUIRED FIELDS:
 
         var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
         var jsonPayload = JsonSerializer.Serialize(requestBody);
-        var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-        var response = await _httpClient.PostAsync(endpoint, content, cancellationToken);
+        using var response = await PostWithExponentialBackoffAsync(
+            endpoint,
+            jsonPayload,
+            $"JudgeMustache({contestantName})",
+            cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
-            var errorBody = await response.Content.ReadAsStringAsync();
-            _logger.LogError("Gemini API returned status {StatusCode}: {Error}", response.StatusCode, errorBody);
+            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogError("Gemini API returned status {StatusCode} after retries: {Error}", response.StatusCode, errorBody);
 
             string userMessage = response.StatusCode switch
             {
                 System.Net.HttpStatusCode.PaymentRequired => "Gemini API credits are depleted. Please check your Google AI Studio billing or API key.",
                 System.Net.HttpStatusCode.TooManyRequests => "Gemini AI rate limit exceeded. Please wait a moment before trying again.",
+                System.Net.HttpStatusCode.ServiceUnavailable => "Gemini AI model is temporarily overloaded (503 Service Unavailable).",
                 System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden => "Invalid Gemini API credentials. Please verify your API key.",
                 _ => $"Gemini AI Judge failed ({response.StatusCode}): {errorBody}"
             };
 
-            throw new HttpRequestException(userMessage);
+            throw new HttpRequestException(userMessage, null, response.StatusCode);
         }
 
         var responseJson = await response.Content.ReadAsStringAsync();
@@ -795,28 +799,129 @@ EVALUATION PROTOCOL:
 
         var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
         var jsonPayload = JsonSerializer.Serialize(requestBody);
-        var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-        var response = await _httpClient.PostAsync(endpoint, content, cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        HttpResponseMessage response;
+        try
         {
-            var errorBody = await response.Content.ReadAsStringAsync();
-            _logger.LogError("Gemini API clean shave check returned status {StatusCode}: {Error}", response.StatusCode, errorBody);
+            response = await PostWithExponentialBackoffAsync(
+                endpoint,
+                jsonPayload,
+                $"VerifyCleanShave({contestantName})",
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Gemini API clean shave check failed after exponential backoff retries for '{Name}'. Using fallback result.", contestantName);
             return GenerateFallbackCleanShaveResult(contestantName);
         }
 
-        var responseJson = await response.Content.ReadAsStringAsync();
-        var parsedResult = ExtractCleanShaveResultFromGeminiResponse(responseJson);
-        if (parsedResult == null)
+        using (response)
         {
-            _logger.LogWarning("Failed to parse valid clean shave result from Gemini response: {Json}. Falling back.", responseJson);
-            return GenerateFallbackCleanShaveResult(contestantName);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError("Gemini API clean shave check returned status {StatusCode} after retries: {Error}", response.StatusCode, errorBody);
+                return GenerateFallbackCleanShaveResult(contestantName);
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
+            var parsedResult = ExtractCleanShaveResultFromGeminiResponse(responseJson);
+            if (parsedResult == null)
+            {
+                _logger.LogWarning("Failed to parse valid clean shave result from Gemini response: {Json}. Falling back.", responseJson);
+                return GenerateFallbackCleanShaveResult(contestantName);
+            }
+
+            _logger.LogInformation("Clean shave verification for '{Name}': IsCleanShaven={Clean}, HasFace={Face}, IsAppropriate={Appropriate}",
+                contestantName, parsedResult.IsCleanShaven, parsedResult.HasFace, parsedResult.IsAppropriate);
+
+            return parsedResult;
+        }
+    }
+
+    private static bool IsTransientStatusCode(System.Net.HttpStatusCode statusCode) =>
+        statusCode is System.Net.HttpStatusCode.ServiceUnavailable      // 503
+                   or System.Net.HttpStatusCode.TooManyRequests         // 429
+                   or System.Net.HttpStatusCode.InternalServerError     // 500
+                   or System.Net.HttpStatusCode.BadGateway              // 502
+                   or System.Net.HttpStatusCode.GatewayTimeout;         // 504
+
+    private async Task<HttpResponseMessage> PostWithExponentialBackoffAsync(
+        string endpoint,
+        string jsonPayload,
+        string operationName,
+        CancellationToken cancellationToken)
+    {
+        int maxRetries = int.TryParse(_configuration["Gemini:MaxRetries"], out var cfgMax) ? Math.Clamp(cfgMax, 0, 6) : 3;
+        int baseDelayMs = int.TryParse(_configuration["Gemini:RetryBaseDelayMs"], out var cfgDelay) ? Math.Max(1, cfgDelay) : 1000;
+
+        for (int attempt = 0; ; attempt++)
+        {
+            try
+            {
+                using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync(endpoint, content, cancellationToken);
+
+                if (!IsTransientStatusCode(response.StatusCode) || attempt >= maxRetries)
+                {
+                    return response;
+                }
+
+                var statusCode = response.StatusCode;
+                var delay = ComputeBackoffDelay(attempt, baseDelayMs, response.Headers.RetryAfter);
+                response.Dispose();
+
+                _logger.LogWarning(
+                    "Gemini API returned transient HTTP {StatusCode} ({StatusInt}) during {Operation}. Retrying attempt {Attempt}/{MaxRetries} after {DelayMs}ms exponential backoff.",
+                    statusCode,
+                    (int)statusCode,
+                    operationName,
+                    attempt + 1,
+                    maxRetries,
+                    (int)delay.TotalMilliseconds);
+
+                await Task.Delay(delay, cancellationToken);
+            }
+            catch (Exception ex) when (
+                attempt < maxRetries &&
+                !cancellationToken.IsCancellationRequested &&
+                (ex is HttpRequestException || ex is TaskCanceledException))
+            {
+                var delay = ComputeBackoffDelay(attempt, baseDelayMs, retryAfter: null);
+
+                _logger.LogWarning(
+                    ex,
+                    "Transient network/timeout error during Gemini API call {Operation}. Retrying attempt {Attempt}/{MaxRetries} after {DelayMs}ms exponential backoff.",
+                    operationName,
+                    attempt + 1,
+                    maxRetries,
+                    (int)delay.TotalMilliseconds);
+
+                await Task.Delay(delay, cancellationToken);
+            }
+        }
+    }
+
+    private static TimeSpan ComputeBackoffDelay(
+        int attempt,
+        int baseDelayMs,
+        RetryConditionHeaderValue? retryAfter)
+    {
+        TimeSpan? serverSpecifiedDelay = retryAfter?.Delta;
+        if (serverSpecifiedDelay == null && retryAfter?.Date is DateTimeOffset retryDate)
+        {
+            serverSpecifiedDelay = retryDate - DateTimeOffset.UtcNow;
         }
 
-        _logger.LogInformation("Clean shave verification for '{Name}': IsCleanShaven={Clean}, HasFace={Face}, IsAppropriate={Appropriate}",
-            contestantName, parsedResult.IsCleanShaven, parsedResult.HasFace, parsedResult.IsAppropriate);
+        if (serverSpecifiedDelay is TimeSpan serverDelta && serverDelta > TimeSpan.Zero && serverDelta <= TimeSpan.FromSeconds(15))
+        {
+            return serverDelta;
+        }
 
-        return parsedResult;
+        // Exponential backoff: baseDelayMs * 2^attempt + random jitter (up to 35% of baseDelayMs)
+        double exponentialMs = baseDelayMs * Math.Pow(2, attempt);
+        double jitterMs = Random.Shared.NextDouble() * (baseDelayMs * 0.35);
+        return TimeSpan.FromMilliseconds(Math.Min(15000, exponentialMs + jitterMs));
     }
 
     private CleanShaveVerificationResult? ExtractCleanShaveResultFromGeminiResponse(string json)

@@ -49,6 +49,14 @@ public class TestGeminiJudgeService : DvtMustacheJudge.Api.Services.IGeminiJudge
             });
         }
 
+        if (contestantName.Contains("Simulate503Test", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new HttpRequestException(
+                "Gemini AI model is temporarily overloaded (503 Service Unavailable).",
+                null,
+                HttpStatusCode.ServiceUnavailable);
+        }
+
         bool hasBaseline = cleanShaveStream != null;
         var verdict = DvtMustacheJudge.Api.Services.GeminiJudgeService.GenerateFallbackVerdict(contestantName, hasBaseline);
         return Task.FromResult(verdict);
@@ -170,6 +178,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
 
 public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
 {
+    private readonly TestWebApplicationFactory _factory;
     private readonly HttpClient _client;
     private readonly string _adminPassword;
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -180,6 +189,7 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
     public EndpointIntegrationTests(TestWebApplicationFactory factory)
     {
         MustacheController.InvalidateLeaderboardCache();
+        _factory = factory;
         _client = factory.CreateClient();
         var config = factory.Services.GetRequiredService<IConfiguration>();
         _adminPassword = config["Admin:Password"] 
@@ -698,5 +708,185 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         var url = doc.RootElement.GetProperty("cleanShaveImageUrl").GetString();
         Assert.False(string.IsNullOrWhiteSpace(url));
         Assert.Contains("clean shave confirmed", doc.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task GetHealth_ReturnsOkAndStatusHealthy()
+    {
+        var response = await _client.GetAsync("/api/mustache/health");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        Assert.Equal("Healthy", root.GetProperty("status").GetString());
+        Assert.Equal("Connected", root.GetProperty("database").GetString());
+        Assert.Equal("2.3.0", root.GetProperty("version").GetString());
+    }
+
+    [Fact]
+    public async Task Judge_WhenGeminiReturns503_SavesAttemptAndQueuesExponentialBackoffRetry()
+    {
+        var (token, _) = await CreatePaidContestantWithCleanShaveAsync("Simulate503Test Contestant");
+
+        using var formData = new MultipartFormDataContent();
+        formData.Add(new StringContent("Simulate503Test Contestant"), "Name");
+
+        var dummyImageBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
+        var imageContent = new ByteArrayContent(dummyImageBytes);
+        imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        formData.Add(imageContent, "Image", "stache_503.jpg");
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/api/mustache/judge") { Content = formData };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(req);
+
+        // User never gets a 503/500 error screen; the attempt is saved in the backend and queued for retry
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content.ReadFromJsonAsync<JudgeResponseDto>(_jsonOptions);
+        Assert.NotNull(result);
+        Assert.NotEqual(Guid.Empty, result.Id);
+        Assert.Equal("Simulate503Test Contestant", result.ContestantName);
+        Assert.True(result.OverallScore > 0);
+        Assert.False(string.IsNullOrWhiteSpace(result.ImageUrl));
+
+        // Verify the entry is queued in IJudgingRetryService for exponential backoff retry
+        var retryService = _factory.Services.GetRequiredService<DvtMustacheJudge.Api.Services.IJudgingRetryService>();
+        Assert.True(retryService.IsPending(result.Id));
+    }
+
+    [Fact]
+    public void JudgingRetryService_AppliesExponentialBackoffSchedule()
+    {
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DvtMustacheJudge.Api.Services.JudgingRetryService>.Instance;
+        var tempPersistenceFile = Path.Combine(Path.GetTempPath(), $"retry_test_{Guid.NewGuid():N}.json");
+        var retryService = new DvtMustacheJudge.Api.Services.JudgingRetryService(logger, tempPersistenceFile);
+        var entryId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        var attempt = new DvtMustacheJudge.Api.Services.PendingJudgingAttempt
+        {
+            EntryId = entryId,
+            ContestantName = "Backoff Tester",
+            ImageUrl = "https://example.com/uploads/stache.jpg",
+            CreatedAtUtc = now,
+            NextRetryAtUtc = now.AddSeconds(-1), // Due immediately
+            MaxAttempts = 4
+        };
+
+        retryService.Enqueue(attempt);
+        Assert.True(retryService.IsPending(entryId));
+        Assert.Single(retryService.GetDueAttempts(DateTime.UtcNow.AddSeconds(15)));
+
+        // 1st failure -> ~15s exponential backoff
+        var beforeFirstRetry = DateTime.UtcNow;
+        retryService.ScheduleNextRetry(entryId, "503 Service Unavailable");
+        Assert.Equal(1, attempt.AttemptCount);
+        var firstDelaySec = (attempt.NextRetryAtUtc - beforeFirstRetry).TotalSeconds;
+        Assert.InRange(firstDelaySec, 14.0, 20.0);
+
+        // 2nd failure -> ~30s exponential backoff
+        var beforeSecondRetry = DateTime.UtcNow;
+        retryService.ScheduleNextRetry(entryId, "503 Service Unavailable");
+        Assert.Equal(2, attempt.AttemptCount);
+        var secondDelaySec = (attempt.NextRetryAtUtc - beforeSecondRetry).TotalSeconds;
+        Assert.InRange(secondDelaySec, 29.0, 35.0);
+
+        // 3rd failure -> ~60s exponential backoff
+        var beforeThirdRetry = DateTime.UtcNow;
+        retryService.ScheduleNextRetry(entryId, "503 Service Unavailable");
+        Assert.Equal(3, attempt.AttemptCount);
+        var thirdDelaySec = (attempt.NextRetryAtUtc - beforeThirdRetry).TotalSeconds;
+        Assert.InRange(thirdDelaySec, 59.0, 65.0);
+
+        // Verify queue state survives restart via disk persistence
+        var restartedService = new DvtMustacheJudge.Api.Services.JudgingRetryService(logger, tempPersistenceFile);
+        Assert.True(restartedService.IsPending(entryId));
+
+        // Mark completed removes it from queue
+        retryService.MarkCompleted(entryId);
+        Assert.False(retryService.IsPending(entryId));
+
+        if (File.Exists(tempPersistenceFile))
+        {
+            File.Delete(tempPersistenceFile);
+        }
+    }
+
+    [Fact]
+    public async Task GeminiJudgeService_RetriesOn503WithExponentialBackoffAndSucceeds()
+    {
+        int callCount = 0;
+        var handler = new Transient503HttpMessageHandler(() =>
+        {
+            callCount++;
+            if (callCount <= 2)
+            {
+                return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                {
+                    Content = new StringContent("{\"error\":{\"code\":503,\"message\":\"The model is overloaded. Please try again later.\"}}")
+                };
+            }
+
+            var validGeminiResponse = """
+            {
+              "candidates": [
+                {
+                  "content": {
+                    "parts": [
+                      {
+                        "text": "{\"overallScore\":88,\"mustacheTitle\":\"The Resilient Magnum\",\"densityScore\":9,\"symmetryScore\":9,\"swaggerScore\":8,\"isWoodenSpoon\":false,\"innovationScore\":0,\"dedicationScore\":0,\"funninessScore\":0,\"styleCategory\":\"The Larnie\",\"roast\":\"Survived two 503 outages and emerged victorious.\",\"celebrityTwin\":\"Tom Selleck\",\"verdictBadge\":\"Certified Movember Hero\",\"isAppropriate\":true}"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+            """;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(validGeminiResponse)
+            };
+        });
+
+        using var httpClient = new HttpClient(handler);
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Gemini:ApiKey"] = "test-api-key-12345",
+                ["Gemini:Model"] = "gemini-2.5-flash",
+                ["Gemini:MaxRetries"] = "3",
+                ["Gemini:RetryBaseDelayMs"] = "10"
+            })
+            .Build();
+
+        var rateLimiterLogger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DvtMustacheJudge.Api.Services.GeminiRateLimiter>.Instance;
+        var rateLimiter = new DvtMustacheJudge.Api.Services.GeminiRateLimiter(config, rateLimiterLogger);
+        var judgeLogger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DvtMustacheJudge.Api.Services.GeminiJudgeService>.Instance;
+        var service = new DvtMustacheJudge.Api.Services.GeminiJudgeService(httpClient, config, rateLimiter, judgeLogger);
+
+        using var imageStream = new MemoryStream(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 });
+        var verdict = await service.JudgeMustacheAsync(imageStream, "image/jpeg", "Resilient Contestant");
+
+        Assert.Equal(3, callCount);
+        Assert.Equal(88, verdict.OverallScore);
+        Assert.Equal("The Resilient Magnum", verdict.MustacheTitle);
+    }
+
+    private sealed class Transient503HttpMessageHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpResponseMessage> _responder;
+
+        public Transient503HttpMessageHandler(Func<HttpResponseMessage> responder)
+        {
+            _responder = responder;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_responder());
+        }
     }
 }
