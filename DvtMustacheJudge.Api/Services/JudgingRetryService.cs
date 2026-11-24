@@ -11,12 +11,19 @@ public class JudgingRetryService : IJudgingRetryService
     private readonly string _persistenceFilePath;
     private readonly ILogger<JudgingRetryService> _logger;
 
-    public JudgingRetryService(ILogger<JudgingRetryService> logger, string? persistenceFilePath = null)
+    public JudgingRetryService(
+        ILogger<JudgingRetryService> logger,
+        string? persistenceFilePath = null,
+        IConfiguration? configuration = null)
     {
         _logger = logger;
-        _persistenceFilePath = string.IsNullOrWhiteSpace(persistenceFilePath)
-            ? Path.Combine(AppContext.BaseDirectory, "pending-judging-retries.json")
-            : persistenceFilePath;
+        var configuredPath = !string.IsNullOrWhiteSpace(persistenceFilePath)
+            ? persistenceFilePath
+            : configuration?["Gemini:RetryPersistencePath"];
+
+        _persistenceFilePath = !string.IsNullOrWhiteSpace(configuredPath)
+            ? configuredPath
+            : Path.Combine(Path.GetTempPath(), "dvt-mustache-judge", "pending-judging-retries.json");
 
         LoadPersistedAttempts();
     }
@@ -170,6 +177,12 @@ public class JudgingRetryService : IJudgingRetryService
         {
             try
             {
+                var directory = Path.GetDirectoryName(_persistenceFilePath);
+                if (!string.IsNullOrWhiteSpace(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
                 var snapshot = _pendingAttempts.Values.OrderBy(a => a.CreatedAtUtc).ToList();
                 var json = JsonSerializer.Serialize(snapshot);
                 var tempPath = _persistenceFilePath + ".tmp";

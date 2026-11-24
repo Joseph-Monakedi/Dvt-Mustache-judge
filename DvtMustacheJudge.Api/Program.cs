@@ -43,7 +43,10 @@ builder.Services.AddHttpClient<IGeminiJudgeService, GeminiJudgeService>(client =
 {
     client.Timeout = TimeSpan.FromSeconds(45);
 });
-builder.Services.AddSingleton<IJudgingRetryService, JudgingRetryService>();
+builder.Services.AddSingleton<IJudgingRetryService>(sp =>
+    new JudgingRetryService(
+        sp.GetRequiredService<ILogger<JudgingRetryService>>(),
+        configuration: sp.GetService<IConfiguration>()));
 builder.Services.AddSingleton<JudgingRetryBackgroundWorker>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<JudgingRetryBackgroundWorker>());
 

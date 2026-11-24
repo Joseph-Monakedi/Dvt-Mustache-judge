@@ -9,17 +9,20 @@ public class JudgingRetryBackgroundWorker : BackgroundService
     private readonly IJudgingRetryService _retryService;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IWebHostEnvironment _environment;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<JudgingRetryBackgroundWorker> _logger;
 
     public JudgingRetryBackgroundWorker(
         IJudgingRetryService retryService,
         IServiceScopeFactory scopeFactory,
         IWebHostEnvironment environment,
+        IHttpClientFactory httpClientFactory,
         ILogger<JudgingRetryBackgroundWorker> logger)
     {
         _retryService = retryService;
         _scopeFactory = scopeFactory;
         _environment = environment;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -218,8 +221,9 @@ public class JudgingRetryBackgroundWorker : BackgroundService
         {
             try
             {
-                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(25) };
-                var resp = await client.GetAsync(imageUrl, cancellationToken);
+                using var client = _httpClientFactory.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(25);
+                using var resp = await client.GetAsync(imageUrl, cancellationToken);
                 if (resp.IsSuccessStatusCode)
                 {
                     var bytes = await resp.Content.ReadAsByteArrayAsync(cancellationToken);
