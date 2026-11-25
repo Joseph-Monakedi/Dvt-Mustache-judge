@@ -24,9 +24,9 @@ public class AuthAndQuizTests : IClassFixture<TestWebApplicationFactory>
         _factory = factory;
         _client = factory.CreateClient();
         var config = factory.Services.GetRequiredService<IConfiguration>();
-        _adminPassword = config["Admin:Password"]
-                         ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
-                         ?? string.Empty;
+        _adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+                         ?? config["Admin:Password"]
+                         ?? "test-admin-password-2026";
     }
 
     [Fact]

@@ -29,4 +29,5 @@ jobs:
       - name: Run Unit & Integration Tests
         env:
             JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ADMIN_PASSWORD: ci-test-admin-password-2026
         run: dotnet test DvtMustacheJudge.Tests/DvtMustacheJudge.Tests.csproj --no-build --configuration Release --verbosity normal

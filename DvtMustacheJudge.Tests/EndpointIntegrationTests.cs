@@ -115,6 +115,34 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ADMIN_PASSWORD")))
+        {
+            Environment.SetEnvironmentVariable("ADMIN_PASSWORD", "test-admin-password-2026");
+        }
+
+        builder.ConfigureAppConfiguration((_, configBuilder) =>
+        {
+            var currentConfig = configBuilder.Build();
+            var overrides = new Dictionary<string, string?>();
+
+            if (string.IsNullOrWhiteSpace(currentConfig["Admin:Password"]))
+            {
+                overrides["Admin:Password"] = Environment.GetEnvironmentVariable("ADMIN_PASSWORD") ?? "test-admin-password-2026";
+            }
+
+            if (string.IsNullOrWhiteSpace(currentConfig["JWT_SECRET"]) &&
+                string.IsNullOrWhiteSpace(currentConfig["Jwt:Secret"]) &&
+                string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("JWT_SECRET")))
+            {
+                overrides["JWT_SECRET"] = "test-jwt-secret-key-for-ci-integration-tests-2026";
+            }
+
+            if (overrides.Count > 0)
+            {
+                configBuilder.AddInMemoryCollection(overrides);
+            }
+        });
+
         builder.ConfigureServices(services =>
         {
             var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
@@ -143,8 +171,9 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             var sp = services.BuildServiceProvider();
             using var scope = sp.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var cfg = scope.ServiceProvider.GetService<IConfiguration>();
             db.Database.EnsureCreated();
-            DbInitializer.SeedAsync(db).GetAwaiter().GetResult();
+            DbInitializer.SeedAsync(db, cfg).GetAwaiter().GetResult();
 
             if (!db.MustacheEntries.Any())
             {
@@ -192,9 +221,9 @@ public class EndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
         _factory = factory;
         _client = factory.CreateClient();
         var config = factory.Services.GetRequiredService<IConfiguration>();
-        _adminPassword = config["Admin:Password"] 
-                         ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD") 
-                         ?? string.Empty;
+        _adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+                         ?? config["Admin:Password"]
+                         ?? "test-admin-password-2026";
     }
 
     private async Task<(string Token, Guid UserId)> CreatePaidContestantWithCleanShaveAsync(string name)
