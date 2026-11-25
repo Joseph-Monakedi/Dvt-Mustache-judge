@@ -46,7 +46,7 @@ builder.Services.AddHttpClient<IGeminiJudgeService, GeminiJudgeService>(client =
 builder.Services.AddSingleton<IJudgingRetryService>(sp =>
     new JudgingRetryService(
         sp.GetRequiredService<ILogger<JudgingRetryService>>(),
-        configuration: sp.GetService<IConfiguration>()));
+        configuration: sp.GetRequiredService<IConfiguration>()));
 builder.Services.AddSingleton<JudgingRetryBackgroundWorker>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<JudgingRetryBackgroundWorker>());
 
