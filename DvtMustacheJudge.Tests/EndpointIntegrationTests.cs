@@ -115,19 +115,15 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ADMIN_PASSWORD")))
-        {
-            Environment.SetEnvironmentVariable("ADMIN_PASSWORD", "test-admin-password-2026");
-        }
-
         builder.ConfigureAppConfiguration((_, configBuilder) =>
         {
             var currentConfig = configBuilder.Build();
             var overrides = new Dictionary<string, string?>();
 
-            if (string.IsNullOrWhiteSpace(currentConfig["Admin:Password"]))
+            if (string.IsNullOrWhiteSpace(currentConfig["Admin:Password"]) &&
+                string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ADMIN_PASSWORD")))
             {
-                overrides["Admin:Password"] = Environment.GetEnvironmentVariable("ADMIN_PASSWORD") ?? "test-admin-password-2026";
+                overrides["Admin:Password"] = "test-admin-password-2026";
             }
 
             if (string.IsNullOrWhiteSpace(currentConfig["JWT_SECRET"]) &&
