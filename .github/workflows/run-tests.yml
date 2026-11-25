@@ -27,4 +27,6 @@ jobs:
         run: dotnet build DvtMustacheJudge.slnx --no-restore --configuration Release
 
       - name: Run Unit & Integration Tests
+        env:
+          ADMIN_PASSWORD: ci-test-admin-password-2026
         run: dotnet test DvtMustacheJudge.Tests/DvtMustacheJudge.Tests.csproj --no-build --configuration Release --verbosity normal
