@@ -27,4 +27,6 @@ jobs:
         run: dotnet build DvtMustacheJudge.slnx --no-restore --configuration Release
 
       - name: Run Unit & Integration Tests
+        env:
+            JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: dotnet test DvtMustacheJudge.Tests/DvtMustacheJudge.Tests.csproj --no-build --configuration Release --verbosity normal
