@@ -120,17 +120,23 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             var currentConfig = configBuilder.Build();
             var overrides = new Dictionary<string, string?>();
 
-            if (string.IsNullOrWhiteSpace(currentConfig["Admin:Password"]) &&
-                string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ADMIN_PASSWORD")))
+            if (string.IsNullOrWhiteSpace(currentConfig["Admin:Password"]))
             {
-                overrides["Admin:Password"] = "test-admin-password-2026";
+                var envAdminPwd = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
+                overrides["Admin:Password"] = !string.IsNullOrWhiteSpace(envAdminPwd)
+                    ? envAdminPwd
+                    : "test-admin-password-2026";
             }
 
             if (string.IsNullOrWhiteSpace(currentConfig["JWT_SECRET"]) &&
-                string.IsNullOrWhiteSpace(currentConfig["Jwt:Secret"]) &&
-                string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("JWT_SECRET")))
+                string.IsNullOrWhiteSpace(currentConfig["Jwt:Secret"]))
             {
-                overrides["JWT_SECRET"] = "test-jwt-secret-key-for-ci-integration-tests-2026";
+                var envJwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET");
+                var fallbackJwtSecret = !string.IsNullOrWhiteSpace(envJwtSecret)
+                    ? envJwtSecret
+                    : "test-jwt-secret-key-for-ci-integration-tests-2026";
+                overrides["JWT_SECRET"] = fallbackJwtSecret;
+                overrides["Jwt:Secret"] = fallbackJwtSecret;
             }
 
             if (overrides.Count > 0)
@@ -167,7 +173,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             var sp = services.BuildServiceProvider();
             using var scope = sp.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var cfg = scope.ServiceProvider.GetService<IConfiguration>();
+            var cfg = scope.ServiceProvider.GetRequiredService<IConfiguration>();
             db.Database.EnsureCreated();
             DbInitializer.SeedAsync(db, cfg).GetAwaiter().GetResult();
 
