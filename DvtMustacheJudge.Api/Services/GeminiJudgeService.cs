@@ -370,7 +370,7 @@ OTHER REQUIRED FIELDS (KEEP SIMPLE & FUNNY):
             },
             generationConfig = new
             {
-                temperature = 0.75,
+                temperature = 0.35,
                 responseMimeType = "application/json",
                 responseSchema = new
                 {
